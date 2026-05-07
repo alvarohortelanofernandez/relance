@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
-import logoUrl from "../../assets/logo_relance.jpg";
 import MainLayout from "../../components/layout/MainLayout";
 
 // ── Constantes ─────────────────────────────────────────────────────────────
@@ -11,38 +10,68 @@ const ROLES = [
     icon: "icon-student",
     label: "Estudiante",
     desc: "Busca prácticas o tu primer empleo",
-    color: "from-blue-500/20 to-blue-600/5",
-    border: "border-blue-500/30",
-    accent: "#60a5fa",
   },
   {
     id: "empresa",
     icon: "icon-company",
     label: "Empresa",
     desc: "Publica ofertas y encuentra talento",
-    color: "from-purple-500/20 to-purple-600/5",
-    border: "border-purple-500/30",
-    accent: "#a78bfa",
   },
   {
     id: "centro_educativo",
     icon: "icon-educativeCenter",
     label: "Centro educativo",
     desc: "Gestiona las prácticas de tus alumnos",
-    color: "from-orange-500/20 to-orange-600/5",
-    border: "border-orange-500/30",
-    accent: "#fb923c",
   },
 ];
 
-// ── Componentes auxiliares ──────────────────────────────────────────────────
+// ── Helpers de validación ───────────────────────────────────────────────────
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const isValidUrl = (v) => {
+  try {
+    new URL(v);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const isValidCif = (v) => /^[A-Z0-9]{8,9}$/i.test(v.trim());
+const isValidPhone = (v) => /^[+\d\s\-().]{7,20}$/.test(v.trim());
+
+// Valida campos comunes (email + contraseñas)
+function validateCommon(form) {
+  const errs = {};
+  if (!form.fullName.trim()) errs.fullName = "El nombre es obligatorio.";
+  if (!form.email.trim()) errs.email = "El correo es obligatorio.";
+  else if (!isValidEmail(form.email))
+    errs.email = "Introduce un correo válido.";
+  if (!form.password) errs.password = "La contraseña es obligatoria.";
+  else if (form.password.length < 8) errs.password = "Mínimo 8 caracteres.";
+  else if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
+    errs.password = "Debe tener al menos una mayúscula y un número.";
+  if (!form.confirmPassword) errs.confirmPassword = "Confirma tu contraseña.";
+  else if (form.password !== form.confirmPassword)
+    errs.confirmPassword = "Las contraseñas no coinciden.";
+  return errs;
+}
+
+// ── Campo de error inline ───────────────────────────────────────────────────
+function FieldError({ msg }) {
+  return msg ? <p className="text-xs text-red-400 mt-1">{msg}</p> : null;
+}
+
+// ── Input con borde de error ─────────────────────────────────────────────────
+function inputCls(hasError) {
+  return `input-field${hasError ? " border-red-500/50 focus:border-red-500" : ""}`;
+}
+
+// ── Componente PasswordField ────────────────────────────────────────────────
 function PasswordField({
   value,
   onChange,
   placeholder = "Mínimo 8 caracteres",
-  required = true,
-  minLength = 8,
   showStrength = true,
+  hasError = false,
 }) {
   const [show, setShow] = useState(false);
   const score = !value
@@ -62,7 +91,6 @@ function PasswordField({
     "bg-brand",
   ];
   const labels = ["", "Muy débil", "Débil", "Media", "Fuerte"];
-
   return (
     <div>
       <div className="relative">
@@ -71,9 +99,7 @@ function PasswordField({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          required={required}
-          minLength={minLength}
-          className="input-field pr-10"
+          className={inputCls(hasError) + " pr-10"}
         />
         <button
           type="button"
@@ -124,7 +150,40 @@ function PasswordField({
   );
 }
 
-// Formulario para ESTUDIANTE
+function SubmitButton({ loading, label }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      className="btn-primary w-full flex justify-center items-center gap-2 py-3.5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {loading ? (
+        <>
+          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          Creando cuenta...
+        </>
+      ) : (
+        label
+      )}
+    </button>
+  );
+}
+
+// ── Formulario ESTUDIANTE ───────────────────────────────────────────────────
 function StudentForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
     fullName: "",
@@ -135,16 +194,30 @@ function StudentForm({ onSubmit, loading, error }) {
     degree: "",
     graduationYear: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
+
+  const validate = () => {
+    const e = validateCommon(form);
+    if (form.graduationYear) {
+      const y = Number(form.graduationYear);
+      if (isNaN(y) || y < 2020 || y > 2035)
+        e.graduationYear = "Introduce un año entre 2020 y 2035.";
+    }
+    setErrs(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "estudiante" });
+    if (validate()) onSubmit({ ...form, role: "estudiante" });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -152,12 +225,12 @@ function StudentForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="text"
-            required
             value={form.fullName}
             onChange={s("fullName")}
             placeholder="Tu nombre y apellidos"
-            className="input-field"
+            className={inputCls(errs.fullName)}
           />
+          <FieldError msg={errs.fullName} />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -165,18 +238,23 @@ function StudentForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="email"
-            required
             value={form.email}
             onChange={s("email")}
             placeholder="tu@correo.com"
-            className="input-field"
+            className={inputCls(errs.email)}
           />
+          <FieldError msg={errs.email} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
             Contraseña *
           </label>
-          <PasswordField value={form.password} onChange={s("password")} />
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
+          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -187,15 +265,9 @@ function StudentForm({ onSubmit, loading, error }) {
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
-          )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+          <FieldError msg={errs.confirmPassword} />
         </div>
       </div>
 
@@ -239,8 +311,9 @@ function StudentForm({ onSubmit, loading, error }) {
               placeholder="2025"
               min="2020"
               max="2035"
-              className="input-field"
+              className={inputCls(errs.graduationYear)}
             />
+            <FieldError msg={errs.graduationYear} />
           </div>
         </div>
       </div>
@@ -255,7 +328,7 @@ function StudentForm({ onSubmit, loading, error }) {
   );
 }
 
-// Formulario para EMPRESA
+// ── Formulario EMPRESA ──────────────────────────────────────────────────────
 function CompanyForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
     fullName: "",
@@ -271,16 +344,34 @@ function CompanyForm({ onSubmit, loading, error }) {
     telefono: "",
     descripcion: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
+
+  const validate = () => {
+    const e = validateCommon(form);
+    if (!form.companyName.trim())
+      e.companyName = "El nombre de la empresa es obligatorio.";
+    if (!form.cif.trim()) e.cif = "El CIF es obligatorio.";
+    else if (!isValidCif(form.cif))
+      e.cif = "Formato de CIF inválido (ej: B12345678).";
+    if (form.web && !isValidUrl(form.web))
+      e.web = "Introduce una URL válida (ej: https://miempresa.com).";
+    if (form.telefono && !isValidPhone(form.telefono))
+      e.telefono = "Teléfono no válido.";
+    setErrs(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "empresa" });
+    if (validate()) onSubmit({ ...form, role: "empresa" });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -288,12 +379,12 @@ function CompanyForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="text"
-            required
             value={form.fullName}
             onChange={s("fullName")}
             placeholder="Nombre del representante"
-            className="input-field"
+            className={inputCls(errs.fullName)}
           />
+          <FieldError msg={errs.fullName} />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -301,18 +392,23 @@ function CompanyForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="email"
-            required
             value={form.email}
             onChange={s("email")}
             placeholder="contacto@empresa.com"
-            className="input-field"
+            className={inputCls(errs.email)}
           />
+          <FieldError msg={errs.email} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
             Contraseña *
           </label>
-          <PasswordField value={form.password} onChange={s("password")} />
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
+          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -323,15 +419,9 @@ function CompanyForm({ onSubmit, loading, error }) {
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
-          )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+          <FieldError msg={errs.confirmPassword} />
         </div>
       </div>
 
@@ -346,23 +436,23 @@ function CompanyForm({ onSubmit, loading, error }) {
             </label>
             <input
               type="text"
-              required
               value={form.companyName}
               onChange={s("companyName")}
               placeholder="Mi Empresa S.L."
-              className="input-field"
+              className={inputCls(errs.companyName)}
             />
+            <FieldError msg={errs.companyName} />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">CIF *</label>
             <input
               type="text"
-              required
               value={form.cif}
               onChange={s("cif")}
               placeholder="B12345678"
-              className="input-field"
+              className={inputCls(errs.cif)}
             />
+            <FieldError msg={errs.cif} />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">Sector</label>
@@ -431,8 +521,9 @@ function CompanyForm({ onSubmit, loading, error }) {
               value={form.telefono}
               onChange={s("telefono")}
               placeholder="+34 900 000 000"
-              className="input-field"
+              className={inputCls(errs.telefono)}
             />
+            <FieldError msg={errs.telefono} />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm text-gray-400 mb-1.5">
@@ -443,8 +534,9 @@ function CompanyForm({ onSubmit, loading, error }) {
               value={form.web}
               onChange={s("web")}
               placeholder="https://miempresa.com"
-              className="input-field"
+              className={inputCls(errs.web)}
             />
+            <FieldError msg={errs.web} />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm text-gray-400 mb-1.5">
@@ -469,8 +561,8 @@ function CompanyForm({ onSubmit, loading, error }) {
         </div>
         <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
           <p className="text-xs text-gray-500 flex items-start gap-2">
-            <svg className="w-4 h-4 text-gray-400">
-              <use href={`icons.svg#icon-info`} />
+            <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5">
+              <use href="icons.svg#icon-info" />
             </svg>
             El CIF será verificado por el equipo de Relance en un plazo de 24–48
             h antes de activar la cuenta plenamente.
@@ -488,7 +580,7 @@ function CompanyForm({ onSubmit, loading, error }) {
   );
 }
 
-// Formulario para CENTRO EDUCATIVO
+// ── Formulario CENTRO EDUCATIVO ─────────────────────────────────────────────
 function CenterForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
     fullName: "",
@@ -502,16 +594,34 @@ function CenterForm({ onSubmit, loading, error }) {
     province: "",
     website: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
+
+  const validate = () => {
+    const e = validateCommon(form);
+    if (!form.centerName.trim())
+      e.centerName = "El nombre del centro es obligatorio.";
+    if (!form.institutionalCode.trim())
+      e.institutionalCode = "El código institucional es obligatorio.";
+    else if (form.institutionalCode.trim().length < 3)
+      e.institutionalCode = "El código debe tener al menos 3 caracteres.";
+    if (!form.city.trim()) e.city = "La ciudad es obligatoria.";
+    if (form.website && !isValidUrl(form.website))
+      e.website = "Introduce una URL válida (ej: https://iesejemplo.edu.es).";
+    setErrs(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "centro_educativo" });
+    if (validate()) onSubmit({ ...form, role: "centro_educativo" });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -519,12 +629,12 @@ function CenterForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="text"
-            required
             value={form.fullName}
             onChange={s("fullName")}
             placeholder="Nombre del responsable"
-            className="input-field"
+            className={inputCls(errs.fullName)}
           />
+          <FieldError msg={errs.fullName} />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -532,18 +642,23 @@ function CenterForm({ onSubmit, loading, error }) {
           </label>
           <input
             type="email"
-            required
             value={form.email}
             onChange={s("email")}
             placeholder="responsable@centro.edu.es"
-            className="input-field"
+            className={inputCls(errs.email)}
           />
+          <FieldError msg={errs.email} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
             Contraseña *
           </label>
-          <PasswordField value={form.password} onChange={s("password")} />
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
+          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
@@ -554,15 +669,9 @@ function CenterForm({ onSubmit, loading, error }) {
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
-          )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+          <FieldError msg={errs.confirmPassword} />
         </div>
       </div>
 
@@ -577,12 +686,12 @@ function CenterForm({ onSubmit, loading, error }) {
             </label>
             <input
               type="text"
-              required
               value={form.centerName}
               onChange={s("centerName")}
               placeholder="IES Nombre del Centro"
-              className="input-field"
+              className={inputCls(errs.centerName)}
             />
+            <FieldError msg={errs.centerName} />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">
@@ -590,12 +699,12 @@ function CenterForm({ onSubmit, loading, error }) {
             </label>
             <input
               type="text"
-              required
               value={form.institutionalCode}
               onChange={s("institutionalCode")}
               placeholder="Ej: IES-COR-2026"
-              className="input-field"
+              className={inputCls(errs.institutionalCode)}
             />
+            <FieldError msg={errs.institutionalCode} />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">
@@ -627,12 +736,12 @@ function CenterForm({ onSubmit, loading, error }) {
             </label>
             <input
               type="text"
-              required
               value={form.city}
               onChange={s("city")}
               placeholder="Córdoba"
-              className="input-field"
+              className={inputCls(errs.city)}
             />
+            <FieldError msg={errs.city} />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">
@@ -655,14 +764,15 @@ function CenterForm({ onSubmit, loading, error }) {
               value={form.website}
               onChange={s("website")}
               placeholder="https://iesejemplo.edu.es"
-              className="input-field"
+              className={inputCls(errs.website)}
             />
+            <FieldError msg={errs.website} />
           </div>
         </div>
         <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
           <p className="text-xs text-gray-500 flex items-start gap-2">
-            <svg className="w-4 h-4 text-gray-400">
-              <use href={`icons.svg#icon-info`} />
+            <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5">
+              <use href="icons.svg#icon-info" />
             </svg>
             El código institucional será verificado por el equipo de Relance
             antes de activar la cuenta.
@@ -683,39 +793,6 @@ function CenterForm({ onSubmit, loading, error }) {
   );
 }
 
-function SubmitButton({ loading, label }) {
-  return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="btn-primary w-full flex justify-center items-center gap-2 py-3.5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {loading ? (
-        <>
-          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          Creando cuenta...
-        </>
-      ) : (
-        label
-      )}
-    </button>
-  );
-}
-
 // ── Página principal ────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -730,14 +807,21 @@ export default function RegisterPage() {
     setError(null);
 
     const { fullName, email, password, role, ...extra } = formData;
-    const metadata = { full_name: fullName, role, ...extra };
 
-    // 1. Crear usuario en Supabase Auth
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
       {
         email,
         password,
-        options: { data: metadata },
+        options: {
+          data: {
+            full_name: fullName,
+            role,
+            ...(role === "empresa" && { cif: extra.cif ?? "" }),
+            ...(role === "centro_educativo" && {
+              institutional_code: extra.institutionalCode ?? "",
+            }),
+          },
+        },
       },
     );
 
@@ -754,62 +838,55 @@ export default function RegisterPage() {
     const userId = signUpData?.user?.id;
     if (!userId) {
       setLoading(false);
-      setError("No se pudo obtener el ID de usuario. Inténtalo de nuevo.");
+      setError("No se pudo obtener el ID de usuario.");
       return;
     }
 
-    // 2. Insertar en tablas de BD
     try {
-      // Tabla central usuario
-      const { error: usuarioError } = await supabase.from("usuario").upsert(
-        {
-          id: userId,
-          email,
-          nombre: fullName,
-          rol: role,
-          is_profile_completed: true,
-        },
-        { onConflict: "id" },
-      );
-      if (usuarioError) {
-        console.error("[registro] Error en tabla usuario:", usuarioError);
-      }
+      await supabase
+        .from("usuario")
+        .upsert(
+          {
+            id: userId,
+            email,
+            nombre: fullName,
+            rol: role,
+            is_profile_completed: true,
+          },
+          { onConflict: "id" },
+        );
 
       if (role === "empresa") {
-        const { error: empresaError } = await supabase.from("empresa").upsert(
-          {
-            id_usuario: userId,
-            nombre: extra.companyName,
-            cif: extra.cif,
-            sector: extra.sector || null,
-            tamanio: extra.tamanio || null,
-            ciudad: extra.ciudad || null,
-            web: extra.web || null,
-            telefono: extra.telefono || null,
-            descripcion: extra.descripcion || null,
-            email_contacto: email,
-          },
-          { onConflict: "id_usuario" },
-        );
-        if (empresaError) {
-          console.error("[registro] Error en tabla empresa:", empresaError);
-          throw new Error(
-            `Error al guardar datos de empresa: ${empresaError.message}`,
+        const { error: empresaError } = await supabase
+          .from("empresa")
+          .upsert(
+            {
+              id_usuario: userId,
+              nombre: extra.companyName,
+              cif: extra.cif,
+              sector: extra.sector || null,
+              tamanio: extra.tamanio || null,
+              ciudad: extra.ciudad || null,
+              web: extra.web || null,
+              telefono: extra.telefono || null,
+              descripcion: extra.descripcion || null,
+              email_contacto: email,
+            },
+            { onConflict: "id_usuario" },
           );
-        }
+        if (empresaError)
+          throw new Error(`Error al guardar empresa: ${empresaError.message}`);
       }
 
       if (role === "estudiante") {
-        const nameParts = fullName.trim().split(" ");
-        const nombre = nameParts[0] ?? fullName;
-        const apellidos = nameParts.slice(1).join(" ") || null;
+        const parts = fullName.trim().split(" ");
         const { error: estudianteError } = await supabase
           .from("estudiante")
           .upsert(
             {
               id: userId,
-              nombre,
-              apellidos,
+              nombre: parts[0] ?? fullName,
+              apellidos: parts.slice(1).join(" ") || null,
               sobre_mi: null,
               formaciones: extra.centerName
                 ? [
@@ -836,51 +913,36 @@ export default function RegisterPage() {
             },
             { onConflict: "id" },
           );
-        if (estudianteError) {
-          console.error(
-            "[registro] Error en tabla estudiante:",
-            estudianteError,
-          );
+        if (estudianteError)
           throw new Error(
-            `Error al guardar datos de estudiante: ${estudianteError.message}`,
+            `Error al guardar estudiante: ${estudianteError.message}`,
           );
-        }
       }
 
       if (role === "centro_educativo") {
-        // ✅ FIX: nombres de columnas corregidos para coincidir con la tabla real
         const { error: centroError } = await supabase
           .from("centro_educativo")
           .upsert(
             {
-              id: userId, // ← era id_centro
+              id: userId,
               nombre: extra.centerName,
-              codigo_institucional: extra.institutionalCode || null, // ← era codigo_centro
-              tipo_centro: extra.centerType || null, // ← era tipo
+              codigo_institucional: extra.institutionalCode || null,
+              tipo_centro: extra.centerType || null,
               ciudad: extra.city || null,
               provincia: extra.province || null,
-              sitio_web: extra.website || null, // ← era web
+              sitio_web: extra.website || null,
               email_contacto: email,
               titulaciones: [],
             },
-            { onConflict: "id" }, // ← era id_centro
+            { onConflict: "id" },
           );
-        if (centroError) {
-          console.error(
-            "[registro] Error en tabla centro_educativo:",
-            centroError,
-          );
-          throw new Error(
-            `Error al guardar datos del centro: ${centroError.message}`,
-          );
-        }
+        if (centroError)
+          throw new Error(`Error al guardar centro: ${centroError.message}`);
       }
     } catch (dbErr) {
-      console.error("[registro] Error de BD:", dbErr);
       setLoading(false);
       setError(
-        `Tu cuenta se creó pero hubo un problema guardando los datos: ${dbErr.message}. ` +
-          `Puedes completar tu perfil después de verificar el correo.`,
+        `Tu cuenta se creó pero hubo un problema guardando los datos: ${dbErr.message}. Puedes completar tu perfil después de verificar el correo.`,
       );
       setRegisteredEmail(email);
       setSuccess(true);
@@ -951,10 +1013,6 @@ export default function RegisterPage() {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none"
         style={{ background: "#c0ff72" }}
       />
-      <div
-        className="absolute bottom-20 right-10 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none"
-        style={{ background: "#c0ff72" }}
-      />
 
       <div className="max-w-2xl mx-auto">
         <div className="text-center m-10">
@@ -974,11 +1032,7 @@ export default function RegisterPage() {
                 setSelectedRole(role.id);
                 setError(null);
               }}
-              className={`relative p-4 rounded-2xl border text-left transition-all duration-200 group overflow-hidden ${
-                selectedRole === role.id
-                  ? `border-brand bg-brand/10`
-                  : "border-white/10 hover:border-white/20 bg-dark-800"
-              }`}
+              className={`relative p-4 rounded-2xl border text-left transition-all duration-200 overflow-hidden ${selectedRole === role.id ? "border-brand bg-brand/10" : "border-white/10 hover:border-white/20 bg-dark-800"}`}
             >
               {selectedRole === role.id && (
                 <div className="absolute inset-0 bg-brand/5 pointer-events-none" />
@@ -1015,28 +1069,24 @@ export default function RegisterPage() {
         </div>
 
         <div className="mb-6 bg-brand/5 border border-brand/20 rounded-2xl p-4 flex gap-3">
-          <span className="text-xl flex-shrink-0">
+          <span className="flex-shrink-0">
             <svg className="text-brand w-5 h-5">
-              <use href={`icons.svg#icon-tutor`} />
+              <use href="icons.svg#icon-tutor" />
             </svg>
           </span>
           <div>
             <p className="text-brand text-sm font-semibold">¿Eres tutor?</p>
             <p className="text-gray-500 text-xs mt-1 leading-relaxed">
-              Los tutores (de empresa o de centro educativo) se registran
-              únicamente a través del
-              <strong className="text-gray-400">
-                {" "}
-                enlace de invitación QR
-              </strong>{" "}
+              Los tutores se registran únicamente a través del{" "}
+              <strong className="text-gray-400">enlace de invitación QR</strong>{" "}
               generado por su empresa o centro. Pide a tu responsable que lo
-              genere desde su perfil de configuración.
+              genere desde su perfil.
             </p>
           </div>
         </div>
 
         {selectedRole && (
-          <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 sm:p-8 animate-fade-in">
+          <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 sm:p-8">
             <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/10">
               <span className="text-xl">
                 <svg className="w-6 h-6">

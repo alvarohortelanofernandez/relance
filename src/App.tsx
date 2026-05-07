@@ -12,7 +12,7 @@ import TutorRegisterPage from "./pages/register/TutorRegisterPage";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import OnboardingModal from "./components/auth/OnboardingModal";
-import OfferPage from "./pages/Offer";
+import OfferPage from "./pages/ofertas/Offer";
 
 import { useEffect, useState, useRef } from "react";
 import NotFound from "./pages/NotFound";

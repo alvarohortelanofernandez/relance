@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { useAuth } from "../context/AuthContext";
-import MainLayout from "../components/layout/MainLayout";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext";
+import MainLayout from "../../components/layout/MainLayout";
 
 // ─── Constantes ────────────────────────────────────────────────────────────
 const MODALIDADES = ["Presencial", "Remoto", "Híbrido"];
@@ -63,17 +63,12 @@ function Spinner({ className = "w-5 h-5" }) {
   );
 }
 
-// Mapa tipo → colores
 const tipoMeta = {
   practicas: { label: "Prácticas", color: "blue" },
   practicas_contratacion: { label: "Prácticas + contratación", color: "green" },
   empleo_junior: { label: "Empleo junior", color: "purple" },
 };
-const modalidadIcon = {
-  Presencial: "🏢",
-  Remoto: "🌐",
-  Híbrido: "⚡",
-};
+const modalidadIcon = { Presencial: "🏢", Remoto: "🌐", Híbrido: "⚡" };
 
 // ─── Tarjeta de oferta ─────────────────────────────────────────────────────
 function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
@@ -86,7 +81,6 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
 
   return (
     <article className="group relative bg-dark-800 border border-white/10 rounded-2xl p-5 hover:border-brand/30 transition-all duration-300 hover:shadow-lg hover:shadow-brand/5 cursor-pointer flex flex-col gap-4">
-      {/* Estado (solo visible para empresa) */}
       {isEmpresa && oferta.estado && (
         <div className="absolute top-4 right-4">
           {oferta.estado === "activa" && <Badge color="green">✓ Activa</Badge>}
@@ -101,9 +95,7 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
       )}
 
       <div onClick={() => onVerDetalle(oferta)} className="flex-1">
-        {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          {/* Logo empresa placeholder */}
           <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0">
             {oferta.empresa_avatar ? (
               <img
@@ -125,7 +117,6 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           <Badge color={meta.color}>{meta.label}</Badge>
           {oferta.modalidad && (
@@ -141,14 +132,12 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
           )}
         </div>
 
-        {/* Descripción */}
         {oferta.descripcion && (
           <p className="text-gray-500 text-sm line-clamp-2 mb-3">
             {oferta.descripcion}
           </p>
         )}
 
-        {/* Tecnologías */}
         {tecnologias.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {tecnologias.slice(0, 5).map((t) => (
@@ -167,7 +156,6 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
           </div>
         )}
 
-        {/* Footer info */}
         <div className="flex flex-wrap gap-3 text-xs text-gray-600">
           {oferta.duracion_semanas && (
             <span>⏱ {oferta.duracion_semanas} semanas</span>
@@ -188,7 +176,6 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
         </div>
       </div>
 
-      {/* Acciones empresa */}
       {isEmpresa && (
         <div className="flex gap-2 pt-3 border-t border-white/5">
           <button
@@ -226,8 +213,7 @@ function OfertaCard({ oferta, onVerDetalle, isEmpresa, onEdit, onDelete }) {
             >
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6l-1 14H6L5 6" />
-              <path d="M10 11v6M14 11v6" />
-              <path d="M9 6V4h6v2" />
+              <path d="M10 11v6M14 11v6M9 6V4h6v2" />
             </svg>
             Eliminar
           </button>
@@ -267,7 +253,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Buscar tecnologías existentes
   const buscarTecnologias = useCallback(async (q) => {
     if (q.length < 1) {
       setTecnosSugeridas([]);
@@ -287,15 +272,12 @@ function OfertaModal({ oferta, onClose, onSaved }) {
   };
 
   const addTech = async (nombre) => {
-    // Buscar si ya existe
     let { data } = await supabase
       .from("tecnologia")
       .select("id_tecnologia, nombre")
       .ilike("nombre", nombre)
       .maybeSingle();
-
     if (!data) {
-      // Crear nueva tecnología
       const { data: nueva } = await supabase
         .from("tecnologia")
         .insert({ nombre })
@@ -329,7 +311,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
     setError(null);
 
     try {
-      // empresa.id === usuario.id (uuid), directo sin query intermedia
+      // ✅ empresa.id === usuario.id (son el mismo uuid), no hace falta query
       const payload = {
         titulo: form.titulo.trim(),
         descripcion: form.descripcion.trim() || null,
@@ -352,7 +334,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
         fecha_fin_solicitud: form.fecha_fin_solicitud || null,
         estado: "pendiente",
         fecha_modificacion: new Date().toISOString(),
-        id_empresa: user.id, // empresa.id = usuario.id (uuid)
+        id_empresa: user.id, // ✅ empresa.id = usuario.id (uuid), directo
       };
 
       let idOferta;
@@ -373,20 +355,18 @@ function OfertaModal({ oferta, onClose, onSaved }) {
         idOferta = nueva.id_oferta;
       }
 
-      // Gestionar tecnologías: borrar las anteriores y reinsertar
+      // Gestionar tecnologías
       await supabase
         .from("oferta_tecnologia")
         .delete()
         .eq("id_oferta", idOferta);
       if (form.tecnologias.length > 0) {
-        await supabase
-          .from("oferta_tecnologia")
-          .insert(
-            form.tecnologias.map((t) => ({
-              id_oferta: idOferta,
-              id_tecnologia: t.id_tecnologia,
-            })),
-          );
+        await supabase.from("oferta_tecnologia").insert(
+          form.tecnologias.map((t) => ({
+            id_oferta: idOferta,
+            id_tecnologia: t.id_tecnologia,
+          })),
+        );
       }
 
       onSaved();
@@ -425,7 +405,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Aviso validación */}
           {!esEdicion && (
             <div className="bg-brand/5 border border-brand/20 rounded-xl px-4 py-3 flex gap-3">
               <svg
@@ -823,7 +802,6 @@ function DetalleModal({
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Badges */}
           <div className="flex flex-wrap gap-2">
             <Badge color={meta.color}>{meta.label}</Badge>
             {oferta.modalidad && (
@@ -844,7 +822,6 @@ function DetalleModal({
             )}
           </div>
 
-          {/* Datos rápidos */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               {
@@ -887,7 +864,6 @@ function DetalleModal({
             ))}
           </div>
 
-          {/* Descripción */}
           {oferta.descripcion && (
             <div>
               <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
@@ -899,7 +875,6 @@ function DetalleModal({
             </div>
           )}
 
-          {/* Tecnologías */}
           {tecnologias.length > 0 && (
             <div>
               <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
@@ -918,7 +893,6 @@ function DetalleModal({
             </div>
           )}
 
-          {/* Requisitos */}
           {oferta.requisitos_adicionales && (
             <div>
               <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
@@ -930,7 +904,6 @@ function DetalleModal({
             </div>
           )}
 
-          {/* Beneficios */}
           {oferta.beneficios && (
             <div>
               <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
@@ -942,7 +915,6 @@ function DetalleModal({
             </div>
           )}
 
-          {/* Acción estudiante */}
           {isEstudiante && (
             <div className="pt-2 border-t border-white/10">
               {yaPostulado ? (
@@ -970,8 +942,7 @@ function DetalleModal({
                     stroke="currentColor"
                     strokeWidth="2"
                   >
-                    <path d="M22 2L11 13" />
-                    <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+                    <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
                   </svg>
                   Postularme a esta oferta
                 </button>
@@ -995,15 +966,9 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
     setSending(true);
     setError(null);
     try {
-      const { data: est } = await supabase
-        .from("estudiante")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
       const { error: err } = await supabase.from("candidatura").insert({
         id_oferta: oferta.id_oferta,
-        id_estudiante: est?.id ?? user.id,
+        id_estudiante: user.id, // estudiante.id === usuario.id
         mensaje: mensaje.trim() || null,
         estado: "pendiente",
         fecha_solicitud: new Date().toISOString(),
@@ -1087,96 +1052,63 @@ export default function OfertasPage() {
   const [loading, setLoading] = useState(true);
   const [postulaciones, setPostulaciones] = useState(new Set());
 
-  // Filtros
   const [search, setSearch] = useState("");
   const [filtroModalidad, setFiltroModalidad] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroContrato, setFiltroContrato] = useState("");
   const [filtroTech, setFiltroTech] = useState("");
 
-  // Modales
-  const [modalCrear, setModalCrear] = useState(null); // null | 'crear' | oferta (editar)
+  const [modalCrear, setModalCrear] = useState(null);
   const [detalleOferta, setDetalleOferta] = useState(null);
   const [postulacionOferta, setPostulacionOferta] = useState(null);
 
   const cargarOfertas = useCallback(async () => {
     setLoading(true);
-    try {
-      // 1. Query de ofertas sin join a empresa
-      //    (no hay FK entre oferta.id_empresa y empresa.id en el schema)
-      let query = supabase
-        .from("oferta")
-        .select(
-          `
-          id_oferta, titulo, descripcion, modalidad, ubicacion,
-          duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
-          opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
-          tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
-          oferta_tecnologia(tecnologia(id_tecnologia, nombre))
-        `,
-        )
-        .order("fecha_publicacion", { ascending: false });
 
-      if (isEmpresa) {
-        // empresa.id === usuario.id (uuid), filtrar directamente
-        query = query.eq("id_empresa", user.id);
-      } else {
-        query = query.eq("estado", "activa");
-      }
-
-      const { data: ofertasData, error: ofertasError } = await query;
-      if (ofertasError) throw ofertasError;
-
-      // 2. Enriquecer con nombre y avatar de empresa usando los id únicos
-      const empresaIds = [
-        ...new Set(
-          (ofertasData ?? []).map((o) => o.id_empresa).filter(Boolean),
+    let query = supabase
+      .from("oferta")
+      .select(
+        `
+        id_oferta, titulo, descripcion, modalidad, ubicacion,
+        duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
+        opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
+        tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
+        empresa:empresa(
+          id,
+          nombre,
+          usuario:usuario!empresa_id_fkey(avatar_url)
         ),
-      ];
+        oferta_tecnologia(tecnologia(id_tecnologia, nombre))
+      `,
+      )
+      .order("fecha_publicacion", { ascending: false });
 
-      let empresaMap = {};
-      if (empresaIds.length > 0) {
-        const { data: empresas } = await supabase
-          .from("empresa")
-          .select("id, nombre")
-          .in("id", empresaIds);
-
-        const { data: usuarios } = await supabase
-          .from("usuario")
-          .select("id, avatar_url")
-          .in("id", empresaIds);
-
-        const avatarMap = Object.fromEntries(
-          (usuarios ?? []).map((u) => [u.id, u.avatar_url]),
-        );
-        empresaMap = Object.fromEntries(
-          (empresas ?? []).map((e) => [
-            e.id,
-            {
-              nombre: e.nombre,
-              avatar: avatarMap[e.id] ?? null,
-            },
-          ]),
-        );
-      }
-
-      const normalizadas = (ofertasData ?? []).map((o) => ({
-        ...o,
-        empresa_nombre: empresaMap[o.id_empresa]?.nombre ?? "Empresa",
-        empresa_avatar: empresaMap[o.id_empresa]?.avatar ?? null,
-        tecnologias:
-          o.oferta_tecnologia?.map((ot) => ot.tecnologia).filter(Boolean) ?? [],
-      }));
-
-      setOfertas(normalizadas);
-    } catch (err) {
-      console.error("Error cargando ofertas:", err);
-    } finally {
-      setLoading(false);
+    if (isEmpresa) {
+      // ✅ empresa.id === usuario.id, filtrar directamente por user.id
+      query = query.eq("id_empresa", user.id);
+    } else {
+      query = query.eq("estado", "activa");
     }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(error);
+      setLoading(false);
+      return;
+    }
+
+    const normalizadas = (data ?? []).map((o) => ({
+      ...o,
+      empresa_nombre: o.empresa?.nombre ?? "Empresa",
+      empresa_avatar: o.empresa?.usuario?.avatar_url ?? null,
+      tecnologias:
+        o.oferta_tecnologia?.map((ot) => ot.tecnologia).filter(Boolean) ?? [],
+    }));
+
+    setOfertas(normalizadas);
+    setLoading(false);
   }, [user, isEmpresa]);
 
-  // Cargar postulaciones del estudiante
   const cargarPostulaciones = useCallback(async () => {
     if (!isEstudiante || !user) return;
     const { data } = await supabase
@@ -1203,7 +1135,6 @@ export default function OfertasPage() {
     cargarOfertas();
   };
 
-  // Filtrado local
   const ofertasFiltradas = ofertas.filter((o) => {
     const q = search.toLowerCase();
     const matchSearch =
@@ -1237,7 +1168,6 @@ export default function OfertasPage() {
     <MainLayout>
       <div className="min-h-screen bg-dark">
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          {/* Header */}
           <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h1 className="font-display text-3xl font-bold text-white">
@@ -1249,8 +1179,6 @@ export default function OfertasPage() {
                   : `${ofertasFiltradas.length} oferta${ofertasFiltradas.length !== 1 ? "s" : ""} disponible${ofertasFiltradas.length !== 1 ? "s" : ""}`}
               </p>
             </div>
-
-            {/* Botón crear (solo empresa) */}
             {isEmpresa && (
               <button
                 onClick={() => setModalCrear("crear")}
@@ -1271,9 +1199,7 @@ export default function OfertasPage() {
             )}
           </div>
 
-          {/* Barra de búsqueda y filtros */}
           <div className="bg-dark-800 border border-white/10 rounded-2xl p-4 mb-6 space-y-3">
-            {/* Search */}
             <div className="relative">
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
@@ -1293,8 +1219,6 @@ export default function OfertasPage() {
                 className="input-field pl-9"
               />
             </div>
-
-            {/* Filtros */}
             <div className="flex flex-wrap gap-2">
               <select
                 value={filtroModalidad}
@@ -1364,7 +1288,6 @@ export default function OfertasPage() {
             </div>
           </div>
 
-          {/* Resultados */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Spinner className="w-8 h-8" />
@@ -1408,7 +1331,6 @@ export default function OfertasPage() {
         </main>
       </div>
 
-      {/* Modal crear/editar */}
       {modalCrear && (
         <OfertaModal
           oferta={modalCrear === "crear" ? null : modalCrear}
@@ -1417,7 +1339,6 @@ export default function OfertasPage() {
         />
       )}
 
-      {/* Modal detalle */}
       {detalleOferta && !postulacionOferta && (
         <DetalleModal
           oferta={detalleOferta}
@@ -1431,7 +1352,6 @@ export default function OfertasPage() {
         />
       )}
 
-      {/* Modal postulación */}
       {postulacionOferta && (
         <PostulacionModal
           oferta={postulacionOferta}
