@@ -95,6 +95,7 @@ export default function OfertaCard({
   isEstudiante = false,
   yaPostulado = false,
   onVerDetalle,
+  onVerCandidatos,
   onEdit,
   onDelete,
   onPostular,
@@ -375,6 +376,25 @@ export default function OfertaCard({
         {/* Acciones empresa */}
         {isEmpresa && (
           <>
+            <button
+              onClick={() => onVerCandidatos?.(oferta)}
+              className="flex-1 text-[11px] font-medium py-2 rounded-xl bg-[#C0FF72]/8 hover:bg-[#C0FF72]/15 text-[#C0FF72] hover:text-[#d7ffab] transition-all border border-[#C0FF72]/15 hover:border-[#C0FF72]/30 flex items-center justify-center gap-1.5"
+            >
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                <path d="M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              Candidatos
+            </button>
+
             <button
               onClick={() => onEdit?.(oferta)}
               className="flex-1 text-[11px] font-medium py-2 rounded-xl bg-white/4 hover:bg-white/8 text-gray-400 hover:text-white transition-all border border-white/8 flex items-center justify-center gap-1.5"

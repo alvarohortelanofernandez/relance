@@ -599,7 +599,8 @@ function Badge({ children, color = "gray" }) {
   );
 }
 
-const modalidadIcon = { Presencial: "🏢", Remoto: "🌐", Híbrido: "⚡" };
+// const modalidadIcon = { Presencial: "🏢", Remoto: "🌐", Híbrido: "⚡" };
+const modalidadIcon = { Presencial: "", Remoto: "", Híbrido: "" };
 
 function DetalleModal({
   oferta,
@@ -661,13 +662,16 @@ function DetalleModal({
               </Badge>
             )}
             {oferta.ubicacion && (
-              <Badge color="gray">📍 {oferta.ubicacion}</Badge>
+              // <Badge color="gray">📍 {oferta.ubicacion}</Badge>
+              <Badge color="gray"> {oferta.ubicacion}</Badge>
             )}
             {oferta.opcion_contrato && (
-              <Badge color="green">💼 Opción de contratación</Badge>
+              // <Badge color="green">💼 Opción de contratación</Badge>
+              <Badge color="green">Opción de contratación</Badge>
             )}
             {oferta.salario_mensual ? (
-              <Badge color="brand">💶 {oferta.salario_mensual} €/mes</Badge>
+              // <Badge color="brand">💶 {oferta.salario_mensual} €/mes</Badge>
+              <Badge color="brand"> {oferta.salario_mensual} €/mes</Badge>
             ) : (
               <Badge color="gray">No remunerado</Badge>
             )}
