@@ -4,10 +4,11 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import MainLayout from "../../components/layout/MainLayout";
 
-// ── Importa el componente OfertaCard externo ──────────────────────────────
 import OfertaCard from "./CardOffer";
+import CandidatosModal from "./CandidatesModal"; // ← nuevo
+import StudentProfileDrawer from "../profiles/StudentProfileDrawer"; // ← nuevo (por si se usa standalone)
 
-// ─── Constantes ────────────────────────────────────────────────────────────
+// ── Constantes ────────────────────────────────────────────────────────────
 const MODALIDADES = ["Presencial", "Remoto", "Híbrido"];
 const TIPOS = [
   { id: "practicas", label: "Solo prácticas" },
@@ -134,7 +135,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
     }
     setSaving(true);
     setError(null);
-
     try {
       const payload = {
         titulo: form.titulo.trim(),
@@ -179,7 +179,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
         idOferta = nueva.id_oferta;
       }
 
-      // Gestionar tecnologías
       await supabase
         .from("oferta_tecnologia")
         .delete()
@@ -192,7 +191,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
           })),
         );
       }
-
       onSaved();
       onClose();
     } catch (err) {
@@ -208,7 +206,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-        {/* Header sticky */}
         <div className="sticky top-0 bg-dark-800 border-b border-white/10 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="font-display text-xl font-bold text-white">
             {esEdicion ? "Editar oferta" : "Crear nueva oferta"}
@@ -229,7 +226,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               {error}
             </div>
           )}
-
           {!esEdicion && (
             <div className="bg-[#C0FF72]/5 border border-[#C0FF72]/20 rounded-xl px-4 py-3 flex gap-3">
               <svg
@@ -430,7 +426,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Opción de contratación */}
+          {/* Opción contratación */}
           <div className="flex items-center gap-3 p-3 bg-dark border border-white/8 rounded-xl">
             <button
               type="button"
@@ -509,7 +505,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Requisitos adicionales */}
+          {/* Requisitos */}
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">
               Requisitos adicionales
@@ -821,12 +817,15 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
     setSending(true);
     setError(null);
     try {
+      // ── FIX: columnas reales de la tabla candidatura:
+      //   fecha_solicitud → fecha_envio  (tiene default now(), se puede omitir)
+      //   mensaje         → comentario_estudiante
       const { error: err } = await supabase.from("candidatura").insert({
         id_oferta: oferta.id_oferta,
         id_estudiante: user.id,
-        mensaje: mensaje.trim() || null,
+        comentario_estudiante: mensaje.trim() || null, // ← era "mensaje"
         estado: "pendiente",
-        fecha_solicitud: new Date().toISOString(),
+        // fecha_envio tiene DEFAULT now() en BD, no hace falta enviarlo
       });
       if (err) throw err;
       onSuccess();
@@ -981,6 +980,94 @@ function RetirarModal({ oferta, onClose, onSuccess }) {
   );
 }
 
+// ─── Modal cerrar oferta ───────────────────────────────────────────────────
+function CerrarOfertaModal({ oferta, onClose, onSuccess }) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleCerrar = async () => {
+    setSending(true);
+    setError(null);
+    try {
+      const { error: err } = await supabase
+        .from("oferta")
+        .update({
+          estado: "cerrada",
+          fecha_modificacion: new Date().toISOString(),
+        })
+        .eq("id_oferta", oferta.id_oferta);
+      if (err) throw err;
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-sm p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+            <svg
+              className="w-5 h-5 text-orange-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="font-display text-lg font-bold text-white">
+              Cerrar oferta
+            </h2>
+            <p className="text-gray-500 text-xs">
+              Dejará de aceptar nuevas candidaturas
+            </p>
+          </div>
+        </div>
+        <p className="text-gray-400 text-sm mb-5">
+          ¿Quieres cerrar la oferta{" "}
+          <strong className="text-white">{oferta.titulo}</strong>? Los
+          candidatos ya postulados no se verán afectados.
+        </p>
+        {error && (
+          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="btn-secondary flex-1">
+            Cancelar
+          </button>
+          <button
+            onClick={handleCerrar}
+            disabled={sending}
+            className="flex-1 py-2 px-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-sm font-medium transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {sending ? (
+              <>
+                <Spinner className="w-4 h-4" /> Cerrando...
+              </>
+            ) : (
+              "Confirmar cierre"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Barra de filtros ──────────────────────────────────────────────────────
 function FiltrosBar({
   search,
@@ -1000,7 +1087,6 @@ function FiltrosBar({
     filtroContrato,
     filtroTech,
   ].filter(Boolean).length;
-
   const limpiar = () => {
     setFiltroModalidad("");
     setFiltroTipo("");
@@ -1101,30 +1187,18 @@ function TabsEmpresa({ tab, setTab, totalMisOfertas }) {
     <div className="flex gap-1 bg-dark-800 border border-white/10 rounded-xl p-1 mb-6 w-fit">
       <button
         onClick={() => setTab("explorar")}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-          tab === "explorar"
-            ? "bg-white/10 text-white"
-            : "text-gray-500 hover:text-gray-300"
-        }`}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "explorar" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}
       >
         Explorar ofertas
       </button>
       <button
         onClick={() => setTab("mis-ofertas")}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-          tab === "mis-ofertas"
-            ? "bg-[#C0FF72]/15 text-[#C0FF72] border border-[#C0FF72]/20"
-            : "text-gray-500 hover:text-gray-300"
-        }`}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${tab === "mis-ofertas" ? "bg-[#C0FF72]/15 text-[#C0FF72] border border-[#C0FF72]/20" : "text-gray-500 hover:text-gray-300"}`}
       >
         Mis ofertas
         {totalMisOfertas > 0 && (
           <span
-            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-              tab === "mis-ofertas"
-                ? "bg-[#C0FF72]/20 text-[#C0FF72]"
-                : "bg-white/10 text-gray-400"
-            }`}
+            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${tab === "mis-ofertas" ? "bg-[#C0FF72]/20 text-[#C0FF72]" : "bg-white/10 text-gray-400"}`}
           >
             {totalMisOfertas}
           </span>
@@ -1196,12 +1270,14 @@ export default function OfertasPage() {
   const [filtroTech, setFiltroTech] = useState("");
 
   // Modales
-  const [modalCrear, setModalCrear] = useState(null); // null | "crear" | oferta
+  const [modalCrear, setModalCrear] = useState(null);
   const [detalleOferta, setDetalleOferta] = useState(null);
   const [postulacionOferta, setPostulacionOferta] = useState(null);
   const [retirarOferta, setRetirarOferta] = useState(null);
+  const [cerrarOferta, setCerrarOferta] = useState(null);
+  const [candidatosOferta, setCandidatosOferta] = useState(null);
 
-  // ── Carga de ofertas públicas (estudiantes y empresas explorando) ─────────
+  // ── Carga de ofertas públicas ──────────────────────────────────────────
   const cargarOfertasPublicas = useCallback(async () => {
     const { data, error } = await supabase
       .from("oferta")
@@ -1215,13 +1291,12 @@ export default function OfertasPage() {
         oferta_tecnologia(tecnologia(id_tecnologia, nombre))
       `,
       )
-      // .eq("estado", "activa")
       .in("estado", ["activa", "pendiente"])
       .order("fecha_publicacion", { ascending: false });
 
     if (error) {
       console.error(error);
-      return;
+      return [];
     }
 
     return (data ?? []).map((o) => ({
@@ -1233,7 +1308,7 @@ export default function OfertasPage() {
     }));
   }, []);
 
-  // ── Carga de mis ofertas (empresa) ────────────────────────────────────────
+  // ── Carga de mis ofertas (empresa) ────────────────────────────────────
   const cargarMisOfertas = useCallback(async () => {
     if (!isEmpresa || !user) return [];
     const { data, error } = await supabase
@@ -1265,7 +1340,7 @@ export default function OfertasPage() {
     }));
   }, [isEmpresa, user]);
 
-  // ── Carga de postulaciones del estudiante ─────────────────────────────────
+  // ── Carga de postulaciones del estudiante ──────────────────────────────
   const cargarPostulaciones = useCallback(async () => {
     if (!isEstudiante || !user) return;
     const { data } = await supabase
@@ -1275,7 +1350,7 @@ export default function OfertasPage() {
     setPostulaciones(new Set((data ?? []).map((c) => c.id_oferta)));
   }, [isEstudiante, user]);
 
-  // ── Carga inicial ─────────────────────────────────────────────────────────
+  // ── Carga inicial ──────────────────────────────────────────────────────
   const recargar = useCallback(async () => {
     setLoading(true);
     const [pub, mis] = await Promise.all([
@@ -1292,7 +1367,7 @@ export default function OfertasPage() {
     recargar();
   }, [recargar]);
 
-  // ── Eliminar oferta ───────────────────────────────────────────────────────
+  // ── Eliminar oferta ────────────────────────────────────────────────────
   const handleDelete = async (idOferta) => {
     if (
       !window.confirm(
@@ -1305,7 +1380,7 @@ export default function OfertasPage() {
     recargar();
   };
 
-  // ── Filtrado ──────────────────────────────────────────────────────────────
+  // ── Filtrado ───────────────────────────────────────────────────────────
   const aplicarFiltros = (lista) =>
     lista.filter((o) => {
       const q = search.toLowerCase();
@@ -1325,12 +1400,14 @@ export default function OfertasPage() {
       );
     });
 
-  // Decide qué lista mostrar según el tab activo
-  const listaActiva = tab === "mis-ofertas" ? misOfertas : ofertasPublicas;
-  const listaFiltrada = aplicarFiltros(listaActiva);
   const esMisOfertas = tab === "mis-ofertas";
+  const listaActiva = esMisOfertas ? misOfertas : ofertasPublicas;
+  const listaFiltrada = aplicarFiltros(listaActiva);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  const isEmpresaOwnerOf = (oferta) =>
+    isEmpresa && oferta.id_empresa === user?.id;
+
+  // ─────────────────────────────────────────────────────────────────────
   return (
     <MainLayout>
       <div className="min-h-screen bg-dark">
@@ -1428,15 +1505,14 @@ export default function OfertasPage() {
                 <OfertaCard
                   key={o.id_oferta}
                   oferta={o}
-                  // Roles — en "Mis ofertas" la empresa gestiona sus propias;
-                  // en "Explorar" puede ver sin acciones de empresa
-                  isEmpresa={isEmpresa && esMisOfertas}
+                  isEmpresa={esMisOfertas ? isEmpresa : isEmpresaOwnerOf(o)}
                   isEstudiante={isEstudiante}
                   yaPostulado={postulaciones.has(o.id_oferta)}
-                  // Handlers
                   onVerDetalle={setDetalleOferta}
                   onEdit={(oferta) => setModalCrear(oferta)}
                   onDelete={handleDelete}
+                  onCerrar={(oferta) => setCerrarOferta(oferta)}
+                  onVerCandidatos={(oferta) => setCandidatosOferta(oferta)}
                   onPostular={(oferta) => setPostulacionOferta(oferta)}
                   onRetirar={(oferta) => setRetirarOferta(oferta)}
                 />
@@ -1455,18 +1531,21 @@ export default function OfertasPage() {
         />
       )}
 
-      {detalleOferta && !postulacionOferta && !retirarOferta && (
-        <DetalleModal
-          oferta={detalleOferta}
-          onClose={() => setDetalleOferta(null)}
-          isEstudiante={isEstudiante}
-          yaPostulado={postulaciones.has(detalleOferta.id_oferta)}
-          onPostular={(o) => {
-            setPostulacionOferta(o);
-            setDetalleOferta(null);
-          }}
-        />
-      )}
+      {detalleOferta &&
+        !postulacionOferta &&
+        !retirarOferta &&
+        !cerrarOferta && (
+          <DetalleModal
+            oferta={detalleOferta}
+            onClose={() => setDetalleOferta(null)}
+            isEstudiante={isEstudiante}
+            yaPostulado={postulaciones.has(detalleOferta.id_oferta)}
+            onPostular={(o) => {
+              setPostulacionOferta(o);
+              setDetalleOferta(null);
+            }}
+          />
+        )}
 
       {postulacionOferta && (
         <PostulacionModal
@@ -1493,6 +1572,22 @@ export default function OfertasPage() {
             });
             recargar();
           }}
+        />
+      )}
+
+      {cerrarOferta && (
+        <CerrarOfertaModal
+          oferta={cerrarOferta}
+          onClose={() => setCerrarOferta(null)}
+          onSuccess={recargar}
+        />
+      )}
+
+      {candidatosOferta && (
+        <CandidatosModal
+          oferta={candidatosOferta}
+          onClose={() => setCandidatosOferta(null)}
+          supabase={supabase}
         />
       )}
     </MainLayout>

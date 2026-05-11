@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../components/layout/MainLayout";
 import InviteModal from "../components/InviteModal";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function Spinner({ className = "w-5 h-5" }) {
   return (
     <svg
@@ -32,11 +32,11 @@ function Spinner({ className = "w-5 h-5" }) {
 function Badge({ children, color = "gray" }) {
   const colors = {
     brand: "bg-brand/10  text-brand   border-brand/20",
-    green: "bg-green-500/10  text-green-400  border-green-500/20",
-    orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    green: "bg-emerald-500/10  text-emerald-400  border-emerald-500/20",
+    orange: "bg-amber-500/10 text-amber-400 border-amber-500/20",
     red: "bg-red-500/10    text-red-400    border-red-500/20",
-    blue: "bg-blue-500/10   text-blue-400   border-blue-500/20",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    blue: "bg-sky-500/10   text-sky-400   border-sky-500/20",
+    purple: "bg-violet-500/10 text-violet-400 border-violet-500/20",
     gray: "bg-white/5       text-gray-400   border-white/10",
   };
   return (
@@ -48,43 +48,75 @@ function Badge({ children, color = "gray" }) {
   );
 }
 
-function StatCard({ label, value, color = "brand", icon }) {
+function StatCard({ label, value, color = "brand", icon, trend }) {
   const ring = {
-    brand: "ring-brand/20  bg-brand/5",
-    blue: "ring-blue-500/20  bg-blue-500/5",
-    purple: "ring-purple-500/20 bg-purple-500/5",
-    orange: "ring-orange-500/20 bg-orange-500/5",
-    green: "ring-green-500/20  bg-green-500/5",
+    brand: "ring-brand/20 bg-brand/5",
+    blue: "ring-sky-500/20 bg-sky-500/5",
+    purple: "ring-violet-500/20 bg-violet-500/5",
+    orange: "ring-amber-500/20 bg-amber-500/5",
+    green: "ring-emerald-500/20 bg-emerald-500/5",
   }[color];
   const text = {
     brand: "text-brand",
-    blue: "text-blue-400",
-    purple: "text-purple-400",
-    orange: "text-orange-400",
-    green: "text-green-400",
+    blue: "text-sky-400",
+    purple: "text-violet-400",
+    orange: "text-amber-400",
+    green: "text-emerald-400",
   }[color];
   return (
-    <div className={`${ring} ring-1 rounded-2xl p-5 flex items-center gap-4`}>
+    <div
+      className={`${ring} ring-1 rounded-2xl p-5 flex items-center gap-4 hover:ring-2 transition-all duration-200`}
+    >
       <div
-        className={`w-11 h-11 rounded-xl flex items-center justify-center ${ring}`}
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${ring} ring-1 flex-shrink-0`}
       >
         <svg className={`w-5 h-5 ${text}`} viewBox="0 0 640 640">
           <use href={`/icons.svg#${icon}`} />
         </svg>
       </div>
-      <div>
-        <p className="text-gray-500 text-xs uppercase tracking-wider">
+      <div className="min-w-0">
+        <p className="text-gray-500 text-[11px] uppercase tracking-widest font-medium truncate">
           {label}
         </p>
-        <p className={`font-display text-2xl font-bold ${text} mt-0.5`}>
+        <p
+          className={`font-display text-3xl font-black ${text} mt-0.5 leading-none`}
+        >
           {value}
         </p>
+        {trend && <p className="text-gray-600 text-[11px] mt-1">{trend}</p>}
       </div>
     </div>
   );
 }
 
-// ─── Modal validar / rechazar oferta ─────────────────────────────────────────
+function OfferField({ label, value }) {
+  const empty = !value || (Array.isArray(value) && value.length === 0);
+  return (
+    <div>
+      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-1">
+        {label}
+      </p>
+      {empty ? (
+        <p className="text-gray-600 text-sm">—</p>
+      ) : Array.isArray(value) ? (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((v, i) => (
+            <span
+              key={i}
+              className="px-2 py-0.5 rounded-md text-xs border border-white/8 bg-white/5 text-gray-300"
+            >
+              {v}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-200 leading-relaxed">{value}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Modal: Revisar Oferta ────────────────────────────────────────────────────
 function ValidarOfertaModal({ oferta, onClose, onSaved }) {
   const [action, setAction] = useState(null);
   const [motivo, setMotivo] = useState("");
@@ -106,36 +138,216 @@ function ValidarOfertaModal({ oferta, onClose, onSaved }) {
     onClose();
   };
 
+  const modalidad_map = {
+    remoto: "Remoto",
+    presencial: "Presencial",
+    hibrido: "Híbrido",
+    Presencial: "Presencial",
+    Remoto: "Remoto",
+    Híbrido: "Híbrido",
+  };
+  const tipo_map = {
+    practicas: "Prácticas",
+    practicas_contratacion: "Prácticas + contratación",
+    empleo_junior: "Empleo junior",
+    contrato: "Contrato",
+    beca: "Beca",
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-lg font-bold text-white">
-              {oferta.titulo}
-            </h2>
-            <p className="text-gray-500 text-sm">{oferta.empresa_nombre}</p>
+      <div className="bg-[#0f1117] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-white/8 flex items-start justify-between gap-4 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {oferta.empresa_avatar ? (
+                <img
+                  src={oferta.empresa_avatar}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-5 h-5 text-brand" viewBox="0 0 640 640">
+                  <use href="/icons.svg#icon-building" />
+                </svg>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-display text-lg font-bold text-white leading-tight truncate">
+                {oferta.titulo}
+              </h2>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-gray-500 text-sm">{oferta.empresa_nombre}</p>
+                <Badge color="orange">Pendiente de revisión</Badge>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-white transition-colors flex-shrink-0 mt-0.5"
+          >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
             </svg>
           </button>
         </div>
-        <div className="p-6 space-y-4">
-          {oferta.descripcion && (
-            <p className="text-gray-400 text-sm leading-relaxed line-clamp-3">
-              {oferta.descripcion}
-            </p>
-          )}
 
+        {/* Contenido scrollable */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-6">
+          <div>
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-3">
+              Información general
+            </p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <OfferField
+                label="Tipo de oferta"
+                value={tipo_map[oferta.tipo_oferta] ?? oferta.tipo_oferta}
+              />
+              <OfferField
+                label="Modalidad"
+                value={modalidad_map[oferta.modalidad] ?? oferta.modalidad}
+              />
+              <OfferField label="Ubicación" value={oferta.ubicacion} />
+              <OfferField
+                label="Fecha publicación"
+                value={
+                  oferta.fecha_publicacion
+                    ? new Date(oferta.fecha_publicacion).toLocaleDateString(
+                        "es-ES",
+                        { day: "2-digit", month: "long", year: "numeric" },
+                      )
+                    : null
+                }
+              />
+              <OfferField
+                label="Duración"
+                value={
+                  oferta.duracion_semanas
+                    ? `${oferta.duracion_semanas} semanas`
+                    : (oferta.duracion ?? null)
+                }
+              />
+              <OfferField
+                label="Horas / semana"
+                value={
+                  oferta.horas_semanales ? `${oferta.horas_semanales} h` : null
+                }
+              />
+              <OfferField
+                label="Plazas"
+                value={
+                  oferta.num_plazas != null
+                    ? `${oferta.num_plazas_restantes ?? oferta.num_plazas} disponibles de ${oferta.num_plazas}`
+                    : oferta.plazas != null
+                      ? `${oferta.plazas} plaza${oferta.plazas !== 1 ? "s" : ""}`
+                      : null
+                }
+              />
+              <OfferField
+                label="Remuneración"
+                value={
+                  oferta.salario_mensual != null
+                    ? oferta.salario_mensual === 0
+                      ? "No remunerado"
+                      : `${oferta.salario_mensual} €/mes`
+                    : (oferta.salario ?? null)
+                }
+              />
+              <OfferField label="Horario" value={oferta.horario} />
+              <OfferField
+                label="Cierre de solicitudes"
+                value={
+                  oferta.fecha_fin_solicitud
+                    ? new Date(oferta.fecha_fin_solicitud).toLocaleDateString(
+                        "es-ES",
+                        { day: "2-digit", month: "long", year: "numeric" },
+                      )
+                    : null
+                }
+              />
+              <OfferField
+                label="Opción de contratación"
+                value={
+                  oferta.opcion_contrato != null
+                    ? oferta.opcion_contrato
+                      ? "Sí"
+                      : "No"
+                    : null
+                }
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-white/6 pt-5">
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-3">
+              Descripción
+            </p>
+            {oferta.descripcion ? (
+              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                {oferta.descripcion}
+              </p>
+            ) : (
+              <p className="text-gray-600 text-sm">—</p>
+            )}
+          </div>
+
+          <div className="border-t border-white/6 pt-5">
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-3">
+              Requisitos
+            </p>
+            {oferta.requisitos || oferta.requisitos_adicionales ? (
+              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                {oferta.requisitos ?? oferta.requisitos_adicionales}
+              </p>
+            ) : (
+              <p className="text-gray-600 text-sm">—</p>
+            )}
+          </div>
+
+          <div className="border-t border-white/6 pt-5">
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-3">
+              Tecnologías requeridas
+            </p>
+            {oferta.tecnologias?.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {oferta.tecnologias.map((t) => (
+                  <span
+                    key={t.id_tecnologia}
+                    className="bg-brand/8 border border-brand/20 text-brand/80 text-xs px-2.5 py-1 rounded-lg font-mono"
+                  >
+                    {t.nombre}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600 text-sm">—</p>
+            )}
+          </div>
+
+          <div className="border-t border-white/6 pt-5">
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-3">
+              Beneficios
+            </p>
+            {oferta.beneficios ? (
+              <p className="text-gray-300 text-sm leading-relaxed">
+                {oferta.beneficios}
+              </p>
+            ) : (
+              <p className="text-gray-600 text-sm">—</p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/8 p-6 space-y-4 flex-shrink-0 bg-white/[0.02]">
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setAction("activa")}
-              className={`py-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2 ${action === "activa" ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-white/10 text-gray-400 hover:border-white/20"}`}
+              className={`py-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${action === "activa" ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200"}`}
             >
               <svg
                 className="w-4 h-4"
@@ -150,7 +362,7 @@ function ValidarOfertaModal({ oferta, onClose, onSaved }) {
             </button>
             <button
               onClick={() => setAction("rechazada")}
-              className={`py-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2 ${action === "rechazada" ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-white/10 text-gray-400 hover:border-white/20"}`}
+              className={`py-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${action === "rechazada" ? "border-red-500/50 bg-red-500/12 text-red-400" : "border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200"}`}
             >
               <svg
                 className="w-4 h-4"
@@ -184,7 +396,7 @@ function ValidarOfertaModal({ oferta, onClose, onSaved }) {
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3">
             <button onClick={onClose} className="btn-secondary flex-1">
               Cancelar
             </button>
@@ -193,7 +405,13 @@ function ValidarOfertaModal({ oferta, onClose, onSaved }) {
               disabled={
                 !action || (action === "rechazada" && !motivo.trim()) || saving
               }
-              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40 flex items-center justify-center gap-2 ${action === "activa" ? "bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30" : action === "rechazada" ? "bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25" : "bg-white/5 text-gray-400 border border-white/10"}`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2 ${
+                action === "activa"
+                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30"
+                  : action === "rechazada"
+                    ? "bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25"
+                    : "bg-white/5 text-gray-400 border border-white/10"
+              }`}
             >
               {saving ? (
                 <Spinner className="w-4 h-4" />
@@ -234,48 +452,58 @@ export default function AdminProfile() {
     ofertas_activas: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
-
   const [ofertasPendientes, setOfertasPendientes] = useState([]);
   const [loadingOfertas, setLoadingOfertas] = useState(false);
-
   const [usuarios, setUsuarios] = useState([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [searchUsuario, setSearchUsuario] = useState("");
-
   const [admins, setAdmins] = useState([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
-
   const [inviteModal, setInviteModal] = useState(false);
   const [validarOferta, setValidarOferta] = useState(null);
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const cargarStats = useCallback(async () => {
     setLoadingStats(true);
     const [est, emp, cen, tut, ofPend, ofActiva] = await Promise.all([
       supabase
         .from("usuario")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("rol", "estudiante"),
       supabase
         .from("usuario")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("rol", "empresa"),
       supabase
         .from("usuario")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("rol", "centro_educativo"),
       supabase
         .from("usuario")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .in("rol", ["tutor_empresa", "tutor_centro"]),
       supabase
         .from("oferta")
-        .select("*", { count: "exact", head: true })
+        .select("id_oferta", { count: "exact", head: true })
         .eq("estado", "pendiente"),
       supabase
         .from("oferta")
-        .select("*", { count: "exact", head: true })
+        .select("id_oferta", { count: "exact", head: true })
         .eq("estado", "activa"),
     ]);
+
+    [est, emp, cen, tut, ofPend, ofActiva].forEach((r, i) => {
+      if (r.error) console.error(`[cargarStats] query ${i}:`, r.error);
+    });
+
+    if (!mountedRef.current) return;
     setStats({
       estudiantes: est.count ?? 0,
       empresas: emp.count ?? 0,
@@ -287,73 +515,108 @@ export default function AdminProfile() {
     setLoadingStats(false);
   }, []);
 
+  // ── cargarOfertas: query separada a empresa para evitar problemas con FK ──
   const cargarOfertas = useCallback(async () => {
     setLoadingOfertas(true);
-    const { data: ofertasData } = await supabase
+
+    const { data: ofertasData, error: ofertasError } = await supabase
       .from("oferta")
       .select(
         `id_oferta, titulo, descripcion, modalidad, ubicacion, tipo_oferta,
-               fecha_publicacion, estado, id_empresa,
-               oferta_tecnologia(tecnologia(id_tecnologia, nombre))`,
+         salario_mensual, duracion_semanas, horas_semanales,
+         num_plazas, num_plazas_restantes, beneficios, requisitos_adicionales,
+         opcion_contrato, fecha_publicacion, fecha_fin_solicitud,
+         estado, id_empresa`,
       )
       .eq("estado", "pendiente")
       .order("fecha_publicacion", { ascending: true });
 
-    const ids = [
-      ...new Set((ofertasData ?? []).map((o) => o.id_empresa).filter(Boolean)),
+    if (ofertasError) console.error("[cargarOfertas] ofertas:", ofertasError);
+
+    const ofertasRaw = ofertasData ?? [];
+
+    // ── Obtener datos de empresa por ids únicos ──
+    const empresaIds = [
+      ...new Set(ofertasRaw.map((o) => o.id_empresa).filter(Boolean)),
     ];
-    let empMap = {};
-    if (ids.length > 0) {
-      const { data: empresas } = await supabase
+    console.log(
+      "IDs empresas en ofertas:",
+      ofertasRaw.map((o) => o.id_empresa),
+    );
+    let empresaMap = {};
+    if (empresaIds.length > 0) {
+      const { data: empresasData, error: empresasError } = await supabase
         .from("empresa")
-        .select("id, nombre")
-        .in("id", ids);
-      const { data: usuariosData } = await supabase
-        .from("usuario")
-        .select("id, avatar_url")
-        .in("id", ids);
-      const avatarMap = Object.fromEntries(
-        (usuariosData ?? []).map((u) => [u.id, u.avatar_url]),
-      );
-      empMap = Object.fromEntries(
-        (empresas ?? []).map((e) => [
-          e.id,
-          { nombre: e.nombre, avatar: avatarMap[e.id] },
-        ]),
-      );
+        .select("id, nombre, logo_url")
+        .in("id", empresaIds);
+
+      if (empresasError)
+        console.error("[cargarOfertas] empresas:", empresasError);
+
+      empresaMap = (empresasData ?? []).reduce((acc, e) => {
+        acc[e.id] = e;
+        return acc;
+      }, {});
+      console.log("EMPRESAS DATA:", empresasData);
+      console.log("EMPRESA MAP:", empresaMap);
     }
 
+    // ── Tecnologías ──
+    const ofertaIds = ofertasRaw.map((o) => o.id_oferta);
+    let tecMap = {};
+    if (ofertaIds.length > 0) {
+      const { data: tecData, error: tecError } = await supabase
+        .from("oferta_tecnologia")
+        .select("id_oferta, tecnologia(id_tecnologia, nombre)")
+        .in("id_oferta", ofertaIds);
+
+      if (tecError) console.error("[cargarOfertas] tecnologias:", tecError);
+
+      tecMap = (tecData ?? []).reduce((acc, row) => {
+        if (!acc[row.id_oferta]) acc[row.id_oferta] = [];
+        if (row.tecnologia) acc[row.id_oferta].push(row.tecnologia);
+        return acc;
+      }, {});
+    }
+
+    if (!mountedRef.current) return;
     setOfertasPendientes(
-      (ofertasData ?? []).map((o) => ({
-        ...o,
-        empresa_nombre: empMap[o.id_empresa]?.nombre ?? "Empresa",
-        empresa_avatar: empMap[o.id_empresa]?.avatar ?? null,
-        tecnologias:
-          o.oferta_tecnologia?.map((ot) => ot.tecnologia).filter(Boolean) ?? [],
-      })),
+      ofertasRaw.map((o) => {
+        const empresa = empresaMap[o.id_empresa] ?? null;
+        return {
+          ...o,
+          empresa_nombre: empresa?.nombre ?? "Empresa desconocida",
+          empresa_avatar: empresa?.logo_url ?? null,
+          tecnologias: tecMap[o.id_oferta] ?? [],
+        };
+      }),
     );
     setLoadingOfertas(false);
   }, []);
 
   const cargarUsuarios = useCallback(async () => {
     setLoadingUsuarios(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("usuario")
       .select("id, email, nombre, rol, created_at, avatar_url")
       .not("rol", "eq", "admin")
       .order("created_at", { ascending: false })
       .limit(100);
+    if (error) console.error("[cargarUsuarios]:", error);
+    if (!mountedRef.current) return;
     setUsuarios(data ?? []);
     setLoadingUsuarios(false);
   }, []);
 
   const cargarAdmins = useCallback(async () => {
     setLoadingAdmins(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("usuario")
       .select("id, email, nombre, created_at, avatar_url")
       .eq("rol", "admin")
       .order("created_at", { ascending: true });
+    if (error) console.error("[cargarAdmins]:", error);
+    if (!mountedRef.current) return;
     setAdmins(data ?? []);
     setLoadingAdmins(false);
   }, []);
@@ -366,7 +629,7 @@ export default function AdminProfile() {
     if (activeTab === "ofertas") cargarOfertas();
     if (activeTab === "usuarios") cargarUsuarios();
     if (activeTab === "admins") cargarAdmins();
-  }, [activeTab]);
+  }, [activeTab, cargarOfertas, cargarUsuarios, cargarAdmins]);
 
   const handleToggleBlock = async (userId, currentRol) => {
     const nuevoRol = currentRol === "bloqueado" ? "estudiante" : "bloqueado";
@@ -430,23 +693,34 @@ export default function AdminProfile() {
     <MainLayout>
       <div className="min-h-screen bg-dark">
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          {/* ── Header admin ── */}
+          {/* ── Header ── */}
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div className="flex items-center gap-4">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={fullName}
-                  className="w-12 h-12 rounded-xl object-cover border border-white/10"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center text-dark font-bold font-display text-lg">
-                  {initials || "A"}
+              <div className="relative">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={fullName}
+                    className="w-14 h-14 rounded-2xl object-cover border border-white/10"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-brand flex items-center justify-center text-dark font-black font-display text-lg">
+                    {initials || "A"}
+                  </div>
+                )}
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-brand rounded-full border-2 border-dark flex items-center justify-center">
+                  <svg
+                    className="w-2.5 h-2.5 text-dark"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.77l-6.18 3.25L7 13.14 2 8.27l6.91-1.01L12 1z" />
+                  </svg>
                 </div>
-              )}
+              </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-display text-2xl font-bold text-white">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="font-display text-2xl font-black text-white">
                     Panel de administración
                   </h1>
                   <Badge color="brand">Admin</Badge>
@@ -479,7 +753,11 @@ export default function AdminProfile() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id ? "bg-brand/15 text-brand border border-brand/20" : "text-gray-500 hover:text-gray-300"}`}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "bg-brand/15 text-brand border border-brand/25 shadow-sm"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/4"
+                }`}
               >
                 <svg
                   className="w-4 h-4"
@@ -492,7 +770,7 @@ export default function AdminProfile() {
                 </svg>
                 {tab.label}
                 {tab.badge > 0 && (
-                  <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  <span className="bg-amber-500 text-dark text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                     {tab.badge}
                   </span>
                 )}
@@ -500,13 +778,11 @@ export default function AdminProfile() {
             ))}
           </div>
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* TAB: DASHBOARD                                            */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* ══ TAB: DASHBOARD ══ */}
           {activeTab === "dashboard" && (
             <div className="space-y-6">
               {loadingStats ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-20">
                   <Spinner className="w-8 h-8" />
                 </div>
               ) : (
@@ -525,7 +801,7 @@ export default function AdminProfile() {
                       icon="icon-company"
                     />
                     <StatCard
-                      label="Centros"
+                      label="Centros educativos"
                       value={stats.centros}
                       color="orange"
                       icon="icon-educativeCenter"
@@ -543,94 +819,88 @@ export default function AdminProfile() {
                       icon="icon-briefcase"
                     />
                     <StatCard
-                      label="Pendientes"
+                      label="Pendientes de revisión"
                       value={stats.ofertas_pendientes}
                       color="orange"
                       icon="icon-clock"
+                      trend={
+                        stats.ofertas_pendientes > 0
+                          ? "Requieren atención"
+                          : "Todo al día"
+                      }
                     />
                   </div>
 
-                  <div className="bg-dark-800 border border-white/10 rounded-2xl p-6">
-                    <h2 className="font-display text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
-                      Acciones rápidas
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <button
-                        onClick={() => setActiveTab("ofertas")}
-                        className="flex items-center gap-3 p-4 rounded-xl bg-dark border border-white/8 hover:border-brand/30 transition-all group text-left"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="bg-dark-800 border border-white/8 rounded-2xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-white/6">
+                      <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        Acciones rápidas
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-white/6">
+                      {[
+                        {
+                          onClick: () => setActiveTab("ofertas"),
+                          icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
+                          colorIcon: "text-amber-400",
+                          colorBg: "bg-amber-500/10 border-amber-500/20",
+                          label: "Validar ofertas",
+                          sub: `${stats.ofertas_pendientes} pendientes`,
+                        },
+                        {
+                          onClick: () => setActiveTab("usuarios"),
+                          icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+                          colorIcon: "text-sky-400",
+                          colorBg: "bg-sky-500/10 border-sky-500/20",
+                          label: "Gestionar usuarios",
+                          sub: `${stats.estudiantes + stats.empresas + stats.centros + stats.tutores} registrados`,
+                        },
+                        {
+                          onClick: () => setInviteModal(true),
+                          icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+                          colorIcon: "text-brand",
+                          colorBg: "bg-brand/10 border-brand/20",
+                          label: "Invitar administrador",
+                          sub: "Enlace seguro · caduca en 48 h",
+                        },
+                      ].map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={item.onClick}
+                          className="flex items-center gap-4 p-5 hover:bg-white/3 transition-all group text-left w-full"
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${item.colorBg}`}
+                          >
+                            <svg
+                              className={`w-5 h-5 ${item.colorIcon}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d={item.icon} />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-semibold group-hover:text-brand transition-colors">
+                              {item.label}
+                            </p>
+                            <p className="text-gray-600 text-xs mt-0.5">
+                              {item.sub}
+                            </p>
+                          </div>
                           <svg
-                            className="w-5 h-5 text-orange-400"
+                            className="w-4 h-4 text-gray-700 ml-auto group-hover:text-brand/50 transition-colors"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
                           >
-                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            <path d="M9 18l6-6-6-6" />
                           </svg>
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-semibold group-hover:text-brand transition-colors">
-                            Validar ofertas
-                          </p>
-                          <p className="text-gray-600 text-xs">
-                            {stats.ofertas_pendientes} pendientes
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab("usuarios")}
-                        className="flex items-center gap-3 p-4 rounded-xl bg-dark border border-white/8 hover:border-brand/30 transition-all group text-left"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                          <svg
-                            className="w-5 h-5 text-blue-400"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-semibold group-hover:text-brand transition-colors">
-                            Gestionar usuarios
-                          </p>
-                          <p className="text-gray-600 text-xs">
-                            {stats.estudiantes +
-                              stats.empresas +
-                              stats.centros +
-                              stats.tutores}{" "}
-                            registrados
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setInviteModal(true)}
-                        className="flex items-center gap-3 p-4 rounded-xl bg-dark border border-white/8 hover:border-brand/30 transition-all group text-left"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0">
-                          <svg
-                            className="w-5 h-5 text-brand"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-semibold group-hover:text-brand transition-colors">
-                            Invitar admin
-                          </p>
-                          <p className="text-gray-600 text-xs">
-                            Generar enlace seguro
-                          </p>
-                        </div>
-                      </button>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </>
@@ -638,19 +908,16 @@ export default function AdminProfile() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* TAB: VALIDAR OFERTAS                                      */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* ══ TAB: VALIDAR OFERTAS ══ */}
           {activeTab === "ofertas" && (
             <div>
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
                 <div>
-                  <h2 className="font-display text-xl font-bold text-white">
+                  <h2 className="font-display text-xl font-black text-white">
                     Ofertas pendientes
                   </h2>
                   <p className="text-gray-500 text-sm mt-0.5">
-                    Revisa y aprueba o rechaza cada oferta antes de que sea
-                    visible para los estudiantes.
+                    Revisa y aprueba o rechaza cada oferta antes de publicarla.
                   </p>
                 </div>
                 <button
@@ -672,33 +939,35 @@ export default function AdminProfile() {
               </div>
 
               {loadingOfertas ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-20">
                   <Spinner className="w-7 h-7" />
                 </div>
               ) : ofertasPendientes.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
-                  <svg
-                    className="w-12 h-12 text-green-500/40 mx-auto mb-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <p className="text-gray-400 font-medium">¡Todo al día!</p>
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+                    <svg
+                      className="w-6 h-6 text-emerald-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-300 font-semibold">¡Todo al día!</p>
                   <p className="text-gray-600 text-sm mt-1">
                     No hay ofertas pendientes de revisión.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {ofertasPendientes.map((o) => (
                     <div
                       key={o.id_oferta}
                       className="bg-dark-800 border border-white/8 rounded-xl p-4 flex items-center gap-4 hover:border-white/15 transition-all"
                     >
-                      <div className="w-11 h-11 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center flex-shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-brand/8 border border-brand/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {o.empresa_avatar ? (
                           <img
                             src={o.empresa_avatar}
@@ -716,20 +985,21 @@ export default function AdminProfile() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-display font-semibold text-white text-sm truncate">
+                          <p className="font-display font-bold text-white text-sm truncate">
                             {o.titulo}
                           </p>
                           <Badge color="orange">Pendiente</Badge>
                         </div>
                         <p className="text-gray-500 text-xs mt-0.5">
-                          {o.empresa_nombre}
+                          {o.empresa_nombre} · {o.modalidad ?? "—"} ·{" "}
+                          {o.ubicacion ?? "Sin ubicación"}
                         </p>
                         {o.tecnologias.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
-                            {o.tecnologias.slice(0, 4).map((t) => (
+                            {o.tecnologias.slice(0, 5).map((t) => (
                               <span
                                 key={t.id_tecnologia}
-                                className="bg-white/5 border border-white/8 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono"
+                                className="bg-white/4 border border-white/8 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono"
                               >
                                 {t.nombre}
                               </span>
@@ -746,8 +1016,18 @@ export default function AdminProfile() {
                       </p>
                       <button
                         onClick={() => setValidarOferta(o)}
-                        className="flex-shrink-0 btn-primary text-xs py-1.5 px-4"
+                        className="flex-shrink-0 btn-primary text-xs py-1.5 px-4 flex items-center gap-1.5"
                       >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                         Revisar
                       </button>
                     </div>
@@ -757,15 +1037,18 @@ export default function AdminProfile() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* TAB: USUARIOS                                             */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* ══ TAB: USUARIOS ══ */}
           {activeTab === "usuarios" && (
             <div>
-              <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
-                <h2 className="font-display text-xl font-bold text-white">
-                  Usuarios registrados
-                </h2>
+              <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+                <div>
+                  <h2 className="font-display text-xl font-black text-white">
+                    Usuarios registrados
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-0.5">
+                    {usuarios.length} usuarios (sin admins)
+                  </p>
+                </div>
                 <div className="relative flex-1 max-w-xs">
                   <svg
                     className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500"
@@ -788,7 +1071,7 @@ export default function AdminProfile() {
               </div>
 
               {loadingUsuarios ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-20">
                   <Spinner className="w-7 h-7" />
                 </div>
               ) : (
@@ -796,9 +1079,9 @@ export default function AdminProfile() {
                   {usuariosFiltrados.map((u) => (
                     <div
                       key={u.id}
-                      className="bg-dark-800 border border-white/8 rounded-xl px-4 py-3 flex items-center gap-4"
+                      className="bg-dark-800 border border-white/8 rounded-xl px-4 py-3 flex items-center gap-4 hover:border-white/12 transition-all"
                     >
-                      <div className="w-9 h-9 rounded-full bg-brand/10 border border-brand/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-9 h-9 rounded-full bg-brand/8 border border-brand/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {u.avatar_url ? (
                           <img
                             src={u.avatar_url}
@@ -812,7 +1095,7 @@ export default function AdminProfile() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">
+                        <p className="text-white text-sm font-semibold truncate">
                           {u.nombre || "Sin nombre"}
                         </p>
                         <p className="text-gray-500 text-xs truncate">
@@ -829,7 +1112,11 @@ export default function AdminProfile() {
                       </p>
                       <button
                         onClick={() => handleToggleBlock(u.id, u.rol)}
-                        className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-all ${u.rol === "bloqueado" ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20" : "border-red-500/20 bg-red-500/5 text-red-400/70 hover:bg-red-500/10 hover:text-red-400"}`}
+                        className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                          u.rol === "bloqueado"
+                            ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-400 hover:bg-emerald-500/15"
+                            : "border-red-500/20 bg-red-500/5 text-red-400/60 hover:bg-red-500/10 hover:text-red-400"
+                        }`}
                       >
                         {u.rol === "bloqueado" ? "Desbloquear" : "Bloquear"}
                       </button>
@@ -845,18 +1132,16 @@ export default function AdminProfile() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* TAB: ADMINISTRADORES                                      */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* ══ TAB: ADMINISTRADORES ══ */}
           {activeTab === "admins" && (
             <div>
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="font-display text-xl font-bold text-white">
+                  <h2 className="font-display text-xl font-black text-white">
                     Administradores
                   </h2>
                   <p className="text-gray-500 text-sm mt-0.5">
-                    Todos los usuarios con acceso de administrador a Relance.
+                    Usuarios con acceso total a la plataforma.
                   </p>
                 </div>
                 <button
@@ -878,7 +1163,7 @@ export default function AdminProfile() {
               </div>
 
               {loadingAdmins ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-20">
                   <Spinner className="w-7 h-7" />
                 </div>
               ) : (
@@ -888,9 +1173,9 @@ export default function AdminProfile() {
                     return (
                       <div
                         key={a.id}
-                        className={`border rounded-xl px-5 py-4 flex items-center gap-4 transition-all ${isMe ? "bg-brand/5 border-brand/25" : "bg-dark-800 border-white/8"}`}
+                        className={`border rounded-2xl px-5 py-4 flex items-center gap-4 transition-all ${isMe ? "bg-brand/5 border-brand/20" : "bg-dark-800 border-white/8 hover:border-white/15"}`}
                       >
-                        <div className="w-11 h-11 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {a.avatar_url ? (
                             <img
                               src={a.avatar_url}
@@ -898,18 +1183,18 @@ export default function AdminProfile() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-brand font-bold font-display">
+                            <span className="text-brand font-black font-display text-sm">
                               {(a.nombre || a.email || "A")[0]?.toUpperCase()}
                             </span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-white font-semibold text-sm">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-white font-bold text-sm">
                               {a.nombre || "Sin nombre"}
                             </p>
                             {isMe && (
-                              <span className="text-[10px] bg-brand/15 text-brand border border-brand/25 px-2 py-0.5 rounded-full">
+                              <span className="text-[10px] bg-brand/15 text-brand border border-brand/25 px-2 py-0.5 rounded-full font-semibold">
                                 Tú
                               </span>
                             )}
@@ -918,8 +1203,8 @@ export default function AdminProfile() {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <Badge color="brand">Admin</Badge>
-                          <p className="text-gray-600 text-xs mt-1">
-                            desde{" "}
+                          <p className="text-gray-600 text-xs mt-1.5">
+                            Desde{" "}
                             {a.created_at
                               ? new Date(a.created_at).toLocaleDateString(
                                   "es-ES",
@@ -932,10 +1217,13 @@ export default function AdminProfile() {
                     );
                   })}
 
-                  <div className="mt-4 bg-dark-800 border border-dashed border-white/10 rounded-xl p-5 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+                  <button
+                    onClick={() => setInviteModal(true)}
+                    className="w-full mt-2 bg-dark-800 border border-dashed border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-brand/30 hover:bg-brand/3 transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white/4 flex items-center justify-center flex-shrink-0 group-hover:bg-brand/10 transition-colors">
                       <svg
-                        className="w-5 h-5 text-gray-500"
+                        className="w-5 h-5 text-gray-500 group-hover:text-brand transition-colors"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -945,22 +1233,15 @@ export default function AdminProfile() {
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-gray-400 text-sm font-medium">
+                    <div className="text-left">
+                      <p className="text-gray-400 text-sm font-semibold group-hover:text-white transition-colors">
                         Añadir nuevo administrador
                       </p>
                       <p className="text-gray-600 text-xs mt-0.5">
-                        Genera un enlace de invitación seguro con caducidad de
-                        48 horas.
+                        Enlace de invitación seguro · caduca en 48 h
                       </p>
                     </div>
-                    <button
-                      onClick={() => setInviteModal(true)}
-                      className="btn-secondary text-xs px-4 py-2 flex-shrink-0"
-                    >
-                      Invitar
-                    </button>
-                  </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -978,7 +1259,7 @@ export default function AdminProfile() {
           expiresInHours={48}
           title="Invitar administrador"
           description="Genera un enlace de invitación para que otra persona cree su cuenta de administrador."
-          warningText="Los administradores tienen acceso total a la plataforma: validación de ofertas, gestión de usuarios y generación de nuevas invitaciones. Comparte este enlace solo con personas de confianza."
+          warningText="Los administradores tienen acceso total a la plataforma. Comparte este enlace solo con personas de confianza."
           roleLabel="administrador"
           inviterName="el equipo de administración"
         />

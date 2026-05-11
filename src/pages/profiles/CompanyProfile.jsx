@@ -4,7 +4,6 @@ import { supabase } from "../../lib/supabase";
 import Header from "../../components/layout/Header";
 import InviteModal from "../../components/InviteModal";
 
-// ── Sección helper ──────────────────────────────────────────────────────────
 function SectionCard({ title, children }) {
   return (
     <section className="bg-dark-800 border border-white/10 rounded-2xl p-6">
@@ -16,68 +15,79 @@ function SectionCard({ title, children }) {
   );
 }
 
-// ── Página principal ────────────────────────────────────────────────────────
-export default function CenterProfile() {
-  const { user, avatarUrl, refreshAvatar } = useAuth();
+export default function CompanyProfile() {
+  const { user, refreshAvatar } = useAuth();
   const fileInputRef = useRef(null);
-  const meta = user?.user_metadata ?? {};
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
-  const [centerName, setCenterName] = useState(meta.centerName ?? "");
-  const [institutionalCode, setInstitutionalCode] = useState(
-    meta.institutionalCode ?? "",
-  );
-  const [centerType, setCenterType] = useState(meta.centerType ?? "");
-  const [city, setCity] = useState(meta.city ?? "");
-  const [province, setProvince] = useState(meta.province ?? "");
-  const [website, setWebsite] = useState(meta.website ?? "");
-  const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [studentsCount, setStudentsCount] = useState("");
-  const [degreesOffered, setDegreesOffered] = useState([]);
-  const [degreeInput, setDegreeInput] = useState("");
+  // ── Avatar centralizado en tabla usuario ──
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [cif, setCif] = useState("");
+  const [sector, setSector] = useState("");
+  const [tamano, setTamano] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [web, setWeb] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [emailContacto, setEmailContacto] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [verificado, setVerificado] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    const load = async () => {
-      const { data, error } = await supabase
-        .from("centro_educativo")
-        .select("*")
+    const cargarPerfil = async () => {
+      // Avatar y datos base vienen de usuario
+      const { data: usuarioData } = await supabase
+        .from("usuario")
+        .select("id, email, nombre, avatar_url")
         .eq("id", user.id)
+        .single();
+
+      const { data: empresa, error: empresaError } = await supabase
+        .from("empresa")
+        .select("*")
+        .eq("id_usuario", user.id)
         .maybeSingle();
-      if (error) console.error("[CenterProfile] Error cargando datos:", error);
-      if (data) {
-        setCenterName(data.nombre ?? meta.centerName ?? "");
-        setInstitutionalCode(
-          data.codigo_institucional ?? meta.institutionalCode ?? "",
+
+      if (empresaError)
+        console.error("Error al cargar empresa:", empresaError.message);
+
+      setAvatarUrl(usuarioData?.avatar_url ?? "");
+
+      if (empresa) {
+        setNombre(empresa.nombre ?? usuarioData?.nombre ?? "");
+        setCif(empresa.cif ?? "");
+        setSector(empresa.sector ?? "");
+        setTamano(empresa.tamano ?? "");
+        setCiudad(empresa.ciudad ?? "");
+        setWeb(empresa.web ?? "");
+        setDescripcion(empresa.descripcion ?? "");
+        setEmailContacto(
+          empresa.email_contacto ?? usuarioData?.email ?? user.email ?? "",
         );
-        setCenterType(data.tipo_centro ?? meta.centerType ?? "");
-        setCity(data.ciudad ?? meta.city ?? "");
-        setProvince(data.provincia ?? "");
-        setWebsite(data.sitio_web ?? meta.website ?? "");
-        setDescription(data.descripcion ?? "");
-        setEmail(data.email_contacto ?? user.email ?? "");
-        setPhone(data.telefono ?? "");
-        setStudentsCount(data.num_alumnos ?? "");
-        setDegreesOffered(data.titulaciones ?? []);
+        setTelefono(empresa.telefono ?? "");
+        setLinkedin(empresa.linkedin ?? "");
+        setTwitter(empresa.twitter ?? "");
+        setInstagram(empresa.instagram ?? "");
+        setVerificado(empresa.verificado ?? false);
       } else {
-        setCenterName(meta.centerName ?? "");
-        setInstitutionalCode(meta.institutionalCode ?? "");
-        setCenterType(meta.centerType ?? "");
-        setCity(meta.city ?? "");
-        setProvince(meta.province ?? "");
-        setEmail(user.email ?? "");
+        setNombre(usuarioData?.nombre ?? "");
+        setEmailContacto(usuarioData?.email ?? user.email ?? "");
       }
     };
-    load();
+    cargarPerfil();
   }, [user]);
 
-  const handleLogoUpload = async (e) => {
+  // Avatar se guarda SOLO en usuario.avatar_url
+  const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !user) return;
     setUploading(true);
@@ -88,59 +98,58 @@ export default function CenterProfile() {
       .upload(path, file, { upsert: true });
     if (!error) {
       const { data } = supabase.storage.from("profiles").getPublicUrl(path);
+      const freshUrl = `${data.publicUrl}?t=${Date.now()}`;
+      setAvatarUrl(freshUrl);
       await supabase
         .from("usuario")
-        .update({
-          avatar_url: data.publicUrl,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ avatar_url: freshUrl, updated_at: new Date().toISOString() })
         .eq("id", user.id);
-      await refreshAvatar();
+      await refreshAvatar?.();
     }
     setUploading(false);
-  };
-
-  const handleDegreeKey = (e) => {
-    if (e.key === "Enter" && degreeInput.trim()) {
-      e.preventDefault();
-      if (!degreesOffered.includes(degreeInput.trim()))
-        setDegreesOffered([...degreesOffered, degreeInput.trim()]);
-      setDegreeInput("");
-    }
   };
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error: centroError } = await supabase
-      .from("centro_educativo")
-      .upsert(
+    setSaveError(null);
+    try {
+      const { error: usuarioError } = await supabase
+        .from("usuario")
+        .update({ nombre, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (usuarioError) throw usuarioError;
+
+      // Sin logo_url — ese campo ya no existe en empresa
+      const { error: empresaError } = await supabase.from("empresa").upsert(
         {
-          id: user.id,
-          nombre: centerName,
-          codigo_institucional: institutionalCode,
-          tipo_centro: centerType,
-          ciudad: city,
-          provincia: province,
-          sitio_web: website,
-          descripcion: description,
-          email_contacto: email,
-          telefono: phone,
-          num_alumnos: studentsCount !== "" ? Number(studentsCount) : null,
-          titulaciones: degreesOffered,
+          id_usuario: user.id,
+          nombre,
+          cif,
+          sector,
+          tamano,
+          ciudad,
+          web,
+          descripcion,
+          email_contacto: emailContacto,
+          telefono,
+          linkedin,
+          twitter,
+          instagram,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "id" },
+        { onConflict: "id_usuario" },
       );
-    if (centroError)
-      console.error("[CenterProfile] Error guardando:", centroError);
-    await supabase
-      .from("usuario")
-      .update({ nombre: centerName, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+      if (empresaError) throw empresaError;
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Error al guardar:", err);
+      setSaveError("No se pudieron guardar los cambios. Inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -150,10 +159,10 @@ export default function CenterProfile() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="font-display text-3xl font-bold text-white">
-              Perfil del centro
+              Perfil de empresa
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Configura la información de tu centro educativo
+              Configura la información de tu empresa
             </p>
           </div>
           <button
@@ -192,15 +201,20 @@ export default function CenterProfile() {
           </button>
         </div>
 
+        {saveError && (
+          <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+            {saveError}
+          </div>
+        )}
+
         <div className="space-y-6">
-          {/* Logo */}
-          <SectionCard title="Logo del centro">
+          <SectionCard title="Logo de empresa">
             <div className="flex items-center gap-5">
               <div className="relative flex-shrink-0">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
-                    alt={centerName}
+                    alt={nombre}
                     className="w-20 h-20 rounded-2xl object-cover border border-white/10"
                   />
                 ) : (
@@ -209,7 +223,7 @@ export default function CenterProfile() {
                       className="w-10 h-10 text-gray-500"
                       viewBox="0 0 640 640"
                     >
-                      <use href="/icons.svg#icon-school" />
+                      <use href="/icons.svg#icon-building" />
                     </svg>
                   </div>
                 )}
@@ -239,15 +253,20 @@ export default function CenterProfile() {
               </div>
               <div>
                 <p className="text-white font-semibold text-lg font-display">
-                  {centerName || "Tu centro"}
+                  {nombre || "Tu empresa"}
                 </p>
                 <p className="text-gray-500 text-sm mb-3">{user?.email}</p>
+                {verificado && (
+                  <span className="inline-flex items-center gap-1 text-xs text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded-full mb-3">
+                    ✓ Empresa verificada
+                  </span>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={handleLogoUpload}
+                  onChange={handleAvatarUpload}
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -259,53 +278,72 @@ export default function CenterProfile() {
             </div>
           </SectionCard>
 
-          {/* Info centro */}
-          <SectionCard title="Información del centro">
+          <SectionCard title="Información de la empresa">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className="block text-xs text-gray-500 mb-1.5">
-                  Nombre del centro *
+                  Nombre de la empresa *
                 </label>
                 <input
                   type="text"
-                  value={centerName}
-                  onChange={(e) => setCenterName(e.target.value)}
-                  placeholder="IES Nombre del Centro"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Mi Empresa S.L."
                   className="input-field"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">
-                  Código institucional
+                  CIF
                 </label>
                 <input
                   type="text"
-                  value={institutionalCode}
-                  onChange={(e) => setInstitutionalCode(e.target.value)}
-                  placeholder="IES-MAD-2024"
+                  value={cif}
+                  onChange={(e) => setCif(e.target.value)}
+                  placeholder="B12345678"
                   className="input-field"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">
-                  Tipo de centro
+                  Sector
                 </label>
                 <select
-                  value={centerType}
-                  onChange={(e) => setCenterType(e.target.value)}
+                  value={sector}
+                  onChange={(e) => setSector(e.target.value)}
                   className="input-field"
                 >
                   <option value="">Seleccionar</option>
                   {[
-                    "IES",
-                    "FP",
-                    "Universidad",
-                    "Centro privado",
-                    "Academia",
+                    "Tecnología",
+                    "Marketing",
+                    "Diseño",
+                    "Finanzas",
+                    "Salud",
+                    "Educación",
+                    "Comercio",
+                    "Industria",
                     "Otro",
-                  ].map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  ].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  Tamaño
+                </label>
+                <select
+                  value={tamano}
+                  onChange={(e) => setTamano(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Seleccionar</option>
+                  {["1–10", "11–50", "51–200", "201–500", "500+"].map((s) => (
+                    <option key={s} value={s}>
+                      {s} empleados
                     </option>
                   ))}
                 </select>
@@ -316,101 +354,40 @@ export default function CenterProfile() {
                 </label>
                 <input
                   type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  value={ciudad}
+                  onChange={(e) => setCiudad(e.target.value)}
                   placeholder="Madrid"
                   className="input-field"
                 />
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
-                  Provincia
-                </label>
-                <input
-                  type="text"
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  placeholder="Madrid"
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
-                  N.º de alumnos aprox.
-                </label>
-                <input
-                  type="number"
-                  value={studentsCount}
-                  onChange={(e) => setStudentsCount(e.target.value)}
-                  placeholder="300"
-                  className="input-field"
-                />
-              </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs text-gray-500 mb-1.5">
                   Sitio web
                 </label>
                 <input
                   type="url"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://iesejemplo.edu.es"
+                  value={web}
+                  onChange={(e) => setWeb(e.target.value)}
+                  placeholder="https://miempresa.com"
                   className="input-field"
                 />
               </div>
             </div>
           </SectionCard>
 
-          {/* Titulaciones */}
-          <SectionCard title="Ciclos / Titulaciones ofertadas">
-            <input
-              type="text"
-              value={degreeInput}
-              onChange={(e) => setDegreeInput(e.target.value)}
-              onKeyDown={handleDegreeKey}
-              placeholder="Escribe una titulación y pulsa Enter (DAM, DAW, ASIR...)"
-              className="input-field mb-3"
-            />
-            <div className="flex flex-wrap gap-2">
-              {degreesOffered.map((d) => (
-                <span
-                  key={d}
-                  className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 text-brand text-sm px-3 py-1 rounded-full"
-                >
-                  {d}
-                  <button
-                    onClick={() =>
-                      setDegreesOffered(degreesOffered.filter((x) => x !== d))
-                    }
-                    className="text-brand/60 hover:text-brand"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {degreesOffered.length === 0 && (
-                <p className="text-gray-600 text-sm">
-                  Aún no has añadido titulaciones
-                </p>
-              )}
-            </div>
-          </SectionCard>
-
-          {/* Descripción */}
-          <SectionCard title="Descripción del centro">
+          <SectionCard title="Descripción de la empresa">
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value.slice(0, 500))}
               rows={4}
-              placeholder="Describe el centro, su especialización, proyectos destacados y qué tipo de empresas suelen colaborar..."
+              placeholder="Describe tu empresa, cultura, tecnologías que usáis y qué tipo de perfiles buscáis..."
               className="input-field resize-none"
             />
             <p className="text-xs text-gray-600 mt-1 text-right">
-              {description.length}/500
+              {descripcion.length}/500
             </p>
           </SectionCard>
 
-          {/* Contacto */}
           <SectionCard title="Datos de contacto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -419,9 +396,9 @@ export default function CenterProfile() {
                 </label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="secretaria@centro.edu.es"
+                  value={emailContacto}
+                  onChange={(e) => setEmailContacto(e.target.value)}
+                  placeholder="rrhh@empresa.com"
                   className="input-field"
                 />
               </div>
@@ -431,8 +408,8 @@ export default function CenterProfile() {
                 </label>
                 <input
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
                   placeholder="+34 900 000 000"
                   className="input-field"
                 />
@@ -440,32 +417,71 @@ export default function CenterProfile() {
             </div>
           </SectionCard>
 
-          {/* Invitar tutores */}
-          <SectionCard title="Invitar tutores de centro">
+          <SectionCard title="Redes sociales">
+            <div className="space-y-3">
+              {[
+                {
+                  value: linkedin,
+                  setter: setLinkedin,
+                  icon: "icon-linkedin",
+                  label: "LinkedIn",
+                  placeholder: "https://linkedin.com/company/mi-empresa",
+                },
+                {
+                  value: twitter,
+                  setter: setTwitter,
+                  icon: "icon-twitter",
+                  label: "X / Twitter",
+                  placeholder: "https://twitter.com/miempresa",
+                },
+                {
+                  value: instagram,
+                  setter: setInstagram,
+                  icon: "icon-instagram",
+                  label: "Instagram",
+                  placeholder: "https://instagram.com/miempresa",
+                },
+              ].map(({ value, setter, icon, label, placeholder }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="w-7 flex justify-center">
+                    <svg className="w-5 h-5" viewBox="0 0 640 640">
+                      <use href={`/icons.svg#${icon}`} />
+                    </svg>
+                  </span>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {label}
+                    </label>
+                    <input
+                      type="url"
+                      value={value}
+                      onChange={(e) => setter(e.target.value)}
+                      placeholder={placeholder}
+                      className="input-field text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Invitar tutores">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-brand"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
+                <svg className="w-6 h-6 text-brand" viewBox="0 0 640 640">
+                  <use href="/icons.svg#icon-qrcode" />
                 </svg>
               </div>
               <div className="flex-1">
                 <p className="text-white font-semibold text-sm mb-1">
-                  Código QR de invitación para tutores
+                  Código QR de invitación
                 </p>
                 <p className="text-gray-500 text-xs leading-relaxed mb-4">
-                  Genera un enlace QR único que los tutores del centro puedan
+                  Genera un enlace QR único que los tutores de la empresa puedan
                   escanear para registrarse en Relance vinculados
-                  automáticamente a tu centro. El enlace también se puede enviar
-                  por correo o compartir manualmente. Caduca a los 7 días.
+                  automáticamente a tu empresa. El enlace también se puede
+                  enviar por correo o compartir manualmente. Caduca a los 7
+                  días.
                 </p>
                 <button
                   onClick={() => setShowInviteModal(true)}
@@ -491,19 +507,18 @@ export default function CenterProfile() {
           </SectionCard>
         </div>
       </main>
-
       {showInviteModal && (
         <InviteModal
           user={user}
           onClose={() => setShowInviteModal(false)}
-          entityType="centro_educativo"
+          entityType="empresa"
           inviteRoute="/registro-tutor"
           expiresInHours={168}
-          title="Invitar tutores de centro"
-          description="Genera un enlace QR para que los tutores se registren vinculados automáticamente a tu centro."
-          roleLabel="tutor de centro educativo"
-          inviterName={centerName || "tu centro"}
-          extraParams={{ type: "centro_educativo" }}
+          title="Invitar tutores de empresa"
+          description="Genera un enlace QR para que los tutores se registren vinculados automáticamente a tu empresa."
+          roleLabel="tutor de empresa"
+          inviterName={nombre || "tu empresa"}
+          extraParams={{ type: "empresa" }}
         />
       )}
     </div>
