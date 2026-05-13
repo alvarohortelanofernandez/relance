@@ -8,36 +8,51 @@
        BRAND
     ========================= */
     --color-brand: #c0ff72;
-    --color-brand-dark: #a8d010;
+    --color-brand-light: #d4ff8c;
+    --color-brand-dark: #9cd44a;
 
     /* =========================
-       BACKGROUND SYSTEM (AZUL MARINO MÁS OSCURO)
+       BACKGROUND SYSTEM
+       Azul marino muy oscuro, más profundo que antes pero sin llegar a negro puro.
+       El tono frío (azulado) se mantiene para distinguirlo del negro neutro.
     ========================= */
-    --color-bg: #03080f;
-    --color-surface: #060e1a;
-    --color-surface-strong: #091525;
-    --color-surface-elevated: #0d1e34;
+    --color-bg: #01030a; /* ← más oscuro (era #03080f) */
+    --color-surface: #03060f; /* ← más oscuro (era #060e1a) */
+    --color-surface-strong: #060d1c; /* ← más oscuro (era #091525) */
+    --color-surface-elevated: #0a1628; /* ← más oscuro (era #0d1e34) */
 
     /* =========================
        TEXT
     ========================= */
-    --color-text: #f0f6ff;
-    --color-text-secondary: #b8c9e0;
-    --color-text-muted: #6a85a3;
-    --color-text-subtle: #3d5470;
+    --color-text: #eef5ff;
+    --color-text-secondary: #b2c5de;
+    --color-text-muted: #5e7a99;
+    --color-text-subtle: #354e68;
 
     /* =========================
        BORDER SYSTEM
     ========================= */
-    --color-border: #111e2e;
-    --color-border-strong: #1a2d45;
-    --color-border-subtle: #0a1525;
+    --color-border: #0c1a2b;
+    --color-border-strong: #152438;
+    --color-border-subtle: #070f1d;
 
     /* =========================
        INTERACTIVE STATES
     ========================= */
-    --color-focus: rgba(192, 255, 114, 0.35);
-    --color-focus-strong: rgba(192, 255, 114, 0.6);
+    --color-focus: rgba(192, 255, 114, 0.3);
+    --color-focus-strong: rgba(192, 255, 114, 0.55);
+
+    /* =========================
+       SEMANTIC COLORS
+    ========================= */
+    --color-success: #4ade80;
+    --color-success-bg: rgba(74, 222, 128, 0.08);
+    --color-error: #f87171;
+    --color-error-bg: rgba(248, 113, 113, 0.08);
+    --color-warning: #fbbf24;
+    --color-warning-bg: rgba(251, 191, 36, 0.08);
+    --color-info: #60a5fa;
+    --color-info-bg: rgba(96, 165, 250, 0.08);
   }
 
   * {
@@ -54,6 +69,8 @@
     font-family: "Plus Jakarta Sans", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Grain sutil para dar profundidad al fondo */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
   }
 
   h1,
@@ -64,6 +81,13 @@
   h6 {
     font-family: "Syne", sans-serif;
     color: var(--color-text);
+    letter-spacing: -0.02em;
+  }
+
+  /* Selección de texto con acento de marca */
+  ::selection {
+    background: rgba(192, 255, 114, 0.2);
+    color: var(--color-text);
   }
 }
 
@@ -73,30 +97,49 @@
   ========================= */
 
   .btn-primary {
-    @apply font-bold px-5 py-2.5 rounded-lg text-sm transition-all duration-200;
+    @apply font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200;
     @apply hover:scale-[1.02] active:scale-[0.98];
     background-color: var(--color-brand);
-    color: #03080f;
+    color: #01030a;
+    letter-spacing: -0.01em;
   }
 
   .btn-primary:hover {
-    background-color: var(--color-brand-dark);
+    background-color: var(--color-brand-light);
+    box-shadow: 0 4px 18px rgba(192, 255, 114, 0.28);
   }
 
   .btn-secondary {
-    @apply font-semibold px-5 py-2.5 rounded-lg text-sm transition-all duration-200;
+    @apply font-semibold px-5 py-2.5 rounded-xl text-sm transition-all duration-200;
     border: 1px solid var(--color-border-strong);
-    color: var(--color-brand);
+    color: var(--color-text-secondary);
     background: transparent;
+    letter-spacing: -0.01em;
   }
 
   .btn-secondary:hover {
-    background: rgba(192, 255, 114, 0.06);
-    border-color: rgba(192, 255, 114, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--color-text);
   }
 
   .btn-secondary:active {
     transform: scale(0.98);
+  }
+
+  /* Variante de botón fantasma con acento verde */
+  .btn-ghost-brand {
+    @apply font-semibold px-5 py-2.5 rounded-xl text-sm transition-all duration-200;
+    border: 1px solid rgba(192, 255, 114, 0.2);
+    color: var(--color-brand);
+    background: rgba(192, 255, 114, 0.04);
+    letter-spacing: -0.01em;
+  }
+
+  .btn-ghost-brand:hover {
+    background: rgba(192, 255, 114, 0.08);
+    border-color: rgba(192, 255, 114, 0.35);
+    box-shadow: 0 0 20px rgba(192, 255, 114, 0.08);
   }
 
   /* =========================
@@ -105,14 +148,15 @@
 
   .input-field {
     width: 100%;
-    border-radius: 0.5rem;
+    border-radius: 0.625rem;
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     transition: all 0.2s ease;
-
     background: var(--color-surface);
     border: 1px solid var(--color-border-strong);
     color: var(--color-text);
+    font-family: "Plus Jakarta Sans", sans-serif;
+    letter-spacing: -0.01em;
   }
 
   .input-field::placeholder {
@@ -121,8 +165,9 @@
 
   .input-field:focus {
     outline: none;
-    border-color: var(--color-brand);
+    border-color: rgba(192, 255, 114, 0.4);
     box-shadow: 0 0 0 3px var(--color-focus);
+    background: var(--color-surface-strong);
   }
 
   /* =========================
@@ -133,24 +178,24 @@
     position: fixed;
     inset: 0;
     z-index: 50;
-
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-
-    background: rgba(2, 6, 14, 0.82);
-    backdrop-filter: blur(8px);
+    background: rgba(1, 3, 10, 0.85);
+    backdrop-filter: blur(10px);
   }
 
   .modal-card {
     width: 100%;
     max-width: 28rem;
     padding: 2rem;
-    border-radius: 1rem;
-
+    border-radius: 1.125rem;
     background: var(--color-surface-strong);
     border: 1px solid var(--color-border-strong);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   /* =========================
@@ -162,6 +207,11 @@
     border: 1px solid var(--color-border);
     border-radius: 1rem;
     padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .section-card:hover {
+    border-color: var(--color-border-strong);
   }
 
   .section-card-label {
@@ -171,6 +221,40 @@
     text-transform: uppercase;
     color: var(--color-text-subtle);
     margin-bottom: 1rem;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  /* =========================
+     BADGES / TAGS
+  ========================= */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  .badge-brand {
+    background: rgba(192, 255, 114, 0.1);
+    color: var(--color-brand);
+    border: 1px solid rgba(192, 255, 114, 0.2);
+  }
+
+  /* =========================
+     DIVIDERS
+  ========================= */
+
+  .divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 1.5rem 0;
   }
 }
 
@@ -179,7 +263,7 @@
 ========================= */
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -192,7 +276,7 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-brand);
+  background: rgba(192, 255, 114, 0.3);
 }
 
 /* =========================
@@ -503,6 +587,42 @@
 
 .animate-search-in {
   animation: search-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* =========================
+   SLIDE DOWN (mobile nav)
+========================= */
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.18s ease forwards;
+}
+
+/* =========================
+   FADE IN
+========================= */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease forwards;
 }
 
 /* ========================================================= */

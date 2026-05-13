@@ -35,9 +35,9 @@ type HeaderProps = {
 const ROLE_PERMISSIONS: Record<Role, EntityType[]> = {
   administrador: ["empresa", "centro_educativo", "estudiante", "oferta"],
   empresa: ["centro_educativo", "estudiante"],
-  centro_educativo: ["empresa", "oferta"],
+  centro_educativo: ["empresa", "estudiante", "oferta"],
   tutor_empresa: ["estudiante", "centro_educativo"],
-  tutor_centro: ["empresa", "oferta"],
+  tutor_centro: ["estudiante", "empresa", "oferta"],
   estudiante: ["empresa", "centro_educativo", "oferta"],
 };
 
@@ -62,8 +62,6 @@ const ENTITY_COLOR: Record<
   oferta: { bg: "rgba(159,122,234,0.08)", text: "#9f7aea", dot: "#9f7aea" },
 };
 
-// ─── Mock data (replace with real API call) ───────────────────────────────────
-
 const RECENT: string[] = [
   "Accenture",
   "IES Ramiro de Maeztu",
@@ -75,71 +73,106 @@ const POPULAR: string[] = [
   "Ofertas 2025",
 ];
 
-function getMock(q: string, allowed: EntityType[]): SearchResult[] {
-  const pool: SearchResult[] = [
-    {
-      id: "1",
-      type: "empresa",
-      name: "Accenture Spain",
-      subtitle: "Consultoría · Madrid",
-      href: "/empresas/accenture",
-    },
-    {
-      id: "2",
-      type: "empresa",
-      name: "Indra Sistemas",
-      subtitle: "Tecnología · Alcobendas",
-      href: "/empresas/indra",
-    },
-    {
-      id: "3",
-      type: "centro_educativo",
-      name: "IES Ramiro de Maeztu",
-      subtitle: "FP Dual · Madrid",
-      href: "/centros/ramiro",
-    },
-    {
-      id: "4",
-      type: "centro_educativo",
-      name: "CIFP Canarias",
-      subtitle: "FP · Las Palmas",
-      href: "/centros/cifp",
-    },
-    {
-      id: "5",
-      type: "estudiante",
-      name: "Laura Martínez",
-      subtitle: "DAM · 2º curso",
-      href: "/estudiantes/laura",
-    },
-    {
-      id: "6",
-      type: "estudiante",
-      name: "Carlos Pérez",
-      subtitle: "ASIR · 1º curso",
-      href: "/estudiantes/carlos",
-    },
-    {
-      id: "7",
-      type: "oferta",
-      name: "Prácticas Full Stack",
-      subtitle: "Accenture · Madrid",
-      href: "/ofertas/1",
-    },
-    {
-      id: "8",
-      type: "oferta",
-      name: "Prácticas Marketing",
-      subtitle: "Telefónica · Remoto",
-      href: "/ofertas/2",
-    },
-  ];
-  return pool.filter(
-    (r) =>
-      allowed.includes(r.type) &&
-      (r.name.toLowerCase().includes(q.toLowerCase()) ||
-        r.subtitle.toLowerCase().includes(q.toLowerCase())),
-  );
+// ─── Búsqueda real contra Supabase ────────────────────────────────────────────
+
+async function searchSupabase(
+  q: string,
+  allowed: EntityType[],
+): Promise<SearchResult[]> {
+  const term = q.trim().toLowerCase();
+  const searches: Promise<void>[] = [];
+  const results: any[] = [];
+
+  if (allowed.includes("empresa")) {
+    searches.push(
+      (async () => {
+        const { data } = await supabase
+          .from("empresa")
+          .select("id, nombre, sector, ciudad, logo_url")
+          .ilike("nombre", `%${term}%`)
+          .limit(5);
+        (data ?? []).forEach((e) => {
+          results.push({
+            id: e.id,
+            type: "empresa",
+            name: e.nombre,
+            subtitle: [e.sector, e.ciudad].filter(Boolean).join(" · "),
+            avatarUrl: e.logo_url ?? undefined,
+            href: `/empresas/${e.id}`,
+          });
+        });
+      })(),
+    );
+  }
+
+  if (allowed.includes("centro_educativo")) {
+    searches.push(
+      (async () => {
+        const { data } = await supabase
+          .from("centro_educativo")
+          .select("id, nombre, tipo_centro, ciudad, avatar_url")
+          .ilike("nombre", `%${term}%`)
+          .limit(5);
+        (data ?? []).forEach((c) => {
+          results.push({
+            id: c.id,
+            type: "centro_educativo",
+            name: c.nombre,
+            subtitle: [c.tipo_centro, c.ciudad].filter(Boolean).join(" · "),
+            avatarUrl: c.avatar_url ?? undefined,
+            href: `/centros/${c.id}`,
+          });
+        });
+      })(),
+    );
+  }
+
+  if (allowed.includes("estudiante")) {
+    searches.push(
+      (async () => {
+        const { data } = await supabase
+          .from("estudiante")
+          .select("id, nombre, apellidos, titulacion, ciudad, avatar_url")
+          .or(`nombre.ilike.%${term}%,apellidos.ilike.%${term}%`)
+          .limit(5);
+        (data ?? []).forEach((s) => {
+          results.push({
+            id: s.id,
+            type: "estudiante",
+            name: `${s.nombre ?? ""} ${s.apellidos ?? ""}`.trim(),
+            subtitle: [s.titulacion, s.ciudad].filter(Boolean).join(" · "),
+            avatarUrl: s.avatar_url ?? undefined,
+            href: `/estudiantes/${s.id}`,
+          });
+        });
+      })(),
+    );
+  }
+
+  if (allowed.includes("oferta")) {
+    searches.push(
+      (async () => {
+        const { data } = await supabase
+          .from("oferta")
+          .select("id_oferta, titulo, modalidad, ubicacion")
+          .ilike("titulo", `%${term}%`)
+          .eq("estado", "activa")
+          .limit(5);
+        (data ?? []).forEach((o) => {
+          results.push({
+            id: o.id_oferta,
+            type: "oferta",
+            name: o.titulo,
+            subtitle: [o.modalidad, o.ubicacion].filter(Boolean).join(" · "),
+            href: `/ofertas/${o.id_oferta}`,
+          });
+        });
+      })(),
+    );
+  }
+
+  await Promise.all(searches);
+  return results;
 }
 
 // ─── Debounce ──────────────────────────────────────────────────────────────────
@@ -151,6 +184,17 @@ function useDebounce<T>(value: T, ms: number): T {
     return () => clearTimeout(t);
   }, [value, ms]);
   return d;
+}
+
+function useScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [active]);
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -218,7 +262,9 @@ function SearchModal({
   const [activeIdx, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const dq = useDebounce(query, 200);
+  const dq = useDebounce(query, 220);
+
+  useScrollLock(open);
 
   useEffect(() => {
     if (open) {
@@ -244,13 +290,20 @@ function SearchModal({
       return;
     }
     setLoading(true);
-    // Replace getMock() with: fetch(`/api/search?q=${dq}&types=${allowedTypes.join(",")}`)
-    Promise.resolve(getMock(dq, allowedTypes))
+    let cancelled = false;
+    searchSupabase(dq, allowedTypes)
       .then((r) => {
-        setResults(r);
-        setActive(-1);
+        if (!cancelled) {
+          setResults(r);
+          setActive(-1);
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [dq, allowedTypes]);
 
   const handleKey = useCallback(
@@ -294,34 +347,30 @@ function SearchModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         aria-hidden="true"
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 50,
-          background: "rgba(3,8,15,0.85)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
+          zIndex: 9998,
+          background: "rgba(1,3,8,0.88)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           animation: "srch-bg 0.15s ease forwards",
         }}
       />
-
-      {/* Panel */}
       <div
         role="dialog"
         aria-modal
-        aria-label="Buscador"
+        aria-label="Buscador global"
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 51,
+          zIndex: 9999,
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "center",
-          paddingTop: "13vh",
           padding: "13vh 16px 0",
           pointerEvents: "none",
         }}
@@ -329,21 +378,21 @@ function SearchModal({
         <div
           style={{
             width: "100%",
-            maxWidth: 600,
+            maxWidth: 620,
             background: "var(--color-surface-strong)",
             border: "1px solid var(--color-border-strong)",
-            borderRadius: 18,
+            borderRadius: 20,
             boxShadow:
-              "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(192,255,114,0.05)",
+              "0 48px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(192,255,114,0.07), inset 0 1px 0 rgba(255,255,255,0.04)",
             overflow: "hidden",
             pointerEvents: "all",
             animation: "srch-in 0.22s cubic-bezier(0.16,1,0.3,1) forwards",
-            maxHeight: "70vh",
+            maxHeight: "72vh",
             display: "flex",
             flexDirection: "column",
           }}
         >
-          {/* Input */}
+          {/* Input row */}
           <div
             style={{
               display: "flex",
@@ -356,8 +405,8 @@ function SearchModal({
             {loading ? (
               <div
                 style={{
-                  width: 17,
-                  height: 17,
+                  width: 16,
+                  height: 16,
                   borderRadius: "50%",
                   flexShrink: 0,
                   border: "2px solid var(--color-border-strong)",
@@ -367,8 +416,8 @@ function SearchModal({
               />
             ) : (
               <svg
-                width="17"
-                height="17"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="var(--color-text-muted)"
@@ -386,7 +435,8 @@ function SearchModal({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Buscar empresas, centros, ofertas…"
+              placeholder="Buscar empresas, centros, estudiantes, ofertas…"
+              aria-label="Campo de búsqueda"
               style={{
                 flex: 1,
                 background: "transparent",
@@ -400,7 +450,10 @@ function SearchModal({
             />
             <kbd
               onClick={onClose}
-              title="Cerrar"
+              role="button"
+              aria-label="Cerrar buscador"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && onClose()}
               style={{
                 fontSize: 10,
                 padding: "2px 8px",
@@ -416,9 +469,8 @@ function SearchModal({
             </kbd>
           </div>
 
-          {/* Body */}
+          {/* Results body */}
           <div ref={listRef} style={{ overflowY: "auto", flex: 1 }}>
-            {/* Empty: recents + popular */}
             {!query.trim() && (
               <div style={{ padding: "6px 0 10px" }}>
                 <SRSection label="Recientes">
@@ -475,7 +527,7 @@ function SearchModal({
                       fontFamily: "Plus Jakarta Sans, sans-serif",
                     }}
                   >
-                    Acceso a:{" "}
+                    Puedes buscar:{" "}
                     <span
                       style={{ color: "var(--color-brand)", fontWeight: 600 }}
                     >
@@ -486,7 +538,6 @@ function SearchModal({
               </div>
             )}
 
-            {/* Results grouped */}
             {query.trim() && results.length > 0 && (
               <div style={{ padding: "6px 0 10px" }}>
                 {(
@@ -520,20 +571,19 @@ function SearchModal({
               </div>
             )}
 
-            {/* No results */}
             {query.trim() && results.length === 0 && !loading && (
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  padding: "36px 0",
+                  padding: "40px 0",
                   gap: 10,
                 }}
               >
                 <svg
-                  width="30"
-                  height="30"
+                  width="28"
+                  height="28"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="var(--color-text-subtle)"
@@ -569,6 +619,7 @@ function SearchModal({
               gap: 14,
               padding: "9px 18px",
               borderTop: "1px solid var(--color-border)",
+              flexWrap: "wrap",
             }}
           >
             {[
@@ -607,17 +658,16 @@ function SearchModal({
           </div>
         </div>
       </div>
-
       <style>{`
         @keyframes srch-bg { from { opacity:0 } to { opacity:1 } }
-        @keyframes srch-in { from { opacity:0; transform:scale(0.97) translateY(-12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+        @keyframes srch-in { from { opacity:0; transform:scale(0.96) translateY(-14px) } to { opacity:1; transform:scale(1) translateY(0) } }
         @keyframes spin { to { transform:rotate(360deg) } }
       `}</style>
     </>
   );
 }
 
-// ─── Search sub-components ────────────────────────────────────────────────────
+// ─── Sub-componentes del modal ────────────────────────────────────────────────
 
 function SRSection({
   label,
@@ -827,10 +877,8 @@ export default function Header({
   onRegisterClick,
 }: HeaderProps): JSX.Element {
   const { user } = useAuth();
-
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(
     user?.user_metadata?.avatar_url,
@@ -838,7 +886,6 @@ export default function Header({
 
   const role: Role = (user?.user_metadata?.rol as Role) ?? "estudiante";
   const allowedTypes = ROLE_PERMISSIONS[role] ?? [];
-
   const fullName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
   const initials: string = fullName
     .split(" ")
@@ -847,7 +894,7 @@ export default function Header({
     .join("");
 
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 10);
+    const h = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
@@ -864,7 +911,7 @@ export default function Header({
       });
   }, [user]);
 
-  // Global CTRL+K
+  // Ctrl+K / Cmd+K global
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -880,239 +927,305 @@ export default function Header({
 
   return (
     <>
-      <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? "bg-dark/90 backdrop-blur-md border-b border-brand/10 shadow-lg shadow-black/20"
-            : "bg-transparent"
-        }`}
+      <div
+        className="sticky top-0 z-40 pointer-events-none"
+        style={{ padding: "10px 20px 0" }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-3">
-            {/* Logo */}
-            <a href="/" className="flex items-center gap-2 flex-shrink-0">
-              <img
-                src={logoUrl}
-                alt="Relance"
-                className="h-8 w-auto rounded-md"
-              />
-            </a>
-
-            {/* Nav desktop */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-all duration-150 font-medium"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-
-            {/* Search trigger — grows to fill space on desktop */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              aria-label="Abrir buscador (Ctrl+K)"
-              className="hidden md:flex"
-              style={{
-                flex: "1 1 0",
-                maxWidth: 340,
-                alignItems: "center",
-                gap: 8,
-                padding: "7px 14px",
-                borderRadius: 10,
-                border: "1px solid var(--color-border-strong)",
-                background: "var(--color-surface)",
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                transition: "all 0.18s",
-                fontFamily: "Plus Jakarta Sans, sans-serif",
-                fontSize: 13,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(192,255,114,0.22)";
-                e.currentTarget.style.background =
-                  "var(--color-surface-elevated)";
-                e.currentTarget.style.color = "var(--color-text-secondary)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor =
-                  "var(--color-border-strong)";
-                e.currentTarget.style.background = "var(--color-surface)";
-                e.currentTarget.style.color = "var(--color-text-muted)";
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ flexShrink: 0 }}
+        <header
+          className="pointer-events-auto"
+          style={{
+            borderRadius: 20,
+            border: scrolled
+              ? "1px solid rgba(192,255,114,0.14)"
+              : "1px solid rgba(255,255,255,0.06)",
+            background: scrolled ? "rgba(1,3,9,0.96)" : "rgba(2,5,13,0.75)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            boxShadow: scrolled
+              ? "0 8px 40px rgba(0,0,0,0.7), 0 1px 0 rgba(192,255,114,0.07) inset, 0 0 0 1px rgba(192,255,114,0.04)"
+              : "0 4px 24px rgba(0,0,0,0.4)",
+            transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-5 sm:px-6">
+            <div className="flex items-center justify-between h-14 gap-3">
+              {/* ── Logo ── */}
+              <a
+                href="/"
+                className="flex items-center gap-2.5 flex-shrink-0 group"
               >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <span style={{ flex: 1, textAlign: "left" }}>Buscar…</span>
-              <kbd
-                style={{
-                  fontSize: 10,
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  border: "1px solid var(--color-border-strong)",
-                  background: "var(--color-surface-strong)",
-                  color: "var(--color-text-subtle)",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                  flexShrink: 0,
-                }}
-              >
-                ⌘K
-              </kbd>
-            </button>
+                <img
+                  src={logoUrl}
+                  alt="Relance"
+                  style={{
+                    height: 28,
+                    width: "auto",
+                    borderRadius: 7,
+                    transition: "opacity 0.2s",
+                  }}
+                />
+              </a>
 
-            {/* Right section */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Mobile search icon */}
+              {/* ── Nav desktop ── */}
+              <nav className="hidden md:flex items-center gap-0.5">
+                {navLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    style={{
+                      padding: "6px 13px",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--color-text-muted)",
+                      borderRadius: 9,
+                      textDecoration: "none",
+                      transition: "color 0.15s, background 0.15s",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                      letterSpacing: "-0.01em",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "var(--color-text)";
+                      e.currentTarget.style.background =
+                        "rgba(255,255,255,0.05)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "var(--color-text-muted)";
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+
+              {/* ── Search trigger (desktop) ── */}
               <button
                 onClick={() => setSearchOpen(true)}
-                aria-label="Buscar"
-                className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
+                aria-label="Abrir buscador (Ctrl+K)"
+                className="hidden md:flex"
+                style={{
+                  flex: "1 1 0",
+                  maxWidth: 300,
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "7px 12px",
+                  borderRadius: 11,
+                  border: "1px solid var(--color-border-strong)",
+                  background: "rgba(255,255,255,0.025)",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.18s",
+                  fontFamily: "Plus Jakarta Sans, sans-serif",
+                  fontSize: 12.5,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(192,255,114,0.25)";
+                  e.currentTarget.style.background = "rgba(192,255,114,0.04)";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor =
+                    "var(--color-border-strong)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.025)";
+                  e.currentTarget.style.color = "var(--color-text-muted)";
+                }}
               >
                 <svg
-                  width="20"
-                  height="20"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  style={{ flexShrink: 0 }}
                 >
                   <circle cx="11" cy="11" r="8" />
                   <path d="m21 21-4.35-4.35" />
                 </svg>
+                <span style={{ flex: 1, textAlign: "left" }}>Buscar…</span>
+                <kbd
+                  style={{
+                    fontSize: 9.5,
+                    padding: "2px 6px",
+                    borderRadius: 5,
+                    border: "1px solid var(--color-border-strong)",
+                    background: "rgba(255,255,255,0.04)",
+                    color: "var(--color-text-subtle)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    flexShrink: 0,
+                  }}
+                >
+                  ⌘K
+                </kbd>
               </button>
 
-              {user ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-brand transition-all duration-200 flex-shrink-0"
-                    aria-label="Menú de usuario"
-                  >
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt={fullName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-brand flex items-center justify-center text-dark font-bold text-sm font-display">
-                        {initials || "?"}
-                      </div>
+              {/* ── Right section ── */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {user ? (
+                  // ── Avatar + UserMenu (no hamburger) ──
+                  <div className="relative">
+                    <button
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        border: menuOpen
+                          ? "2px solid var(--color-brand)"
+                          : "2px solid rgba(255,255,255,0.1)",
+                        transition: "border-color 0.2s",
+                        flexShrink: 0,
+                        cursor: "pointer",
+                        padding: 0,
+                        background: "transparent",
+                      }}
+                      aria-label="Menú de usuario"
+                    >
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={fullName}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            background: "var(--color-brand)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#02050d",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            fontFamily: "Syne, sans-serif",
+                          }}
+                        >
+                          {initials || "?"}
+                        </div>
+                      )}
+                    </button>
+                    {menuOpen && (
+                      <UserMenu onClose={() => setMenuOpen(false)} />
                     )}
-                  </button>
-                  {menuOpen && <UserMenu onClose={() => setMenuOpen(false)} />}
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={onLoginClick}
-                    className="hidden md:flex btn-secondary text-sm"
-                  >
-                    Iniciar sesión
-                  </button>
-                  <button
-                    onClick={onRegisterClick}
-                    className="hidden md:flex btn-primary text-sm"
-                  >
-                    Registrarse
-                  </button>
-                </>
-              )}
-
-              {/* Mobile hamburger */}
-              <button
-                onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
-                aria-label="Menú"
-              >
-                {mobileNavOpen ? (
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                  </div>
                 ) : (
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <line x1="3" y1="6" x2="21" y2="6" />
-                    <line x1="3" y1="12" x2="21" y2="12" />
-                    <line x1="3" y1="18" x2="21" y2="18" />
-                  </svg>
+                  <>
+                    <button
+                      onClick={onLoginClick}
+                      className="hidden md:flex"
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 9,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        fontFamily: "Plus Jakarta Sans, sans-serif",
+                        border: "1px solid var(--color-border-strong)",
+                        background: "transparent",
+                        color: "var(--color-text-muted)",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        letterSpacing: "-0.01em",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor =
+                          "rgba(255,255,255,0.18)";
+                        e.currentTarget.style.color =
+                          "var(--color-text-secondary)";
+                        e.currentTarget.style.background =
+                          "rgba(255,255,255,0.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor =
+                          "var(--color-border-strong)";
+                        e.currentTarget.style.color = "var(--color-text-muted)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      Iniciar sesión
+                    </button>
+                    <button
+                      onClick={onRegisterClick}
+                      className="hidden md:flex"
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 9,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        fontFamily: "Plus Jakarta Sans, sans-serif",
+                        border: "1px solid transparent",
+                        background: "var(--color-brand)",
+                        color: "#02050d",
+                        cursor: "pointer",
+                        transition: "all 0.18s",
+                        letterSpacing: "-0.01em",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#d4ff8c";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 4px 18px rgba(192,255,114,0.28)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "var(--color-brand)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "none";
+                      }}
+                    >
+                      Registrarse
+                    </button>
+
+                    {/* Mobile: botones compactos sin hamburger */}
+                    <button
+                      onClick={onLoginClick}
+                      className="md:hidden"
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 9,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        fontFamily: "Plus Jakarta Sans, sans-serif",
+                        border: "1px solid var(--color-border-strong)",
+                        background: "transparent",
+                        color: "var(--color-text-muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Entrar
+                    </button>
+                    <button
+                      onClick={onRegisterClick}
+                      className="md:hidden"
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 9,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        fontFamily: "Plus Jakarta Sans, sans-serif",
+                        border: "none",
+                        background: "var(--color-brand)",
+                        color: "#02050d",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Registro
+                    </button>
+                  </>
                 )}
-              </button>
+              </div>
             </div>
           </div>
+        </header>
+      </div>
 
-          {/* Mobile nav */}
-          {mobileNavOpen && (
-            <nav className="md:hidden border-t border-white/10 py-3 pb-4 animate-slide-down">
-              {navLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileNavOpen(false)}
-                  className="block px-2 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  {link.label}
-                </a>
-              ))}
-              {!user && (
-                <>
-                  <button
-                    onClick={() => {
-                      setMobileNavOpen(false);
-                      onLoginClick?.();
-                    }}
-                    className="mt-2 w-full btn-secondary text-sm"
-                  >
-                    Iniciar sesión
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMobileNavOpen(false);
-                      onRegisterClick?.();
-                    }}
-                    className="mt-2 w-full btn-primary text-sm"
-                  >
-                    Registrarse
-                  </button>
-                </>
-              )}
-            </nav>
-          )}
-        </div>
-      </header>
-
-      {/* Search modal — rendered outside the header so backdrop covers everything */}
       <SearchModal
         open={searchOpen}
         onClose={() => setSearchOpen(false)}

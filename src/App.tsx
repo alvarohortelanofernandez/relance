@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { supabase } from "./lib/supabase";
+import { useParams, useNavigate } from "react-router-dom";
 
 import Home from "./pages/Home";
 import StudentProfile from "./pages/StudentProfile";
@@ -14,13 +15,16 @@ import AuthCallback from "./pages/AuthCallback";
 import OnboardingModal from "./components/auth/OnboardingModal";
 import OfferPage from "./pages/ofertas/Offer";
 import NotificacionesPage from "./pages/NotificacionesPage";
-
-import { useEffect, useState, useRef } from "react";
+import UserProfilePage from "./pages/profiles/UserProfilePage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/routes/ProtectedRoute";
 import AdminProfile from "./pages/profiles/AdminProfile";
 import AdministrationPanel from "./pages/AdministrationPanel";
 import CenterEducativePanel from "./pages/CenterEducativePanel";
+
+import { useEffect, useState, useRef } from "react";
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ROLES_SIN_ONBOARDING = [
   "estudiante",
@@ -30,6 +34,8 @@ const ROLES_SIN_ONBOARDING = [
   "tutor_centro",
   "tutor",
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -218,24 +224,72 @@ function AppContent() {
       )}
 
       <Routes>
+        {/* ── Públicas / Auth ─────────────────────────────────────────── */}
         <Route path="/" element={<Home />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/registro-tutor" element={<TutorRegisterPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        {/* RUTAS PROTEGIDAS */}
+
+        {/* ── Perfiles de terceros (cualquier rol autenticado) ─────────
+            Todos convergen en UserProfilePage, que internamente bifurca
+            por entityType y viewerRole para mostrar acciones y secciones.
+        ─────────────────────────────────────────────────────────────── */}
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/empresas/:id"
+            element={<EmbeddedProfilePage entityType="empresa" />}
+          />
+          <Route
+            path="/centros/:id"
+            element={<EmbeddedProfilePage entityType="centro_educativo" />}
+          />
+          <Route
+            path="/estudiantes/:id"
+            element={<EmbeddedProfilePage entityType="estudiante" />}
+          />
+        </Route>
+
+        {/* ── Ofertas (cualquier rol autenticado) ─────────────────────
+            /ofertas        → listado general
+            /ofertas/:id    → detalle de una oferta
+            Nota: el botón "Ver ofertas" de UserProfilePage redirige a
+            /empresas/:id/ofertas — si quieres una página dedicada para
+            eso, crea EmpresaOfertasPage y añade la ruta aquí.
+        ─────────────────────────────────────────────────────────────── */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/ofertas" element={<OfferPage />} />
+          <Route path="/ofertas/:id" element={<OfferDetailPage />} />
+        </Route>
+
+        {/* ── Notificaciones (cualquier rol autenticado) ───────────── */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/notificaciones" element={<NotificacionesPage />} />
+        </Route>
+
+        {/* ── Perfiles propios (protegidos por rol) ───────────────────
+            Vistas editables del propio perfil. La vista de solo lectura
+            de un tercero siempre va por /empresas/:id, /centros/:id
+            o /estudiantes/:id usando EmbeddedProfilePage.
+        ─────────────────────────────────────────────────────────────── */}
+
+        {/* Estudiante */}
         <Route element={<ProtectedRoute requiredRole="estudiante" />}>
           <Route path="/perfil/estudiante" element={<StudentProfile />} />
         </Route>
+
+        {/* Empresa */}
         <Route element={<ProtectedRoute requiredRole="empresa" />}>
           <Route path="/perfil/empresa" element={<CompanyProfile />} />
         </Route>
-        <Route element={<ProtectedRoute requiredRole="centro_educativo" />}>
-          <Route path="/panel-centro" element={<CenterEducativePanel />} />
-        </Route>
+
+        {/* Centro educativo */}
         <Route element={<ProtectedRoute requiredRole="centro_educativo" />}>
           <Route path="/perfil/centro" element={<CenterProfile />} />
+          <Route path="/panel-centro" element={<CenterEducativePanel />} />
         </Route>
+
+        {/* Tutores — tutor_centro y tutor_empresa comparten perfil editable */}
         <Route
           element={
             <ProtectedRoute
@@ -245,28 +299,55 @@ function AppContent() {
         >
           <Route path="/perfil/tutor" element={<TutorProfile />} />
         </Route>
+
+        {/* Administrador */}
         <Route element={<ProtectedRoute requiredRole="admin" />}>
           <Route path="/perfil/admin" element={<AdminProfile />} />
-        </Route>
-        <Route element={<ProtectedRoute requiredRole="admin" />}>
           <Route
             path="/panel-administracion"
             element={<AdministrationPanel />}
           />
         </Route>
-        {/* Ofertas — todos los roles autenticados */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/ofertas" element={<OfferPage />} />
-        </Route>
-        {/* Notificaciones — todos los roles autenticados */} {/* ← NUEVO */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/notificaciones" element={<NotificacionesPage />} />
-        </Route>
+
+        {/* ── 404 ─────────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
 }
+
+// ─── Wrapper para perfiles de terceros ───────────────────────────────────────
+/**
+ * Extrae el :id de React Router y monta UserProfilePage.
+ * Es el único punto de entrada para ver el perfil de cualquier entidad
+ * externa (empresa, centro_educativo, estudiante).
+ */
+function EmbeddedProfilePage({
+  entityType,
+}: {
+  entityType: "empresa" | "centro_educativo" | "estudiante";
+}) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--color-bg)",
+        paddingTop: 80,
+      }}
+    >
+      <UserProfilePage
+        entityType={entityType}
+        entityId={id ?? ""}
+        onBack={() => navigate(-1)}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function App() {
   return (
