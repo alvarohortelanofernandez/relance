@@ -8,6 +8,7 @@ import OfertaCard from "./CardOffer";
 import CandidatosModal from "./CandidatesModal";
 import StudentProfileDrawer from "../profiles/StudentProfileDrawer";
 import RecommendModalOffer from "./RecommendModalOffer";
+import OfferDetailsModal from "./OfferDetailsModal";
 
 // ── Constantes ────────────────────────────────────────────────────────────
 const MODALIDADES = ["Presencial", "Remoto", "Híbrido"];
@@ -29,7 +30,7 @@ const DURACIONES = [
 function Spinner({ className = "w-5 h-5" }) {
   return (
     <svg
-      className={`animate-spin text-[#C0FF72] ${className}`}
+      className={`animate-spin text-[var(--color-brand)] ${className}`}
       viewBox="0 0 24 24"
       fill="none"
     >
@@ -203,17 +204,34 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(3,8,15,0.82)", backdropFilter: "blur(8px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-        <div className="sticky top-0 bg-dark-800 border-b border-white/10 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="font-display text-xl font-bold text-white">
+      <div
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative rounded-2xl"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
+        <div
+          className="sticky top-0 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl"
+          style={{
+            background: "var(--color-surface-strong)",
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          <h2
+            className="font-display text-xl font-bold"
+            style={{ color: "var(--color-text)" }}
+          >
             {esEdicion ? "Editar oferta" : "Crear nueva oferta"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white transition-colors"
+            style={{ color: "var(--color-text-muted)" }}
+            className="hover:text-white transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
@@ -223,14 +241,28 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
         <div className="p-6 space-y-5">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+            <div
+              className="rounded-xl px-4 py-3 text-sm"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                color: "#f87171",
+              }}
+            >
               {error}
             </div>
           )}
           {!esEdicion && (
-            <div className="bg-[#C0FF72]/5 border border-[#C0FF72]/20 rounded-xl px-4 py-3 flex gap-3">
+            <div
+              className="rounded-xl px-4 py-3 flex gap-3"
+              style={{
+                background: "rgba(192,255,114,0.05)",
+                border: "1px solid rgba(192,255,114,0.2)",
+              }}
+            >
               <svg
-                className="w-4 h-4 text-[#C0FF72] flex-shrink-0 mt-0.5"
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: "var(--color-brand)" }}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -240,7 +272,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <p className="text-xs text-gray-400">
+              <p
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Las ofertas son revisadas por el equipo de Relance antes de ser
                 visibles para los estudiantes. El proceso suele tardar menos de
                 24 h.
@@ -250,7 +285,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Tipo */}
           <div>
-            <label className="block text-xs text-gray-500 mb-2 uppercase tracking-wider">
+            <label
+              className="block text-xs mb-2 uppercase tracking-wider"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Tipo de oferta *
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -259,7 +297,18 @@ function OfertaModal({ oferta, onClose, onSaved }) {
                   key={t.id}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, tipo_oferta: t.id }))}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-medium transition-all ${form.tipo_oferta === t.id ? "border-[#C0FF72] bg-[#C0FF72]/10 text-[#C0FF72]" : "border-white/10 text-gray-400 hover:border-white/20"}`}
+                  className="py-2.5 px-3 rounded-xl text-xs font-medium transition-all"
+                  style={{
+                    border: `1px solid ${form.tipo_oferta === t.id ? "var(--color-brand)" : "var(--color-border-strong)"}`,
+                    background:
+                      form.tipo_oferta === t.id
+                        ? "rgba(192,255,114,0.1)"
+                        : "transparent",
+                    color:
+                      form.tipo_oferta === t.id
+                        ? "var(--color-brand)"
+                        : "var(--color-text-muted)",
+                  }}
                 >
                   {t.label}
                 </button>
@@ -269,7 +318,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Título */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Título del puesto *
             </label>
             <input
@@ -283,7 +335,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Descripción */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Descripción del puesto
             </label>
             <textarea
@@ -298,7 +353,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               placeholder="Describe las tareas, responsabilidades y el equipo..."
               className="input-field resize-none"
             />
-            <p className="text-xs text-gray-600 mt-1 text-right">
+            <p
+              className="text-xs mt-1 text-right"
+              style={{ color: "var(--color-text-subtle)" }}
+            >
               {form.descripcion.length}/1000
             </p>
           </div>
@@ -306,7 +364,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
           {/* Modalidad + Ubicación */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Modalidad
               </label>
               <select
@@ -323,7 +384,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Ubicación
               </label>
               <input
@@ -339,7 +403,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
           {/* Duración + Horas + Plazas */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Duración
               </label>
               <select
@@ -356,7 +423,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Horas/semana
               </label>
               <input
@@ -370,7 +440,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Plazas
               </label>
               <input
@@ -387,7 +460,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
           {/* Fechas + Salario */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Fecha de inicio
               </label>
               <input
@@ -398,7 +474,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Cierre de solicitudes
               </label>
               <input
@@ -409,7 +488,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
+              <label
+                className="block text-xs mb-1.5"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Remuneración €/mes
               </label>
               <input
@@ -424,23 +506,43 @@ function OfertaModal({ oferta, onClose, onSaved }) {
           </div>
 
           {/* Toggle contrato */}
-          <div className="flex items-center gap-3 p-3 bg-dark border border-white/8 rounded-xl">
+          <div
+            className="flex items-center gap-3 p-3 rounded-xl"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border-strong)",
+            }}
+          >
             <button
               type="button"
               onClick={() =>
                 setForm((f) => ({ ...f, opcion_contrato: !f.opcion_contrato }))
               }
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${form.opcion_contrato ? "bg-[#C0FF72]" : "bg-white/15"}`}
+              className="relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0"
+              style={{
+                background: form.opcion_contrato
+                  ? "var(--color-brand)"
+                  : "var(--color-border-strong)",
+              }}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${form.opcion_contrato ? "translate-x-5" : ""}`}
+                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                style={{
+                  transform: form.opcion_contrato ? "translateX(20px)" : "none",
+                }}
               />
             </button>
             <div>
-              <p className="text-sm text-white font-medium">
+              <p
+                className="text-sm font-medium"
+                style={{ color: "var(--color-text)" }}
+              >
                 Opción de contratación
               </p>
-              <p className="text-xs text-gray-500">
+              <p
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 Existe posibilidad de incorporación al finalizar las prácticas
               </p>
             </div>
@@ -448,7 +550,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Tecnologías */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Tecnologías requeridas
             </label>
             <div className="relative">
@@ -462,13 +567,33 @@ function OfertaModal({ oferta, onClose, onSaved }) {
                 autoComplete="off"
               />
               {tecnosSugeridas.length > 0 && (
-                <div className="absolute z-20 top-full mt-1 w-full bg-dark-800 border border-white/15 rounded-xl overflow-hidden shadow-xl">
+                <div
+                  className="absolute z-20 top-full mt-1 w-full rounded-xl overflow-hidden shadow-xl"
+                  style={{
+                    background: "var(--color-surface-elevated)",
+                    border: "1px solid var(--color-border-strong)",
+                  }}
+                >
                   {tecnosSugeridas.map((t) => (
                     <button
                       key={t.id_tecnologia}
                       type="button"
                       onClick={() => addTech(t.nombre)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/8 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                      className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+                      style={{
+                        color: "var(--color-text-secondary)",
+                        borderBottom: "1px solid var(--color-border)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--color-surface-strong)";
+                        e.currentTarget.style.color = "var(--color-text)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color =
+                          "var(--color-text-secondary)";
+                      }}
                     >
                       {t.nombre}
                     </button>
@@ -480,7 +605,12 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               {form.tecnologias.map((t) => (
                 <span
                   key={t.id_tecnologia}
-                  className="flex items-center gap-1 bg-[#C0FF72]/10 border border-[#C0FF72]/20 text-[#C0FF72] text-xs px-2.5 py-1 rounded-full"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
+                  style={{
+                    background: "rgba(192,255,114,0.1)",
+                    border: "1px solid rgba(192,255,114,0.2)",
+                    color: "var(--color-brand)",
+                  }}
                 >
                   {t.nombre}
                   <button
@@ -493,7 +623,13 @@ function OfertaModal({ oferta, onClose, onSaved }) {
                         ),
                       }))
                     }
-                    className="text-[#C0FF72]/60 hover:text-[#C0FF72]"
+                    style={{ color: "rgba(192,255,114,0.6)" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "var(--color-brand)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "rgba(192,255,114,0.6)";
+                    }}
                   >
                     ×
                   </button>
@@ -504,7 +640,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Requisitos */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Requisitos adicionales
             </label>
             <textarea
@@ -523,7 +662,10 @@ function OfertaModal({ oferta, onClose, onSaved }) {
 
           {/* Beneficios */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               Beneficios ofrecidos
             </label>
             <textarea
@@ -571,233 +713,6 @@ function OfertaModal({ oferta, onClose, onSaved }) {
   );
 }
 
-// ─── Modal detalle oferta ──────────────────────────────────────────────────
-const TIPO_META = {
-  practicas: { label: "Prácticas", color: "blue" },
-  practicas_contratacion: { label: "Prácticas + contratación", color: "green" },
-  empleo_junior: { label: "Empleo junior", color: "purple" },
-};
-
-function Badge({ children, color = "gray" }) {
-  const cls = {
-    brand: "bg-[#C0FF72]/10 text-[#C0FF72]  border-[#C0FF72]/20",
-    blue: "bg-blue-500/10  text-blue-400   border-blue-500/20",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-    green: "bg-green-500/10 text-green-400  border-green-500/20",
-    gray: "bg-white/5      text-gray-400   border-white/10",
-  }[color];
-  return (
-    <span
-      className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-const modalidadIcon = { Presencial: "", Remoto: "", Híbrido: "" };
-
-function DetalleModal({
-  oferta,
-  onClose,
-  onPostular,
-  yaPostulado,
-  isEstudiante,
-}) {
-  const meta = TIPO_META[oferta.tipo_oferta] ?? {
-    label: "Oferta",
-    color: "gray",
-  };
-  const tecnologias = oferta.tecnologias ?? [];
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-        <div className="sticky top-0 bg-dark-800 border-b border-white/10 px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C0FF72]/10 border border-[#C0FF72]/20 flex items-center justify-center flex-shrink-0">
-              {oferta.empresa_avatar ? (
-                <img
-                  src={oferta.empresa_avatar}
-                  alt=""
-                  className="w-full h-full object-cover rounded-xl"
-                />
-              ) : (
-                <svg className="w-5 h-5 text-[#C0FF72]" viewBox="0 0 640 640">
-                  <use href="/icons.svg#icon-building" />
-                </svg>
-              )}
-            </div>
-            <div>
-              <h2 className="font-display font-bold text-white text-lg leading-tight">
-                {oferta.titulo}
-              </h2>
-              <p className="text-gray-400 text-sm">{oferta.empresa_nombre}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          <div className="flex flex-wrap gap-2">
-            <Badge color={meta.color}>{meta.label}</Badge>
-            {oferta.modalidad && (
-              <Badge color="gray">
-                {modalidadIcon[oferta.modalidad]} {oferta.modalidad}
-              </Badge>
-            )}
-            {oferta.ubicacion && <Badge color="gray">{oferta.ubicacion}</Badge>}
-            {oferta.opcion_contrato && (
-              <Badge color="green">Opción de contratación</Badge>
-            )}
-            {oferta.salario_mensual ? (
-              <Badge color="brand">{oferta.salario_mensual} €/mes</Badge>
-            ) : (
-              <Badge color="gray">No remunerado</Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              {
-                label: "Duración",
-                val: oferta.duracion_semanas
-                  ? `${oferta.duracion_semanas} semanas`
-                  : "-",
-              },
-              {
-                label: "Horas/semana",
-                val: oferta.horas_semanales
-                  ? `${oferta.horas_semanales} h`
-                  : "-",
-              },
-              {
-                label: "Plazas",
-                val:
-                  oferta.num_plazas_restantes != null
-                    ? `${oferta.num_plazas_restantes} disponibles`
-                    : "-",
-              },
-              {
-                label: "Cierre",
-                val: oferta.fecha_fin_solicitud
-                  ? new Date(oferta.fecha_fin_solicitud).toLocaleDateString(
-                      "es-ES",
-                    )
-                  : "-",
-              },
-            ].map(({ label, val }) => (
-              <div
-                key={label}
-                className="bg-dark border border-white/8 rounded-xl p-3 text-center"
-              >
-                <p className="text-gray-600 text-xs mb-1">{label}</p>
-                <p className="text-white text-sm font-semibold font-display">
-                  {val}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {oferta.descripcion && (
-            <div>
-              <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                Descripción
-              </h3>
-              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-                {oferta.descripcion}
-              </p>
-            </div>
-          )}
-          {tecnologias.length > 0 && (
-            <div>
-              <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                Tecnologías
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {tecnologias.map((t) => (
-                  <span
-                    key={t.id_tecnologia}
-                    className="bg-[#C0FF72]/10 border border-[#C0FF72]/20 text-[#C0FF72] text-xs px-2.5 py-1 rounded-full"
-                  >
-                    {t.nombre}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {oferta.requisitos_adicionales && (
-            <div>
-              <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                Requisitos adicionales
-              </h3>
-              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-                {oferta.requisitos_adicionales}
-              </p>
-            </div>
-          )}
-          {oferta.beneficios && (
-            <div>
-              <h3 className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                Beneficios
-              </h3>
-              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-                {oferta.beneficios}
-              </p>
-            </div>
-          )}
-
-          {isEstudiante && (
-            <div className="pt-2 border-t border-white/10">
-              {yaPostulado ? (
-                <div className="flex items-center justify-center gap-2 py-3 text-[#C0FF72] text-sm font-medium">
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Ya te has postulado a esta oferta
-                </div>
-              ) : (
-                <button
-                  onClick={() => onPostular(oferta)}
-                  className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
-                  </svg>
-                  Postularme a esta oferta
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Modal postulación ─────────────────────────────────────────────────────
 function PostulacionModal({ oferta, onClose, onSuccess }) {
   const { user } = useAuth();
@@ -827,25 +742,54 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "rgba(3,8,15,0.88)", backdropFilter: "blur(8px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-6">
-        <h2 className="font-display text-xl font-bold text-white mb-1">
+      <div
+        className="w-full max-w-md p-6 rounded-2xl"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
+        <h2
+          className="font-display text-xl font-bold mb-1"
+          style={{ color: "var(--color-text)" }}
+        >
           Postularme
         </h2>
-        <p className="text-gray-500 text-sm mb-5">
+        <p
+          className="text-sm mb-5"
+          style={{ color: "var(--color-text-muted)" }}
+        >
           Vas a postularte a{" "}
-          <strong className="text-white">{oferta.titulo}</strong> en{" "}
-          <strong className="text-white">{oferta.empresa_nombre}</strong>.
+          <strong style={{ color: "var(--color-text)" }}>
+            {oferta.titulo}
+          </strong>{" "}
+          en{" "}
+          <strong style={{ color: "var(--color-text)" }}>
+            {oferta.empresa_nombre}
+          </strong>
+          .
         </p>
         {error && (
-          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+          <div
+            className="mb-4 rounded-xl px-4 py-3 text-sm"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              color: "#f87171",
+            }}
+          >
             {error}
           </div>
         )}
         <div className="mb-4">
-          <label className="block text-xs text-gray-500 mb-1.5">
+          <label
+            className="block text-xs mb-1.5"
+            style={{ color: "var(--color-text-muted)" }}
+          >
             Mensaje de presentación (opcional)
           </label>
           <textarea
@@ -855,7 +799,10 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
             placeholder="Cuéntale a la empresa por qué eres el candidato ideal..."
             className="input-field resize-none"
           />
-          <p className="text-xs text-gray-600 mt-1 text-right">
+          <p
+            className="text-xs mt-1 text-right"
+            style={{ color: "var(--color-text-subtle)" }}
+          >
             {mensaje.length}/500
           </p>
         </div>
@@ -909,14 +856,28 @@ function RetirarModal({ oferta, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "rgba(3,8,15,0.88)", backdropFilter: "blur(8px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-sm p-6">
+      <div
+        className="w-full max-w-sm p-6 rounded-2xl"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.2)",
+            }}
+          >
             <svg
-              className="w-5 h-5 text-red-400"
+              className="w-5 h-5"
+              style={{ color: "#f87171" }}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -928,20 +889,36 @@ function RetirarModal({ oferta, onClose, onSuccess }) {
             </svg>
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-white">
+            <h2
+              className="font-display text-lg font-bold"
+              style={{ color: "var(--color-text)" }}
+            >
               Retirar candidatura
             </h2>
-            <p className="text-gray-500 text-xs">
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               Esta acción no se puede deshacer
             </p>
           </div>
         </div>
-        <p className="text-gray-400 text-sm mb-5">
+        <p
+          className="text-sm mb-5"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
           ¿Seguro que quieres retirar tu candidatura a{" "}
-          <strong className="text-white">{oferta.titulo}</strong>?
+          <strong style={{ color: "var(--color-text)" }}>
+            {oferta.titulo}
+          </strong>
+          ?
         </p>
         {error && (
-          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+          <div
+            className="mb-4 rounded-xl px-4 py-3 text-sm"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              color: "#f87171",
+            }}
+          >
             {error}
           </div>
         )}
@@ -952,7 +929,18 @@ function RetirarModal({ oferta, onClose, onSuccess }) {
           <button
             onClick={handleRetirar}
             disabled={sending}
-            className="flex-1 py-2 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-sm font-medium transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              color: "#f87171",
+              border: "1px solid rgba(239,68,68,0.2)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(239,68,68,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(239,68,68,0.1)";
+            }}
           >
             {sending ? (
               <>
@@ -996,14 +984,28 @@ function CerrarOfertaModal({ oferta, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "rgba(3,8,15,0.88)", backdropFilter: "blur(8px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-sm p-6">
+      <div
+        className="w-full max-w-sm p-6 rounded-2xl"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "rgba(246,173,85,0.1)",
+              border: "1px solid rgba(246,173,85,0.2)",
+            }}
+          >
             <svg
-              className="w-5 h-5 text-orange-400"
+              className="w-5 h-5"
+              style={{ color: "#f6ad55" }}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1015,21 +1017,36 @@ function CerrarOfertaModal({ oferta, onClose, onSuccess }) {
             </svg>
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-white">
+            <h2
+              className="font-display text-lg font-bold"
+              style={{ color: "var(--color-text)" }}
+            >
               Cerrar oferta
             </h2>
-            <p className="text-gray-500 text-xs">
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               Dejará de aceptar nuevas candidaturas
             </p>
           </div>
         </div>
-        <p className="text-gray-400 text-sm mb-5">
+        <p
+          className="text-sm mb-5"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
           ¿Quieres cerrar la oferta{" "}
-          <strong className="text-white">{oferta.titulo}</strong>? Los
-          candidatos ya postulados no se verán afectados.
+          <strong style={{ color: "var(--color-text)" }}>
+            {oferta.titulo}
+          </strong>
+          ? Los candidatos ya postulados no se verán afectados.
         </p>
         {error && (
-          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+          <div
+            className="mb-4 rounded-xl px-4 py-3 text-sm"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              color: "#f87171",
+            }}
+          >
             {error}
           </div>
         )}
@@ -1040,7 +1057,18 @@ function CerrarOfertaModal({ oferta, onClose, onSuccess }) {
           <button
             onClick={handleCerrar}
             disabled={sending}
-            className="flex-1 py-2 px-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-sm font-medium transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{
+              background: "rgba(246,173,85,0.1)",
+              color: "#f6ad55",
+              border: "1px solid rgba(246,173,85,0.2)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(246,173,85,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(246,173,85,0.1)";
+            }}
           >
             {sending ? (
               <>
@@ -1083,10 +1111,17 @@ function FiltrosBar({
   };
 
   return (
-    <div className="bg-dark-800 border border-white/10 rounded-2xl p-4 mb-6 space-y-3">
+    <div
+      className="rounded-2xl p-4 mb-6 space-y-3"
+      style={{
+        background: "var(--color-surface-strong)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+    >
       <div className="relative">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: "var(--color-text-muted)" }}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -1149,7 +1184,20 @@ function FiltrosBar({
         {filtrosActivos > 0 && (
           <button
             onClick={limpiar}
-            className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5 transition-all border border-white/10 flex items-center gap-1"
+            className="text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+            style={{
+              color: "var(--color-text-muted)",
+              border: "1px solid var(--color-border-strong)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--color-text)";
+              e.currentTarget.style.background =
+                "var(--color-surface-elevated)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--color-text-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
           >
             <svg
               className="w-3 h-3"
@@ -1172,21 +1220,59 @@ function FiltrosBar({
 // ─── Tabs empresa ──────────────────────────────────────────────────────────
 function TabsEmpresa({ tab, setTab, totalMisOfertas }) {
   return (
-    <div className="flex gap-1 bg-dark-800 border border-white/10 rounded-xl p-1 mb-6 w-fit">
+    <div
+      className="flex gap-1 rounded-xl p-1 mb-6 w-fit"
+      style={{
+        background: "var(--color-surface-strong)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+    >
       <button
         onClick={() => setTab("explorar")}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "explorar" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}
+        className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+        style={{
+          background:
+            tab === "explorar"
+              ? "var(--color-surface-elevated)"
+              : "transparent",
+          color:
+            tab === "explorar"
+              ? "var(--color-text)"
+              : "var(--color-text-muted)",
+        }}
       >
         Explorar ofertas
       </button>
       <button
         onClick={() => setTab("mis-ofertas")}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${tab === "mis-ofertas" ? "bg-[#C0FF72]/15 text-[#C0FF72] border border-[#C0FF72]/20" : "text-gray-500 hover:text-gray-300"}`}
+        className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+        style={{
+          background:
+            tab === "mis-ofertas" ? "rgba(192,255,114,0.12)" : "transparent",
+          color:
+            tab === "mis-ofertas"
+              ? "var(--color-brand)"
+              : "var(--color-text-muted)",
+          border:
+            tab === "mis-ofertas"
+              ? "1px solid rgba(192,255,114,0.2)"
+              : "1px solid transparent",
+        }}
       >
         Mis ofertas
         {totalMisOfertas > 0 && (
           <span
-            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${tab === "mis-ofertas" ? "bg-[#C0FF72]/20 text-[#C0FF72]" : "bg-white/10 text-gray-400"}`}
+            className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+            style={{
+              background:
+                tab === "mis-ofertas"
+                  ? "rgba(192,255,114,0.2)"
+                  : "var(--color-surface-elevated)",
+              color:
+                tab === "mis-ofertas"
+                  ? "var(--color-brand)"
+                  : "var(--color-text-muted)",
+            }}
           >
             {totalMisOfertas}
           </span>
@@ -1204,31 +1290,47 @@ function EmpresaStats({ ofertas }) {
     (o) => o.estado === "cerrada" || o.estado === "rechazada",
   ).length;
 
+  const stats = [
+    {
+      label: "Activas",
+      val: activas,
+      color: "#68d391",
+      bg: "rgba(104,211,145,0.1)",
+      border: "rgba(104,211,145,0.2)",
+    },
+    {
+      label: "En revisión",
+      val: pendientes,
+      color: "#f6ad55",
+      bg: "rgba(246,173,85,0.1)",
+      border: "rgba(246,173,85,0.2)",
+    },
+    {
+      label: "Cerradas",
+      val: cerradas,
+      color: "var(--color-text-muted)",
+      bg: "var(--color-surface-elevated)",
+      border: "var(--color-border-strong)",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-3 gap-3 mb-6">
-      {[
-        {
-          label: "Activas",
-          val: activas,
-          color: "text-green-400",
-          bg: "bg-green-500/10  border-green-500/20",
-        },
-        {
-          label: "En revisión",
-          val: pendientes,
-          color: "text-orange-400",
-          bg: "bg-orange-500/10 border-orange-500/20",
-        },
-        {
-          label: "Cerradas",
-          val: cerradas,
-          color: "text-gray-400",
-          bg: "bg-white/5       border-white/10",
-        },
-      ].map(({ label, val, color, bg }) => (
-        <div key={label} className={`border rounded-2xl p-4 text-center ${bg}`}>
-          <p className={`text-2xl font-display font-bold ${color}`}>{val}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+      {stats.map(({ label, val, color, bg, border }) => (
+        <div
+          key={label}
+          className="rounded-2xl p-4 text-center"
+          style={{ background: bg, border: `1px solid ${border}` }}
+        >
+          <p className="text-2xl font-display font-bold" style={{ color }}>
+            {val}
+          </p>
+          <p
+            className="text-xs mt-0.5"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            {label}
+          </p>
         </div>
       ))}
     </div>
@@ -1242,7 +1344,7 @@ export default function OfertasPage() {
 
   const isEmpresa = userRole === "empresa";
   const isEstudiante = userRole === "estudiante";
-  const isTutorCentro = userRole === "tutor_centro"; // ← AÑADIDO
+  const isTutorCentro = userRole === "tutor_centro";
 
   // Datos
   const [ofertasPublicas, setOfertasPublicas] = useState([]);
@@ -1265,7 +1367,7 @@ export default function OfertasPage() {
   const [retirarOferta, setRetirarOferta] = useState(null);
   const [cerrarOferta, setCerrarOferta] = useState(null);
   const [candidatosOferta, setCandidatosOferta] = useState(null);
-  const [recomendarOferta, setRecomendarOferta] = useState(null); // ← AÑADIDO
+  const [recomendarOferta, setRecomendarOferta] = useState(null);
 
   // ── Carga de ofertas públicas ──────────────────────────────────────────
   const cargarOfertasPublicas = useCallback(async () => {
@@ -1297,7 +1399,7 @@ export default function OfertasPage() {
     }));
   }, []);
 
-  // ── Carga de mis ofertas (empresa) ────────────────────────────────────
+  // ── Carga mis ofertas (empresa) ───────────────────────────────────────
   const cargarMisOfertas = useCallback(async () => {
     if (!isEmpresa || !user) return [];
     const { data, error } = await supabase
@@ -1328,7 +1430,7 @@ export default function OfertasPage() {
     }));
   }, [isEmpresa, user]);
 
-  // ── Carga postulaciones del estudiante ────────────────────────────────
+  // ── Postulaciones del estudiante ──────────────────────────────────────
   const cargarPostulaciones = useCallback(async () => {
     if (!isEstudiante || !user) return;
     const { data } = await supabase
@@ -1338,7 +1440,6 @@ export default function OfertasPage() {
     setPostulaciones(new Set((data ?? []).map((c) => c.id_oferta)));
   }, [isEstudiante, user]);
 
-  // ── Carga inicial ──────────────────────────────────────────────────────
   const recargar = useCallback(async () => {
     setLoading(true);
     const [pub, mis] = await Promise.all([
@@ -1355,7 +1456,6 @@ export default function OfertasPage() {
     recargar();
   }, [recargar]);
 
-  // ── Eliminar oferta ────────────────────────────────────────────────────
   const handleDelete = async (idOferta) => {
     if (
       !window.confirm(
@@ -1394,18 +1494,23 @@ export default function OfertasPage() {
   const isEmpresaOwnerOf = (oferta) =>
     isEmpresa && oferta.id_empresa === user?.id;
 
-  // ─────────────────────────────────────────────────────────────────────
   return (
     <MainLayout>
-      <div className="min-h-screen bg-dark">
+      <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
           {/* Cabecera */}
           <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
             <div>
-              <h1 className="font-display text-3xl font-bold text-white">
+              <h1
+                className="font-display text-3xl font-bold"
+                style={{ color: "var(--color-text)" }}
+              >
                 {esMisOfertas ? "Mis ofertas" : "Ofertas de prácticas"}
               </h1>
-              <p className="text-gray-500 text-sm mt-1">
+              <p
+                className="text-sm mt-1"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 {esMisOfertas
                   ? "Gestiona y publica tus ofertas de prácticas o empleo"
                   : `${listaFiltrada.length} oferta${listaFiltrada.length !== 1 ? "s" : ""} disponible${listaFiltrada.length !== 1 ? "s" : ""}`}
@@ -1431,7 +1536,6 @@ export default function OfertasPage() {
             )}
           </div>
 
-          {/* Tabs solo empresa */}
           {isEmpresa && (
             <TabsEmpresa
               tab={tab}
@@ -1439,13 +1543,10 @@ export default function OfertasPage() {
               totalMisOfertas={misOfertas.length}
             />
           )}
-
-          {/* Stats empresa */}
           {isEmpresa && esMisOfertas && misOfertas.length > 0 && (
             <EmpresaStats ofertas={misOfertas} />
           )}
 
-          {/* Filtros */}
           <FiltrosBar
             search={search}
             setSearch={setSearch}
@@ -1465,14 +1566,21 @@ export default function OfertasPage() {
               <Spinner className="w-8 h-8" />
             </div>
           ) : listaFiltrada.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
+            <div
+              className="text-center py-20 rounded-2xl"
+              style={{ border: "1px dashed var(--color-border-strong)" }}
+            >
               <svg
-                className="w-12 h-12 text-gray-700 mx-auto mb-4"
+                className="w-12 h-12 mx-auto mb-4"
+                style={{ color: "var(--color-text-subtle)" }}
                 viewBox="0 0 640 640"
               >
                 <use href="/icons.svg#icon-briefcase" />
               </svg>
-              <p className="text-gray-500 font-medium">
+              <p
+                className="font-medium"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 {esMisOfertas
                   ? "Aún no has publicado ninguna oferta"
                   : "No hay ofertas disponibles con estos filtros"}
@@ -1524,11 +1632,12 @@ export default function OfertasPage() {
         />
       )}
 
+      {/* OfferDetailsModal — reemplaza el antiguo DetalleModal inline */}
       {detalleOferta &&
         !postulacionOferta &&
         !retirarOferta &&
         !cerrarOferta && (
-          <DetalleModal
+          <OfferDetailsModal
             oferta={detalleOferta}
             onClose={() => setDetalleOferta(null)}
             isEstudiante={isEstudiante}
@@ -1584,7 +1693,6 @@ export default function OfertasPage() {
         />
       )}
 
-      {/* ← AÑADIDO */}
       {recomendarOferta && (
         <RecommendModalOffer
           oferta={recomendarOferta}
