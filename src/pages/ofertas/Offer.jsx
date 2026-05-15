@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import MainLayout from "../../components/layout/MainLayout";
@@ -1341,6 +1341,7 @@ function EmpresaStats({ ofertas }) {
 export default function OfertasPage() {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const isEmpresa = userRole === "empresa";
   const isEstudiante = userRole === "estudiante";
@@ -1455,6 +1456,26 @@ export default function OfertasPage() {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  // ── Abrir modal desde query param ?oferta=ID ───────────────────────────
+  // Se ejecuta cuando los datos ya están cargados Y hay un query param
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(location.search);
+    const ofertaId = params.get("oferta");
+    if (!ofertaId) return;
+
+    // Buscar en ambas listas
+    const encontrada =
+      ofertasPublicas.find((o) => String(o.id_oferta) === ofertaId) ??
+      misOfertas.find((o) => String(o.id_oferta) === ofertaId);
+
+    if (encontrada) {
+      setDetalleOferta(encontrada);
+      // Limpiar el query param de la URL sin recargar la página
+      navigate("/ofertas", { replace: true });
+    }
+  }, [loading, location.search, ofertasPublicas, misOfertas, navigate]);
 
   const handleDelete = async (idOferta) => {
     if (
@@ -1632,7 +1653,6 @@ export default function OfertasPage() {
         />
       )}
 
-      {/* OfferDetailsModal — reemplaza el antiguo DetalleModal inline */}
       {detalleOferta &&
         !postulacionOferta &&
         !retirarOferta &&

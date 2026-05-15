@@ -34,8 +34,10 @@ type HeaderProps = {
 
 const ROLE_PERMISSIONS: Record<Role, EntityType[]> = {
   administrador: ["empresa", "centro_educativo", "estudiante", "oferta"],
+  // empresa y centro pueden buscar TODOS los estudiantes de la plataforma
   empresa: ["centro_educativo", "estudiante"],
   centro_educativo: ["empresa", "estudiante", "oferta"],
+  // tutores solo ven sus propios estudiantes (filtrado en la query)
   tutor_empresa: ["estudiante", "centro_educativo"],
   tutor_centro: ["estudiante", "empresa", "oferta"],
   estudiante: ["empresa", "centro_educativo", "oferta"],
@@ -73,15 +75,65 @@ const POPULAR: string[] = [
   "Ofertas 2025",
 ];
 
+// ─── Resolución de contexto de tutor ─────────────────────────────────────────
+// Devuelve los IDs de estudiantes que el tutor tiene asignados
+
+async function resolveTutorStudentIds(
+  role: Role,
+  userId: string,
+): Promise<string[] | null> {
+  // null = sin restricción (todos los estudiantes)
+
+  if (role === "tutor_centro") {
+    // Estudiantes cuyo id_tutor coincide con el usuario actual
+    const { data } = await supabase
+      .from("centro_estudiante")
+      .select("id_estudiante")
+      .eq("id_tutor", userId);
+    return (data ?? []).map((r) => r.id_estudiante);
+  }
+
+  if (role === "tutor_empresa") {
+    // Primero obtenemos la empresa del tutor
+    const { data: tutorData } = await supabase
+      .from("tutor_empresa")
+      .select("empresa_id")
+      .eq("usuario_id", userId)
+      .maybeSingle();
+
+    if (!tutorData?.empresa_id) return [];
+
+    // Estudiantes en prácticas o con candidatura en esa empresa
+    const { data: estadoData } = await supabase
+      .from("estudiante_estado")
+      .select("id_estudiante")
+      .eq("id_empresa", tutorData.empresa_id)
+      .in("estado", ["en_practicas", "finalizado"]);
+
+    return (estadoData ?? []).map((r) => r.id_estudiante);
+  }
+
+  return null; // sin filtro
+}
+
 // ─── Búsqueda real contra Supabase ────────────────────────────────────────────
 
 async function searchSupabase(
   q: string,
   allowed: EntityType[],
+  role: Role,
+  userId: string,
 ): Promise<SearchResult[]> {
   const term = q.trim().toLowerCase();
   const searches: Promise<void>[] = [];
-  const results: any[] = [];
+  const results: SearchResult[] = [];
+
+  // Precalcular IDs de estudiantes del tutor (una sola vez si aplica)
+  let tutorStudentIds: string[] | null = null;
+  const isTutor = role === "tutor_centro" || role === "tutor_empresa";
+  if (isTutor && allowed.includes("estudiante")) {
+    tutorStudentIds = await resolveTutorStudentIds(role, userId);
+  }
 
   if (allowed.includes("empresa")) {
     searches.push(
@@ -130,12 +182,23 @@ async function searchSupabase(
   if (allowed.includes("estudiante")) {
     searches.push(
       (async () => {
-        const { data } = await supabase
+        let query = supabase
           .from("estudiante")
           .select("id, nombre, apellidos, titulacion, ciudad, avatar_url")
-          .or(`nombre.ilike.%${term}%,apellidos.ilike.%${term}%`)
-          .limit(5);
-        (data ?? []).forEach((s) => {
+          .or(`nombre.ilike."%${term}%",apellidos.ilike."%${term}%"`)
+          .limit(isTutor ? 20 : 5); // más resultados para tutores ya que filtramos en memoria
+
+        const { data } = await query;
+
+        let estudiantes = data ?? [];
+
+        // Si es tutor, filtrar solo sus estudiantes asignados
+        if (isTutor && tutorStudentIds !== null) {
+          const ids = new Set(tutorStudentIds);
+          estudiantes = estudiantes.filter((s) => ids.has(s.id));
+        }
+
+        estudiantes.slice(0, 5).forEach((s) => {
           results.push({
             id: s.id,
             type: "estudiante",
@@ -164,7 +227,7 @@ async function searchSupabase(
             type: "oferta",
             name: o.titulo,
             subtitle: [o.modalidad, o.ubicacion].filter(Boolean).join(" · "),
-            href: `/ofertas/${o.id_oferta}`,
+            href: `/ofertas?oferta=${o.id_oferta}`,
           });
         });
       })(),
@@ -251,10 +314,14 @@ function SearchModal({
   open,
   onClose,
   allowedTypes,
+  role,
+  userId,
 }: {
   open: boolean;
   onClose: () => void;
   allowedTypes: EntityType[];
+  role: Role;
+  userId: string;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -291,7 +358,7 @@ function SearchModal({
     }
     setLoading(true);
     let cancelled = false;
-    searchSupabase(dq, allowedTypes)
+    searchSupabase(dq, allowedTypes, role, userId)
       .then((r) => {
         if (!cancelled) {
           setResults(r);
@@ -304,7 +371,7 @@ function SearchModal({
     return () => {
       cancelled = true;
     };
-  }, [dq, allowedTypes]);
+  }, [dq, allowedTypes, role, userId]);
 
   const handleKey = useCallback(
     (e: React.KeyboardEvent) => {
@@ -342,6 +409,14 @@ function SearchModal({
     },
     {},
   );
+
+  // Etiqueta contextual para estudiantes según el rol
+  const studentSearchLabel =
+    role === "tutor_centro"
+      ? "Mis estudiantes tutorizados"
+      : role === "tutor_empresa"
+        ? "Estudiantes en mis prácticas"
+        : "Todos los estudiantes";
 
   if (!open) return null;
 
@@ -527,12 +602,26 @@ function SearchModal({
                       fontFamily: "Plus Jakarta Sans, sans-serif",
                     }}
                   >
-                    Puedes buscar:{" "}
-                    <span
-                      style={{ color: "var(--color-brand)", fontWeight: 600 }}
-                    >
-                      {allowedTypes.map((t) => ENTITY_LABELS[t]).join(", ")}
-                    </span>
+                    {(role === "tutor_centro" || role === "tutor_empresa") &&
+                    allowedTypes.includes("estudiante") ? (
+                      <>
+                        Buscando:{" "}
+                        <span
+                          style={{ color: "#f6ad55", fontWeight: 600 }}
+                        >
+                          {studentSearchLabel}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        Puedes buscar:{" "}
+                        <span
+                          style={{ color: "var(--color-brand)", fontWeight: 600 }}
+                        >
+                          {allowedTypes.map((t) => ENTITY_LABELS[t]).join(", ")}
+                        </span>
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
@@ -546,10 +635,16 @@ function SearchModal({
                   const offset = allowedTypes
                     .slice(0, allowedTypes.indexOf(type))
                     .reduce((a, t) => a + (grouped[t]?.length ?? 0), 0);
+                  // Usar etiqueta contextual para estudiantes en tutores
+                  const sectionLabel =
+                    type === "estudiante" &&
+                    (role === "tutor_centro" || role === "tutor_empresa")
+                      ? studentSearchLabel
+                      : ENTITY_LABELS[type];
                   return (
                     <SRSection
                       key={type}
-                      label={ENTITY_LABELS[type]}
+                      label={sectionLabel}
                       dot={ENTITY_COLOR[type].dot}
                     >
                       {items.map((r, i) => (
@@ -606,6 +701,19 @@ function SearchModal({
                   <strong style={{ color: "var(--color-text)" }}>
                     "{query}"
                   </strong>
+                  {(role === "tutor_centro" || role === "tutor_empresa") &&
+                    allowedTypes.includes("estudiante") && (
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: 11.5,
+                          color: "var(--color-text-subtle)",
+                          marginTop: 4,
+                        }}
+                      >
+                        La búsqueda está limitada a tus estudiantes asignados
+                      </span>
+                    )}
                 </span>
               </div>
             )}
@@ -743,30 +851,12 @@ function SRSuggestion({
     >
       <span style={{ color: "var(--color-text-subtle)", flexShrink: 0 }}>
         {icon === "clock" ? (
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="1 4 1 10 7 10" />
             <path d="M3.51 15a9 9 0 1 0 .49-5" />
           </svg>
         ) : (
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
             <polyline points="17 6 23 6 23 12" />
           </svg>
@@ -885,6 +975,7 @@ export default function Header({
   );
 
   const role: Role = (user?.user_metadata?.rol as Role) ?? "estudiante";
+  const userId = user?.id ?? "";
   const allowedTypes = ROLE_PERMISSIONS[role] ?? [];
   const fullName: string = user?.user_metadata?.full_name ?? user?.email ?? "";
   const initials: string = fullName
@@ -950,19 +1041,11 @@ export default function Header({
           <div className="max-w-7xl mx-auto px-5 sm:px-6">
             <div className="flex items-center justify-between h-14 gap-3">
               {/* ── Logo ── */}
-              <a
-                href="/"
-                className="flex items-center gap-2.5 flex-shrink-0 group"
-              >
+              <a href="/" className="flex items-center gap-2.5 flex-shrink-0 group">
                 <img
                   src={logoUrl}
                   alt="Relance"
-                  style={{
-                    height: 28,
-                    width: "auto",
-                    borderRadius: 7,
-                    transition: "opacity 0.2s",
-                  }}
+                  style={{ height: 28, width: "auto", borderRadius: 7, transition: "opacity 0.2s" }}
                 />
               </a>
 
@@ -985,8 +1068,7 @@ export default function Header({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = "var(--color-text)";
-                      e.currentTarget.style.background =
-                        "rgba(255,255,255,0.05)";
+                      e.currentTarget.style.background = "rgba(255,255,255,0.05)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = "var(--color-text-muted)";
@@ -1024,23 +1106,12 @@ export default function Header({
                   e.currentTarget.style.color = "var(--color-text-secondary)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor =
-                    "var(--color-border-strong)";
+                  e.currentTarget.style.borderColor = "var(--color-border-strong)";
                   e.currentTarget.style.background = "rgba(255,255,255,0.025)";
                   e.currentTarget.style.color = "var(--color-text-muted)";
                 }}
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}
-                >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <circle cx="11" cy="11" r="8" />
                   <path d="m21 21-4.35-4.35" />
                 </svg>
@@ -1064,7 +1135,6 @@ export default function Header({
               {/* ── Right section ── */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {user ? (
-                  // ── Avatar + UserMenu (no hamburger) ──
                   <div className="relative">
                     <button
                       onClick={() => setMenuOpen(!menuOpen)}
@@ -1085,15 +1155,7 @@ export default function Header({
                       aria-label="Menú de usuario"
                     >
                       {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={fullName}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
+                        <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         <div
                           style={{
@@ -1113,27 +1175,16 @@ export default function Header({
                         </div>
                       )}
                     </button>
-                    {menuOpen && (
-                      <UserMenu onClose={() => setMenuOpen(false)} />
-                    )}
+                    {menuOpen && <UserMenu onClose={() => setMenuOpen(false)} />}
                   </div>
                 ) : (
                   <>
-                    <button
-                      onClick={onLoginClick}
-                      className="hidden sm:flex btn-secondary"
-                    >
+                    <button onClick={onLoginClick} className="hidden sm:flex btn-secondary">
                       Iniciar sesión
                     </button>
-
-                    <button
-                      onClick={onRegisterClick}
-                      className="hidden md:flex btn-primary"
-                    >
+                    <button onClick={onRegisterClick} className="hidden md:flex btn-primary">
                       Registrarse
                     </button>
-
-                    {/* Mobile: botones compactos sin hamburger */}
                     <button
                       onClick={onLoginClick}
                       className="md:hidden"
@@ -1180,6 +1231,8 @@ export default function Header({
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         allowedTypes={allowedTypes}
+        role={role}
+        userId={userId}
       />
     </>
   );
