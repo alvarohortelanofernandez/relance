@@ -4,7 +4,7 @@ import { supabase } from "./lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 
 import Home from "./pages/Home";
-import StudentProfile from "./pages/StudentProfile";
+import StudentProfile from "./pages/profiles/StudentProfile";
 import CompanyProfile from "./pages/profiles/CompanyProfile";
 import CenterProfile from "./pages/profiles/CenterProfile";
 import TutorProfile from "./pages/profiles/TutorProfile";
@@ -21,6 +21,7 @@ import ProtectedRoute from "./components/routes/ProtectedRoute";
 import AdminProfile from "./pages/profiles/AdminProfile";
 import AdministrationPanel from "./pages/AdministrationPanel";
 import CenterEducativePanel from "./pages/CenterEducativePanel";
+import OfferDetailPage from "./pages/ofertas/OfferDetailPage";
 
 import { useEffect, useState, useRef } from "react";
 

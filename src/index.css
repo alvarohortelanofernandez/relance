@@ -16,10 +16,10 @@
        Azul marino muy oscuro, más profundo que antes pero sin llegar a negro puro.
        El tono frío (azulado) se mantiene para distinguirlo del negro neutro.
     ========================= */
-    --color-bg: #01030a; /* ← más oscuro (era #03080f) */
-    --color-surface: #03060f; /* ← más oscuro (era #060e1a) */
-    --color-surface-strong: #060d1c; /* ← más oscuro (era #091525) */
-    --color-surface-elevated: #0a1628; /* ← más oscuro (era #0d1e34) */
+    --color-bg: #01030a;
+    --color-surface: #03060f;
+    --color-surface-strong: #060d1c;
+    --color-surface-elevated: #0a1628;
 
     /* =========================
        TEXT
@@ -93,37 +93,60 @@
 
 @layer components {
   /* =========================
-     BUTTONS
-  ========================= */
+   BUTTONS
+========================= */
 
   .btn-primary {
-    @apply font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200;
-    @apply hover:scale-[1.02] active:scale-[0.98];
-    background-color: var(--color-brand);
-    color: #01030a;
+    @apply inline-flex items-center justify-center;
+    @apply rounded-[9px] text-sm font-bold;
+    @apply transition-all duration-200;
+    @apply active:scale-[0.98];
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: "Plus Jakarta Sans", sans-serif;
     letter-spacing: -0.01em;
+    border: 1px solid transparent;
+    background: var(--color-brand);
+    color: #02050d;
+    cursor: pointer;
   }
 
   .btn-primary:hover {
-    background-color: var(--color-brand-light);
+    background: var(--color-brand-light);
+    transform: translateY(-1px);
     box-shadow: 0 4px 18px rgba(192, 255, 114, 0.28);
   }
 
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ========================= */
+
   .btn-secondary {
-    @apply font-semibold px-5 py-2.5 rounded-xl text-sm transition-all duration-200;
-    border: 1px solid var(--color-border-strong);
-    color: var(--color-text-secondary);
-    background: transparent;
+    @apply inline-flex items-center justify-center;
+    @apply rounded-[9px] text-sm font-medium;
+    @apply transition-all duration-150;
+    @apply active:scale-[0.98];
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: "Plus Jakarta Sans", sans-serif;
     letter-spacing: -0.01em;
+    border: 1px solid var(--color-focus);
+    background: transparent;
+    color: var(--color-brand);
+    cursor: pointer;
   }
 
   .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: var(--color-text);
+    color: var(--color-brand-light);
+    background: rgba(192, 255, 114, 0.06);
+    border-color: rgba(192, 255, 114, 0.25);
+    transform: translateY(-1px);
   }
 
   .btn-secondary:active {
+    box-shadow: 0 4px 18px rgba(192, 255, 114, 0.16);
     transform: scale(0.98);
   }
 

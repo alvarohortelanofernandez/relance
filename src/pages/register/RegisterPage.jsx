@@ -907,7 +907,7 @@ export default function RegisterPage() {
         style={{ background: "#c0ff72" }}
       />
 
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto mb-10">
         <div className="text-center m-10">
           <h1 className="font-display text-3xl font-extrabold text-white mb-2">
             Crea tu cuenta

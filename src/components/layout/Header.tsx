@@ -1121,64 +1121,14 @@ export default function Header({
                   <>
                     <button
                       onClick={onLoginClick}
-                      className="hidden md:flex"
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 9,
-                        fontSize: 13,
-                        fontWeight: 500,
-                        fontFamily: "Plus Jakarta Sans, sans-serif",
-                        border: "1px solid var(--color-border-strong)",
-                        background: "transparent",
-                        color: "var(--color-text-muted)",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                        letterSpacing: "-0.01em",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor =
-                          "rgba(255,255,255,0.18)";
-                        e.currentTarget.style.color =
-                          "var(--color-text-secondary)";
-                        e.currentTarget.style.background =
-                          "rgba(255,255,255,0.04)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor =
-                          "var(--color-border-strong)";
-                        e.currentTarget.style.color = "var(--color-text-muted)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
+                      className="hidden sm:flex btn-secondary"
                     >
                       Iniciar sesión
                     </button>
+
                     <button
                       onClick={onRegisterClick}
-                      className="hidden md:flex"
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 9,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        fontFamily: "Plus Jakarta Sans, sans-serif",
-                        border: "1px solid transparent",
-                        background: "var(--color-brand)",
-                        color: "#02050d",
-                        cursor: "pointer",
-                        transition: "all 0.18s",
-                        letterSpacing: "-0.01em",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#d4ff8c";
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 4px 18px rgba(192,255,114,0.28)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "var(--color-brand)";
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "none";
-                      }}
+                      className="hidden md:flex btn-primary"
                     >
                       Registrarse
                     </button>

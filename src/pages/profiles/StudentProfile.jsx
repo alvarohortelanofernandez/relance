@@ -941,7 +941,7 @@ function ProyectoCard({ proyecto, onEdit, onDelete }) {
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 export default function StudentProfile() {
-  const { user, avatarUrl, refreshAvatar } = useAuth();
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
 
   const [saving, setSaving] = useState(false);
@@ -955,6 +955,7 @@ export default function StudentProfile() {
 
   const [nombre, setNombre] = useState("");
   const [apellidos, setApellidos] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [sobreMi, setSobreMi] = useState("");
   const [formaciones, setFormaciones] = useState([]);
   const [habilidades, setHabilidades] = useState([]);
@@ -996,6 +997,7 @@ export default function StudentProfile() {
       if (data) {
         setNombre(data.nombre ?? "");
         setApellidos(data.apellidos ?? "");
+        setAvatarUrl(data.avatar_url ?? null);
         setSobreMi(data.sobre_mi ?? "");
         setFormaciones(data.formaciones ?? []);
         setHabilidades(data.habilidades ?? []);
@@ -1049,12 +1051,12 @@ export default function StudentProfile() {
       .from("profiles")
       .getPublicUrl(storagePath);
     const freshUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-    // Guardar avatar en usuario (fuente única para todos los roles)
-    await supabase
-      .from("usuario")
-      .update({ avatar_url: freshUrl, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-    await refreshAvatar();
+    setAvatarUrl(freshUrl);
+    await supabase.from("estudiante").upsert({
+      id: user.id,
+      avatar_url: freshUrl,
+      updated_at: new Date().toISOString(),
+    });
     setUploading(false);
   };
 
@@ -1095,6 +1097,7 @@ export default function StudentProfile() {
       id: user.id,
       nombre: nombre.trim() || null,
       apellidos: apellidos.trim() || null,
+      avatar_url: avatarUrl,
       sobre_mi: sobreMi.trim() || null,
       formaciones,
       habilidades,
@@ -1110,16 +1113,6 @@ export default function StudentProfile() {
     };
 
     const { error } = await supabase.from("estudiante").upsert(payload);
-    if (!error) {
-      // Sync nombre completo en usuario
-      await supabase
-        .from("usuario")
-        .update({
-          nombre: [nombre.trim(), apellidos.trim()].filter(Boolean).join(" "),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-    }
     setSaving(false);
     if (error) {
       setSaveError("Error al guardar: " + error.message);

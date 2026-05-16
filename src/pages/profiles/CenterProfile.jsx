@@ -77,6 +77,7 @@ function QRModal({ url, entityName, onClose }) {
               <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
             </svg>
           </button>
+
           <h2 className="font-display text-xl font-bold text-white mb-1">
             Código QR de invitación
           </h2>
@@ -85,6 +86,7 @@ function QRModal({ url, entityName, onClose }) {
             <strong className="text-white">{entityName}</strong> se registren
             vinculados automáticamente.
           </p>
+
           <div className="flex items-center justify-center mb-5">
             {loadingQr ? (
               <div className="w-48 h-48 bg-dark rounded-2xl flex items-center justify-center border border-white/10">
@@ -114,17 +116,23 @@ function QRModal({ url, entityName, onClose }) {
               </div>
             )}
           </div>
+
           <div className="bg-dark border border-white/10 rounded-xl px-3 py-2 mb-4 flex items-center gap-2">
             <span className="text-gray-500 text-xs truncate flex-1 text-left">
               {url}
             </span>
             <button
               onClick={handleCopy}
-              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all font-medium ${copied ? "bg-brand/20 text-brand" : "bg-white/10 text-gray-400 hover:text-white"}`}
+              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all font-medium ${
+                copied
+                  ? "bg-brand/20 text-brand"
+                  : "bg-white/10 text-gray-400 hover:text-white"
+              }`}
             >
               {copied ? "✓ Copiado" : "Copiar"}
             </button>
           </div>
+
           <div className="flex gap-3 mb-3">
             <button
               onClick={handleDownload}
@@ -163,6 +171,7 @@ function QRModal({ url, entityName, onClose }) {
               Enviar por correo
             </button>
           </div>
+
           <button onClick={onClose} className="btn-primary w-full">
             Cerrar
           </button>
@@ -209,9 +218,7 @@ function SendInviteEmailModal({
 
     const { error: fnError } = await supabase.functions.invoke(
       "send-invite-email",
-      {
-        body: { to: email, inviterName, inviterType, inviteUrl },
-      },
+      { body: { to: email, inviterName, inviterType, inviteUrl } },
     );
 
     setLoading(false);
@@ -489,7 +496,9 @@ export default function CenterProfile() {
         .select("*")
         .eq("id", user.id)
         .maybeSingle();
+
       if (error) console.error("[CenterProfile] Error cargando datos:", error);
+
       if (data) {
         setCenterName(data.nombre ?? meta.centerName ?? "");
         setInstitutionalCode(
@@ -551,6 +560,7 @@ export default function CenterProfile() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+
     const { error: centroError } = await supabase
       .from("centro_educativo")
       .upsert(
@@ -571,12 +581,15 @@ export default function CenterProfile() {
         },
         { onConflict: "id" },
       );
+
     if (centroError)
       console.error("[CenterProfile] Error guardando:", centroError);
+
     await supabase
       .from("usuario")
       .update({ nombre: centerName, updated_at: new Date().toISOString() })
       .eq("id", user.id);
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
