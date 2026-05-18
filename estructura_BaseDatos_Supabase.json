@@ -1,0 +1,118 @@
+[
+  {
+    "table_name": "administrador",
+    "campos": "id_usuario (uuid), created_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "candidatura",
+    "campos": "id_candidatura (integer), fecha_envio (timestamp without time zone), estado (character varying), comentario_empresa (text), comentario_estudiante (text), id_estudiante (uuid), id_oferta (uuid)"
+  },
+  {
+    "table_name": "centro_educativo",
+    "campos": "id (uuid), nombre (text), codigo_institucional (text), email_contacto (text), telefono (text), direccion (text), verificado (boolean), created_at (timestamp with time zone), updated_at (timestamp with time zone), ciudad (text), provincia (text), tipo_centro (text), sitio_web (text), descripcion (text), num_alumnos (integer), titulaciones (ARRAY), avatar_url (text)"
+  },
+  {
+    "table_name": "centro_empresa_acuerdo",
+    "campos": "id (uuid), id_centro (uuid), id_empresa (uuid), estado (text), fecha_inicio (date), fecha_fin (date), plazas_acordadas (integer), modalidad (text), notas (text), created_at (timestamp with time zone), updated_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "centro_estudiante",
+    "campos": "id (uuid), id_centro (uuid), id_estudiante (uuid), id_tutor (uuid), created_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "centro_tutor",
+    "campos": "id (uuid), id_centro (uuid), id_tutor (uuid), created_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "chat",
+    "campos": "id_chat (integer), tipo (character varying), nombre (character varying), fecha_creacion (timestamp without time zone), activo (boolean), id_grupo (integer)"
+  },
+  {
+    "table_name": "documento",
+    "campos": "id_documento (integer), nombre_archivo (character varying), tipo (character varying), archivo_url (text), tamaño (integer), fecha_subida (timestamp without time zone), id_usuario (integer)"
+  },
+  {
+    "table_name": "empresa",
+    "campos": "id (uuid), nombre (text), cif (text), descripcion (text), sector (text), ciudad (text), web (text), telefono (text), email_contacto (text), logo_url (text), linkedin (text), twitter (text), instagram (text), verificado (boolean), created_at (timestamp with time zone), updated_at (timestamp with time zone), tamano (text)"
+  },
+  {
+    "table_name": "empresa_estudiante",
+    "campos": "id (uuid), id_empresa (uuid), id_estudiante (uuid), tipo (text), fecha_inicio (date), fecha_fin (date), activo (boolean), created_at (timestamp with time zone), updated_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "estudiante",
+    "campos": "id (uuid), apellidos (text), disponibilidad (text), tipo_busqueda (text), modalidad (text), titulacion (text), ubicacion (text), github_username (text), habilidades (ARRAY), perfil_publico (boolean), sobre_mi (text), avatar_url (text), created_at (timestamp with time zone), updated_at (timestamp with time zone), nombre (text), ciudad (text), telefono (text), formaciones (jsonb), proyectos (jsonb), redes_sociales (jsonb), github_repos_vinculados (jsonb)"
+  },
+  {
+    "table_name": "estudiante_estado",
+    "campos": "id (uuid), id_estudiante (uuid), estado (text), id_empresa (uuid), updated_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "estudiante_tecnologia",
+    "campos": "id_estudiante (integer), id_tecnologia (integer)"
+  },
+  {
+    "table_name": "estudiante_tutor",
+    "campos": "id (uuid), id_estudiante (uuid), id_tutor (uuid), tipo_tutor (text), created_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "ficha_practicas",
+    "campos": "id_ficha (integer), fecha_inicio (date), fecha_fin (date), contenido (text), estado (character varying), firma_estudiante (text), firma_tutor_empresa (text), firma_tutor_centro (text), fecha_firma (timestamp without time zone), id_estudiante (integer), id_empresa (integer), id_tutor_empresa (integer), id_tutor_centro (integer)"
+  },
+  {
+    "table_name": "grupo",
+    "campos": "id_grupo (integer), nombre (character varying), descripcion (text), fecha_creacion (timestamp without time zone), es_privado (boolean), imagen_grupo (text), id_creador (integer)"
+  },
+  {
+    "table_name": "guardado",
+    "campos": "id_tutor_empresa (integer), id_estudiante (integer), fecha_guardado (timestamp without time zone)"
+  },
+  {
+    "table_name": "invite_tokens",
+    "campos": "id (uuid), token (uuid), entity_id (uuid), entity_type (text), used (boolean), used_at (timestamp with time zone), expires_at (timestamp with time zone), created_at (timestamp with time zone)"
+  },
+  {
+    "table_name": "mensaje",
+    "campos": "id_mensaje (integer), contenido (text), tipo (character varying), adjunto_url (text), leido (boolean), fecha_envio (timestamp without time zone), id_chat (integer), id_remitente (integer)"
+  },
+  {
+    "table_name": "notificacion",
+    "campos": "id_notificacion (integer), titulo (character varying), mensaje (text), tipo (character varying), leido (boolean), url_destino (text), fecha (timestamp without time zone), id_usuario (integer)"
+  },
+  {
+    "table_name": "oferta",
+    "campos": "titulo (character varying), descripcion (text), modalidad (character varying), ubicacion (character varying), duracion_semanas (integer), horas_semanales (integer), num_plazas (integer), num_plazas_restantes (integer), opcion_contrato (boolean), fecha_publicacion (timestamp without time zone), fecha_modificacion (timestamp without time zone), estado (character varying), motivo_rechazo (text), requisitos_adicionales (text), beneficios (text), tipo_oferta (character varying), salario_mensual (numeric), fecha_inicio (date), fecha_fin_solicitud (date), id_empresa (uuid), id_oferta (uuid)"
+  },
+  {
+    "table_name": "oferta_tecnologia",
+    "campos": "id_tecnologia (integer), id_oferta (uuid)"
+  },
+  {
+    "table_name": "proyecto",
+    "campos": "id_proyecto (integer), titulo (character varying), descripcion (text), enlace (text), imagen (text), fecha_creacion (timestamp without time zone), id_estudiante (integer)"
+  },
+  {
+    "table_name": "tecnologia",
+    "campos": "id_tecnologia (integer), nombre (character varying)"
+  },
+  {
+    "table_name": "tutor_centro",
+    "campos": "id (uuid), nombre (text), departamento (text), telefono (text), created_at (timestamp with time zone), usuario_id (uuid)"
+  },
+  {
+    "table_name": "tutor_empresa",
+    "campos": "id (uuid), empresa_id (uuid), nombre (text), cargo (text), telefono (text), created_at (timestamp with time zone), usuario_id (uuid)"
+  },
+  {
+    "table_name": "usuario",
+    "campos": "id (uuid), email (text), nombre (text), rol (text), is_profile_completed (boolean), created_at (timestamp with time zone), updated_at (timestamp with time zone), avatar_url (text)"
+  },
+  {
+    "table_name": "usuario_chat",
+    "campos": "id_usuario (integer), id_chat (integer)"
+  },
+  {
+    "table_name": "valoracion_empresa",
+    "campos": "id (uuid), id_empresa (uuid), id_estudiante (uuid), puntuacion (numeric), created_at (timestamp with time zone)"
+  }
+]
