@@ -102,7 +102,7 @@ function PasswordField({
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
         >
           {show ? (
             <svg
@@ -139,7 +139,7 @@ function PasswordField({
               className={`h-1 flex-1 rounded-full transition-all duration-300 ${score >= lvl ? colors[score] : "bg-white/10"}`}
             />
           ))}
-          <span className="text-xs text-gray-500 w-16 text-right">
+          <span className="text-xs text-[var(--color-text-muted)] w-16 text-right">
             {labels[score]}
           </span>
         </div>
@@ -560,7 +560,7 @@ function CompanyForm({ onSubmit, loading, error }) {
         <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
           <p className="text-xs text-gray-500 flex items-start gap-2">
             <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5">
-              <use href="icons.svg#icon-info" />
+              <use href="/icons.svg#icon-info" />
             </svg>
             El CIF será verificado por el equipo de Relance en un plazo de 24–48
             h antes de activar la cuenta plenamente.
@@ -770,7 +770,7 @@ function CenterForm({ onSubmit, loading, error }) {
         <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
           <p className="text-xs text-gray-500 flex items-start gap-2">
             <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5">
-              <use href="icons.svg#icon-info" />
+              <use href="/icons.svg#icon-info" />
             </svg>
             El código institucional será verificado por el equipo de Relance
             antes de activar la cuenta.
@@ -907,7 +907,7 @@ export default function RegisterPage() {
         style={{ background: "#c0ff72" }}
       />
 
-      <div className="max-w-2xl mx-auto mb-10">
+      <div className="max-w-xl lg:max-w-2xl mx-auto mb-8 lg:mb-10">
         <div className="text-center m-10">
           <h1 className="font-display text-3xl font-extrabold text-white mb-2">
             Crea tu cuenta
@@ -937,7 +937,7 @@ export default function RegisterPage() {
               )}
               <span className="text-2xl block mb-2">
                 <svg className="w-5 h-5">
-                  <use href={`icons.svg#${role.icon}`} />
+                  <use href={`/icons.svg#${role.icon}`} />
                 </svg>
               </span>
               <span
@@ -970,7 +970,7 @@ export default function RegisterPage() {
         <div className="mb-6 bg-brand/5 border border-brand/20 rounded-2xl p-4 flex gap-3">
           <span className="flex-shrink-0">
             <svg className="text-brand w-5 h-5">
-              <use href="icons.svg#icon-tutor" />
+              <use href="/icons.svg#icon-tutor" />
             </svg>
           </span>
           <div>
@@ -986,12 +986,12 @@ export default function RegisterPage() {
 
         {/* Formulario */}
         {selectedRole && (
-          <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/10">
+          <div className="rounded-2xl p-5 sm:p-6 lg:p-7 border border-[var(--color-border-strong)] bg-[var(--color-surface-strong)]">
+            <div className="flex items-center gap-2 mb-5 pb-3 border-b border-[var(--color-border)]">
               <span className="text-xl">
                 <svg className="w-6 h-6">
                   <use
-                    href={`icons.svg#${ROLES.find((r) => r.id === selectedRole)?.icon}`}
+                    href={`/icons.svg#${ROLES.find((r) => r.id === selectedRole)?.icon}`}
                   />
                 </svg>
               </span>
@@ -1024,12 +1024,12 @@ export default function RegisterPage() {
         )}
 
         {!selectedRole && (
-          <div className="text-center text-gray-600 text-sm py-8">
+          <div className="text-center text-[var(--color-text-muted)] text-sm py-7">
             Selecciona un tipo de cuenta para continuar
           </div>
         )}
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-[var(--color-text-muted)] mt-5">
           ¿Ya tienes cuenta?{" "}
           <a
             onClick={() => navigate("/", { state: { openLogin: true } })}
