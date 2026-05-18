@@ -1,250 +1,652 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
+import logoUrl from "../../assets/logo_relance.jpg";
 
-const TYPE_TO_ROLE = {
-  empresa: "tutor_empresa",
-  centro_educativo: "tutor_centro",
-};
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function Spinner({ className = "w-8 h-8" }) {
+  return (
+    <svg
+      className={`animate-spin text-brand ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  );
+}
 
-const TYPE_LABEL = {
-  empresa: "empresa",
-  centro_educativo: "centro educativo",
-};
+// ── Password field con indicador de fortaleza ────────────────────────────────
+function PasswordField({ value, onChange }) {
+  const [show, setShow] = useState(false);
+  const score = !value
+    ? 0
+    : value.length < 6
+      ? 1
+      : value.length < 8
+        ? 2
+        : /[A-Z]/.test(value) && /[0-9]/.test(value)
+          ? 4
+          : 3;
+  const colors = [
+    "",
+    "bg-red-500",
+    "bg-orange-500",
+    "bg-yellow-500",
+    "bg-brand",
+  ];
+  const labels = ["", "Muy débil", "Débil", "Media", "Fuerte"];
 
-const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  return (
+    <div>
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={onChange}
+          placeholder="Mínimo 8 caracteres"
+          required
+          minLength={8}
+          className="input-field pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShow(!show)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+        >
+          {show ? (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          ) : (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
+        </button>
+      </div>
+      {value && (
+        <div className="mt-2 flex items-center gap-2">
+          {[1, 2, 3, 4].map((lvl) => (
+            <div
+              key={lvl}
+              className={`h-1 flex-1 rounded-full transition-all duration-300 ${score >= lvl ? colors[score] : "bg-white/10"}`}
+            />
+          ))}
+          <span className="text-xs text-gray-500 w-16 text-right">
+            {labels[score]}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
-const getFriendlyDbError = (message = "") => {
-  const msg = message.toLowerCase();
-  if (msg.includes("row-level security") || msg.includes("rls")) {
-    return "La base de datos bloqueó la operación por políticas RLS. Revisa las políticas INSERT/UPDATE para invite_tokens, usuario y tutor_*.";
-  }
-  if (msg.includes("violates foreign key") || msg.includes("foreign key")) {
-    return "Fallo de relación en base de datos. Verifica que los UUID de entidad/tutor y usuario coincidan con sus tablas.";
-  }
-  if (msg.includes("duplicate key") || msg.includes("unique")) {
-    return "Ya existe un registro con esos datos (correo o relación de tutor duplicada).";
-  }
-  return null;
-};
+// ── Pantallas auxiliares ─────────────────────────────────────────────────────
+function AlreadyLoggedIn({ userName, onSignOut }) {
+  return (
+    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
+      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
+        <div className="mb-4 flex justify-center">
+          <svg className="w-14 h-14 text-brand" viewBox="0 0 640 640">
+            <use href="/icons.svg#icon-user-check" />
+          </svg>
+        </div>
+        <h2 className="font-display text-xl font-bold text-white mb-2">
+          Ya tienes sesión iniciada
+        </h2>
+        <p className="text-gray-400 text-sm mb-6">
+          Estás conectado como{" "}
+          <strong className="text-white">{userName}</strong>. Para registrarte
+          con esta invitación, cierra tu sesión primero.
+        </p>
+        <button onClick={onSignOut} className="btn-primary w-full mb-3">
+          Cerrar sesión y continuar
+        </button>
+        <a href="/" className="btn-secondary block w-full text-center">
+          Volver al inicio
+        </a>
+      </div>
+    </div>
+  );
+}
 
+function InvalidToken() {
+  return (
+    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
+      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
+        <div className="mb-4 flex justify-center">
+          <svg className="w-14 h-14 text-yellow-400" viewBox="0 0 640 640">
+            <use href="/icons.svg#icon-warning" />
+          </svg>
+        </div>
+        <h2 className="font-display text-xl font-bold text-white mb-2">
+          Enlace inválido o caducado
+        </h2>
+        <p className="text-gray-400 text-sm mb-6">
+          Este enlace de invitación no es válido, ya ha sido usado o ha caducado
+          (validez: 7 días). Pide a tu empresa o centro que genere un nuevo
+          código QR desde su perfil.
+        </p>
+        <a href="/" className="btn-secondary block w-full text-center">
+          Volver al inicio
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function SuccessScreen({ entityName, navigate }) {
+  return (
+    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
+      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
+        <div className="mb-5 flex justify-center">
+          <svg className="w-16 h-16 text-brand" viewBox="0 0 640 640">
+            <use href="/icons.svg#icon-party" />
+          </svg>
+        </div>
+        <h2 className="font-display text-2xl font-bold text-white mb-3">
+          ¡Ya eres parte del equipo!
+        </h2>
+        <p className="text-gray-400 text-sm mb-2">
+          Tu cuenta de tutor ha sido creada y vinculada a:
+        </p>
+        <p className="text-brand font-semibold text-lg mb-4">{entityName}</p>
+        <p className="text-gray-500 text-xs mb-8">
+          Revisa tu correo para verificar tu cuenta antes de iniciar sesión.
+        </p>
+        <button onClick={() => navigate("/")} className="btn-primary w-full">
+          Ir al inicio
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Campos específicos por tipo de tutor ─────────────────────────────────────
+
+/**
+ * Campos extra para tutor de EMPRESA:
+ *  - Cargo / Puesto          (texto)
+ *  - Área / Departamento     (texto)
+ *  - Teléfono                (tel)
+ */
+function EmpresaExtraFields({ form, s }) {
+  return (
+    <div className="pt-2 border-t border-white/10">
+      <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
+        Información profesional
+      </p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">
+              Cargo / Puesto
+            </label>
+            <input
+              type="text"
+              value={form.cargo}
+              onChange={s("cargo")}
+              placeholder="Ej: Jefe de Proyecto"
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">
+              Área / Departamento
+            </label>
+            <input
+              type="text"
+              value={form.area}
+              onChange={s("area")}
+              placeholder="Ej: Desarrollo Web"
+              className="input-field"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1.5">Teléfono</label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={s("phone")}
+            placeholder="+34 600 000 000"
+            className="input-field"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Campos extra para tutor de CENTRO EDUCATIVO:
+ *  - Departamento            (texto)
+ *  - Especialidad            (texto)
+ *  - Teléfono                (tel)
+ */
+function CentroExtraFields({ form, s }) {
+  return (
+    <div className="pt-2 border-t border-white/10">
+      <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
+        Información académica
+      </p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">
+              Departamento
+            </label>
+            <input
+              type="text"
+              value={form.area}
+              onChange={s("area")}
+              placeholder="Ej: Informática"
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">
+              Especialidad
+            </label>
+            <input
+              type="text"
+              value={form.cargo}
+              onChange={s("cargo")}
+              placeholder="Ej: DAW / DAM"
+              className="input-field"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1.5">Teléfono</label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={s("phone")}
+            placeholder="+34 600 000 000"
+            className="input-field"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Página principal ─────────────────────────────────────────────────────────
 export default function TutorRegisterPage() {
-  const navigate = useNavigate();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
 
   const token = params.get("token");
-  const entityId = params.get("entity");
-  const entityType = params.get("type");
-  const role = useMemo(() => TYPE_TO_ROLE[entityType] ?? null, [entityType]);
+  const entityId = params.get("entity"); // auth UID de la empresa/centro
+  const entityType = params.get("type"); // 'empresa' | 'centro_educativo'
 
-  const [state, setState] = useState("loading"); // loading|logged_in|invalid|form|success
-  const [inviterName, setInviterName] = useState("la entidad");
-  const [submitError, setSubmitError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
+  // pageState: "loading" | "logged_in" | "invalid" | "form" | "success"
+  const [pageState, setPageState] = useState("loading");
+  const [entityInfo, setEntityInfo] = useState(null);
 
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
+    cargo: "", // empresa → Cargo/Puesto   |   centro → Especialidad
+    area: "", // empresa → Área/Dpto       |   centro → Departamento
   });
+  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
+  // ── Validar token ────────────────────────────────────────────────────────
   const validateToken = async () => {
-    if (!token || !entityId || !role) return null;
+    if (!token || !entityId || !entityType) return null;
     const { data, error } = await supabase
       .from("invite_tokens")
       .select("id, entity_id, entity_type, used, expires_at")
       .eq("token", token)
       .eq("entity_id", entityId)
-      .eq("entity_type", entityType)
       .eq("used", false)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
-
     if (error) {
-      console.error("Error validando token tutor:", error.message);
+      console.error("Error al validar token:", error.message);
       return null;
     }
     return data;
   };
 
+  const fetchEntityName = async () => {
+    try {
+      if (entityType === "empresa") {
+        const { data } = await supabase
+          .from("empresa")
+          .select("nombre")
+          .eq("id_usuario", entityId)
+          .maybeSingle();
+        return data?.nombre || null;
+      }
+      if (entityType === "centro_educativo") {
+        const { data } = await supabase
+          .from("centro_educativo")
+          .select("nombre")
+          .eq("id", entityId)
+          .maybeSingle();
+        return data?.nombre || null;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  // ── Efecto: esperar a Auth, luego validar ────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
-
     const init = async () => {
       if (user) {
-        setState("logged_in");
+        setPageState("logged_in");
         return;
       }
-
-      const valid = await validateToken();
-      if (!valid) {
-        setState("invalid");
+      const tokenData = await validateToken();
+      if (!tokenData) {
+        setPageState("invalid");
         return;
       }
-
-      const { data } = await supabase
-        .from("usuario")
-        .select("nombre")
-        .eq("id", entityId)
-        .maybeSingle();
-
-      if (data?.nombre) setInviterName(data.nombre);
-      setState("form");
+      const entityName = await fetchEntityName();
+      setEntityInfo({
+        name:
+          entityName || (entityType === "empresa" ? "la empresa" : "el centro"),
+        type: entityType,
+        id: entityId,
+        tokenId: tokenData.id,
+      });
+      setPageState("form");
     };
-
     init();
-  }, [authLoading, user, token, entityId, entityType, role]);
+  }, [authLoading, user]);
 
-  const onChange = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const handleSignOut = async () => {
+    setPageState("loading");
+    await signOut();
+  };
 
+  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError(null);
-    setDebugInfo([]);
-
-    if (!form.fullName.trim()) return setSubmitError("Escribe tu nombre completo.");
-    if (!isValidEmail(form.email)) return setSubmitError("Escribe un correo válido.");
-    if (form.password.length < 8)
-      return setSubmitError("La contraseña debe tener al menos 8 caracteres.");
-    if (form.password !== form.confirmPassword)
-      return setSubmitError("Las contraseñas no coinciden.");
-
-    setSubmitting(true);
-
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          full_name: form.fullName,
-          role,
-          linked_entity_id: entityId,
-          linked_entity_type: entityType,
-          invite_token: token,
-        },
-      },
-    });
-
-    if (signUpError) {
-      setSubmitting(false);
-      const friendly = getFriendlyDbError(signUpError.message);
-      setSubmitError(
-        signUpError.message === "User already registered"
-          ? "Este correo ya está registrado."
-          : friendly || signUpError.message,
-      );
-      setDebugInfo([
-        `Supabase auth.signUp devolvió: ${signUpError.message}`,
-        "Revisa si hay trigger/procedimiento que inserta en usuario/tutor_* y si ese trigger falla por RLS o FK.",
-      ]);
+    if (form.password !== form.confirmPassword) {
+      setSubmitError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setSubmitError("La contraseña debe tener mínimo 8 caracteres.");
       return;
     }
 
-    const debug = [];
-    if (signUpData?.user?.id) debug.push(`Usuario Auth creado: ${signUpData.user.id}`);
+    setSubmitting(true);
+    setSubmitError(null);
 
-    const { data: userRow, error: userRowError } = await supabase
-      .from("usuario")
-      .select("id, rol, email")
-      .eq("email", form.email)
-      .maybeSingle();
+    const role = entityType === "empresa" ? "tutor_empresa" : "tutor_centro";
 
-    if (userRowError) {
-      debug.push(`Error consultando tabla usuario: ${userRowError.message}`);
-    } else if (!userRow) {
-      debug.push("No aparece fila en tabla usuario tras registro (posible trigger ausente/bloqueado por RLS).");
-    } else {
-      debug.push(`Fila usuario detectada: ${userRow.id} (${userRow.rol ?? "sin rol"}).`);
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.fullName,
+            role,
+            phone: form.phone || null,
+            // campo semántico unificado que el trigger puede leer
+            specialty: form.specialty || null,
+            cargo: form.cargo || null,
+            area: form.area || null,
+            linked_entity_id: entityId,
+            linked_entity_type: entityType,
+          },
+        },
+      });
+      if (signUpError) throw signUpError;
+
+      // Marcar token como usado
+      await supabase
+        .from("invite_tokens")
+        .update({ used: true, used_at: new Date().toISOString() })
+        .eq("token", token);
+
+      setPageState("success");
+    } catch (err) {
+      console.error("Error en registro de tutor:", err);
+      setSubmitError(
+        err.message || "Error al crear la cuenta. Inténtalo de nuevo.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    const tutorTable = role === "tutor_empresa" ? "tutor_empresa" : "tutor_centro";
-    const { data: tutorRow, error: tutorError } = await supabase
-      .from(tutorTable)
-      .select("id, usuario_id")
-      .eq("usuario_id", userRow?.id ?? "00000000-0000-0000-0000-000000000000")
-      .maybeSingle();
-
-    if (tutorError) {
-      debug.push(`Error consultando ${tutorTable}: ${tutorError.message}`);
-    } else if (!tutorRow) {
-      debug.push(`No aparece fila en ${tutorTable} asociada al usuario.`);
-    } else {
-      debug.push(`Fila en ${tutorTable} detectada: ${tutorRow.id}.`);
-    }
-
-    const { error: inviteUpdateError } = await supabase
-      .from("invite_tokens")
-      .update({ used: true, used_at: new Date().toISOString() })
-      .eq("token", token)
-      .eq("entity_id", entityId)
-      .eq("entity_type", entityType)
-      .eq("used", false);
-
-    if (inviteUpdateError) {
-      debug.push(`No se pudo marcar invite_tokens.used=true: ${inviteUpdateError.message}`);
-    }
-
-    setDebugInfo(debug);
-    setSubmitting(false);
-    setState("success");
   };
 
-  if (state === "loading") return <div className="min-h-screen bg-dark" />;
-
-  if (state === "logged_in") {
-    return <div className="min-h-screen bg-dark flex items-center justify-center p-4"><div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-8 text-center"><h2 className="font-display text-xl font-bold text-white mb-3">Ya tienes sesión iniciada</h2><p className="text-gray-400 text-sm mb-6">Cierra sesión para completar este registro por invitación.</p><button className="btn-primary w-full mb-3" onClick={signOut}>Cerrar sesión</button><a href="/" className="btn-secondary block w-full text-center">Volver al inicio</a></div></div>;
-  }
-
-  if (state === "invalid") {
-    return <div className="min-h-screen bg-dark flex items-center justify-center p-4"><div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-8 text-center"><h2 className="font-display text-xl font-bold text-white mb-3">Invitación inválida o caducada</h2><p className="text-gray-400 text-sm mb-6">Este enlace no es válido, ya fue usado o ha caducado.</p><a href="/" className="btn-secondary block w-full text-center">Volver al inicio</a></div></div>;
-  }
-
-  if (state === "success") {
+  // ── Renders condicionales ────────────────────────────────────────────────
+  if (pageState === "loading") {
     return (
-      <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-        <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-xl p-8 text-center">
-          <h2 className="font-display text-2xl font-bold text-white mb-3">¡Cuenta creada!</h2>
-          <p className="text-gray-400 text-sm mb-4">Tu cuenta de tutor fue creada. Revisa tu correo para verificar tu email.</p>
-          {debugInfo.length > 0 && (
-            <div className="text-left bg-black/20 border border-white/10 rounded-xl p-4 mb-6">
-              <p className="text-xs uppercase tracking-wide text-brand mb-2">Diagnóstico rápido del registro</p>
-              <ul className="space-y-1 text-xs text-gray-300 list-disc pl-5">
-                {debugInfo.map((item) => <li key={item}>{item}</li>)}
-              </ul>
-            </div>
-          )}
-          <button onClick={() => navigate("/")} className="btn-primary w-full">Ir al inicio</button>
-        </div>
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <Spinner />
       </div>
     );
   }
+  if (pageState === "logged_in") {
+    const displayName =
+      user?.user_metadata?.full_name || user?.email || "tu cuenta actual";
+    return <AlreadyLoggedIn userName={displayName} onSignOut={handleSignOut} />;
+  }
+  if (pageState === "invalid") return <InvalidToken />;
+  if (pageState === "success")
+    return <SuccessScreen entityName={entityInfo?.name} navigate={navigate} />;
+
+  // ── Derivados de entityType ──────────────────────────────────────────────
+  const isEmpresa = entityType === "empresa";
+  const entityLabel = isEmpresa ? "empresa" : "centro educativo";
+  const roleLabel = isEmpresa
+    ? "tutor de empresa"
+    : "tutor de centro educativo";
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-xl p-8">
-        <h1 className="font-display text-2xl font-bold text-white mb-2">Registro de tutor</h1>
-        <p className="text-gray-400 text-sm mb-6">Invitación de <strong className="text-white">{inviterName}</strong> ({TYPE_LABEL[entityType] ?? "entidad"}).</p>
-        <div className="bg-brand/10 border border-brand/20 rounded-xl px-4 py-3 mb-6">
-          <p className="text-xs text-brand">Se crearán datos en: auth.users, usuario y {role === "tutor_empresa" ? "tutor_empresa" : "tutor_centro"}. Si algo falla, verás diagnóstico para detectar RLS/relaciones.</p>
+    <div className="min-h-screen bg-dark py-12 px-4">
+      <div className="max-w-lg mx-auto">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <a href="/">
+            <img
+              src={logoUrl}
+              alt="Relance"
+              className="h-9 rounded-md mx-auto mb-6"
+            />
+          </a>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-3">
-          <input className="input-field md:col-span-2" placeholder="Nombre completo" value={form.fullName} onChange={onChange("fullName")} />
-          <input className="input-field" type="email" placeholder="Correo electrónico" value={form.email} onChange={onChange("email")} />
-          <input className="input-field" type="password" placeholder="Contraseña (mínimo 8 caracteres)" value={form.password} onChange={onChange("password")} />
-          <input className="input-field md:col-span-2" type="password" placeholder="Confirmar contraseña" value={form.confirmPassword} onChange={onChange("confirmPassword")} />
+        {/* Banner de invitación */}
+        <div className="bg-brand/10 border border-brand/25 rounded-2xl p-5 mb-6 flex items-start gap-4">
+          <span className="flex-shrink-0">
+            <svg className="w-8 h-8 text-brand" viewBox="0 0 640 640">
+              <use href="/icons.svg#icon-hand-wave" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-white font-semibold font-display">
+              Invitación de {entityInfo?.name}
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              Estás a punto de crear tu cuenta como{" "}
+              <strong className="text-brand">{roleLabel}</strong> vinculado a
+              esta {entityLabel}.
+            </p>
+          </div>
         </div>
 
-        {submitError && <p className="text-red-400 text-sm mt-4">{submitError}</p>}
+        {/* Formulario */}
+        <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 sm:p-8">
+          <h1 className="font-display text-2xl font-bold text-white mb-6">
+            Completa tu registro
+          </h1>
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full mt-6 disabled:opacity-60">
-          {submitting ? "Creando cuenta..." : "Crear cuenta"}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* ── Datos personales ── */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Nombre completo *
+              </label>
+              <input
+                type="text"
+                required
+                value={form.fullName}
+                onChange={s("fullName")}
+                placeholder="Tu nombre y apellidos"
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Correo electrónico *
+              </label>
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={s("email")}
+                placeholder={
+                  isEmpresa ? "tutor@empresa.com" : "tutor@centro.edu"
+                }
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Contraseña *
+              </label>
+              <PasswordField value={form.password} onChange={s("password")} />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Confirmar contraseña *
+              </label>
+              <input
+                type="password"
+                required
+                value={form.confirmPassword}
+                onChange={s("confirmPassword")}
+                placeholder="Repite la contraseña"
+                className="input-field"
+              />
+              {form.confirmPassword &&
+                form.confirmPassword !== form.password && (
+                  <p className="text-xs text-red-400 mt-1">No coinciden</p>
+                )}
+              {form.confirmPassword &&
+                form.confirmPassword === form.password &&
+                form.password.length >= 8 && (
+                  <p className="text-xs text-brand mt-1">✓ Coinciden</p>
+                )}
+            </div>
+
+            {/* ── Campos específicos por tipo ── */}
+            {isEmpresa ? (
+              <EmpresaExtraFields form={form} s={s} />
+            ) : (
+              <CentroExtraFields form={form} s={s} />
+            )}
+
+            {/* ── Entidad vinculada (solo lectura) ── */}
+            <div className="bg-dark border border-white/8 rounded-xl p-3 flex items-center gap-3">
+              <span>
+                {isEmpresa ? (
+                  <svg className="w-5 h-5 text-gray-400" viewBox="0 0 640 640">
+                    <use href="/icons.svg#icon-building" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-gray-400" viewBox="0 0 640 640">
+                    <use href="/icons.svg#icon-school" />
+                  </svg>
+                )}
+              </span>
+              <div>
+                <p className="text-xs text-gray-500">Vinculado a</p>
+                <p className="text-sm text-white font-semibold">
+                  {entityInfo?.name}
+                </p>
+              </div>
+              <div className="ml-auto">
+                <span className="text-xs bg-brand/20 text-brand px-2 py-0.5 rounded-full">
+                  Invitación válida
+                </span>
+              </div>
+            </div>
+
+            {submitError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
+                {submitError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary w-full flex justify-center items-center gap-2 py-3.5 text-base disabled:opacity-50"
+            >
+              {submitting ? (
+                <>
+                  <Spinner className="w-4 h-4" />
+                  Creando cuenta...
+                </>
+              ) : (
+                `Registrarme como ${roleLabel}`
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-gray-600 mt-4">
+          ¿Ya tienes cuenta?{" "}
+          <a
+            href="/"
+            className="text-gray-400 hover:text-white underline transition-colors"
+          >
+            Inicia sesión desde el inicio
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
