@@ -87,11 +87,11 @@ function tipoIcon(tipo) {
 function tipoBg(tipo) {
   switch (tipo) {
     case "recomendacion_oferta":
-      return "bg-[#C0FF72]/10 border-[#C0FF72]/20 text-[#C0FF72]";
+      return "bg-brand/10 border-brand/20 text-brand";
     case "candidatura":
       return "bg-blue-500/10 border-blue-500/20 text-blue-400";
     default:
-      return "bg-white/5 border-white/10 text-gray-400";
+      return "bg-white/5 border-[var(--color-border)] text-[var(--color-text-secondary)]";
   }
 }
 
@@ -116,15 +116,15 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
   };
   const meta = TIPO_META[oferta.tipo_oferta] ?? {
     label: "Oferta",
-    color: "bg-white/5 text-gray-400 border-white/10",
+    color: "bg-white/5 text-[var(--color-text-secondary)] border-[var(--color-border)]",
   };
 
   return (
-    <div className="mt-6 border border-white/10 rounded-2xl overflow-hidden">
-      <div className="bg-dark-800 px-5 py-4 border-b border-white/10">
+    <div className="mt-6 border border-[var(--color-border)] rounded-2xl overflow-hidden">
+      <div className="bg-[var(--color-surface-strong)] px-5 py-4 border-b border-[var(--color-border)]">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#C0FF72]/10 border border-[#C0FF72]/20 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[#C0FF72]" viewBox="0 0 640 640">
+          <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-brand" viewBox="0 0 640 640">
               <use href="/icons.svg#icon-building" />
             </svg>
           </div>
@@ -132,7 +132,7 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
             <h3 className="font-display font-bold text-white text-base leading-tight">
               {oferta.titulo}
             </h3>
-            <p className="text-gray-400 text-sm">{oferta.empresa_nombre}</p>
+            <p className="text-[var(--color-text-secondary)] text-sm">{oferta.empresa_nombre}</p>
           </div>
         </div>
 
@@ -143,21 +143,21 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
             {meta.label}
           </span>
           {oferta.modalidad && (
-            <span className="inline-flex items-center border border-white/10 rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-gray-400">
+            <span className="inline-flex items-center border border-[var(--color-border)] rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-[var(--color-text-secondary)]">
               {oferta.modalidad}
             </span>
           )}
           {oferta.ubicacion && (
-            <span className="inline-flex items-center border border-white/10 rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-gray-400">
+            <span className="inline-flex items-center border border-[var(--color-border)] rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-[var(--color-text-secondary)]">
               {oferta.ubicacion}
             </span>
           )}
           {oferta.salario_mensual ? (
-            <span className="inline-flex items-center border border-[#C0FF72]/20 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#C0FF72]/10 text-[#C0FF72]">
+            <span className="inline-flex items-center border border-brand/20 rounded-full px-2.5 py-0.5 text-xs font-medium bg-brand/10 text-brand">
               {oferta.salario_mensual} €/mes
             </span>
           ) : (
-            <span className="inline-flex items-center border border-white/10 rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-gray-400">
+            <span className="inline-flex items-center border border-[var(--color-border)] rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-[var(--color-text-secondary)]">
               No remunerado
             </span>
           )}
@@ -195,9 +195,9 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
           ].map(({ label, val }) => (
             <div
               key={label}
-              className="bg-dark border border-white/8 rounded-xl p-3 text-center"
+              className="bg-[var(--color-bg)] border border-white/8 rounded-xl p-3 text-center"
             >
-              <p className="text-gray-600 text-xs mb-1">{label}</p>
+              <p className="text-[var(--color-text-subtle)] text-xs mb-1">{label}</p>
               <p className="text-white text-sm font-semibold font-display">
                 {val}
               </p>
@@ -207,7 +207,7 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
 
         {oferta.descripcion && (
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">
               Descripción
             </p>
             <p className="text-gray-300 text-sm leading-relaxed line-clamp-4 whitespace-pre-line">
@@ -218,14 +218,14 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
 
         {oferta.tecnologias?.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">
               Tecnologías
             </p>
             <div className="flex flex-wrap gap-1.5">
               {oferta.tecnologias.map((t) => (
                 <span
                   key={t.id_tecnologia}
-                  className="bg-[#C0FF72]/10 border border-[#C0FF72]/20 text-[#C0FF72] text-xs px-2.5 py-1 rounded-full"
+                  className="bg-brand/10 border border-brand/20 text-brand text-xs px-2.5 py-1 rounded-full"
                 >
                   {t.nombre}
                 </span>
@@ -253,7 +253,7 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
             Ver oferta
           </button>
           {yaPostulado ? (
-            <div className="flex-1 py-2.5 px-4 rounded-xl bg-[#C0FF72]/5 border border-[#C0FF72]/20 text-[#C0FF72] text-sm font-medium flex items-center justify-center gap-2">
+            <div className="flex-1 py-2.5 px-4 rounded-xl bg-brand/5 border border-brand/20 text-brand text-sm font-medium flex items-center justify-center gap-2">
               <svg
                 className="w-4 h-4"
                 viewBox="0 0 24 24"
@@ -268,7 +268,7 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
           ) : (
             <button
               onClick={onPostular}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-[#C0FF72] hover:bg-[#d4ff8a] text-dark text-sm font-bold transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-brand hover:bg-brand/90 text-dark text-sm font-bold transition-all flex items-center justify-center gap-2"
             >
               <svg
                 className="w-4 h-4"
@@ -321,11 +321,11 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-6">
+      <div className="bg-[var(--color-surface-strong)] border border-[var(--color-border)] rounded-2xl w-full max-w-md p-6">
         <h2 className="font-display text-xl font-bold text-white mb-1">
           Postularme
         </h2>
-        <p className="text-gray-500 text-sm mb-5">
+        <p className="text-[var(--color-text-muted)] text-sm mb-5">
           Vas a postularte a{" "}
           <strong className="text-white">{oferta.titulo}</strong> en{" "}
           <strong className="text-white">{oferta.empresa_nombre}</strong>.
@@ -336,7 +336,7 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
           </div>
         )}
         <div className="mb-4">
-          <label className="block text-xs text-gray-500 mb-1.5">
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
             Mensaje de presentación (opcional)
           </label>
           <textarea
@@ -346,7 +346,7 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
             placeholder="Cuéntale a la empresa por qué eres el candidato ideal..."
             className="input-field resize-none"
           />
-          <p className="text-xs text-gray-600 mt-1 text-right">
+          <p className="text-xs text-[var(--color-text-subtle)] mt-1 text-right">
             {mensaje.length}/500
           </p>
         </div>
@@ -480,20 +480,20 @@ export default function NotificacionesPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-dark">
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+      <div className="min-h-screen bg-[var(--color-bg)]">
+        <main className="max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-9">
           {/* Header */}
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h1 className="font-display text-3xl font-bold text-white flex items-center gap-3">
                 Notificaciones
                 {noLeidas > 0 && (
-                  <span className="text-sm px-2.5 py-1 rounded-full bg-[#C0FF72]/20 text-[#C0FF72] border border-[#C0FF72]/30 font-semibold">
+                  <span className="text-sm px-2.5 py-1 rounded-full bg-brand/20 text-brand border border-brand/30 font-semibold">
                     {noLeidas} nueva{noLeidas !== 1 ? "s" : ""}
                   </span>
                 )}
               </h1>
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-[var(--color-text-muted)] text-sm mt-1">
                 {notificaciones.length} notificación
                 {notificaciones.length !== 1 ? "es" : ""} en total
               </p>
@@ -501,7 +501,7 @@ export default function NotificacionesPage() {
             {noLeidas > 0 && (
               <button
                 onClick={marcarTodasLeidas}
-                className="text-sm text-gray-400 hover:text-white px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                className="text-sm text-[var(--color-text-secondary)] hover:text-white px-4 py-2 rounded-xl border border-[var(--color-border)] hover:border-white/20 transition-all flex items-center gap-2"
               >
                 <svg
                   className="w-4 h-4"
@@ -520,7 +520,7 @@ export default function NotificacionesPage() {
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <svg
-                className="animate-spin w-8 h-8 text-[#C0FF72]"
+                className="animate-spin w-8 h-8 text-brand"
                 viewBox="0 0 24 24"
                 fill="none"
               >
@@ -540,10 +540,10 @@ export default function NotificacionesPage() {
               </svg>
             </div>
           ) : notificaciones.length === 0 ? (
-            <div className="text-center py-24 border border-dashed border-white/10 rounded-2xl">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+            <div className="text-center py-24 border border-dashed border-[var(--color-border)] rounded-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-[var(--color-border)] flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-8 h-8 text-gray-600"
+                  className="w-8 h-8 text-[var(--color-text-subtle)]"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -552,19 +552,19 @@ export default function NotificacionesPage() {
                   <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
                 </svg>
               </div>
-              <p className="text-gray-500 font-medium">
+              <p className="text-[var(--color-text-muted)] font-medium">
                 No tienes notificaciones aún
               </p>
-              <p className="text-gray-600 text-sm mt-1">
+              <p className="text-[var(--color-text-subtle)] text-sm mt-1">
                 Aquí aparecerán las recomendaciones y avisos
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[340px_1fr] gap-4 items-start">
               {/* ── Sidebar izquierda ── */}
-              <div className="bg-dark-800 border border-white/10 rounded-2xl overflow-hidden">
+              <div className="bg-[var(--color-surface-strong)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/8">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                  <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-medium">
                     Bandeja de entrada
                   </p>
                 </div>
@@ -572,7 +572,7 @@ export default function NotificacionesPage() {
                   {Object.entries(grupos).map(([day, items]) => (
                     <div key={day}>
                       <div className="px-4 py-2 bg-white/2 border-b border-white/5">
-                        <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">
+                        <p className="text-[10px] text-[var(--color-text-subtle)] uppercase tracking-widest font-semibold">
                           {day}
                         </p>
                       </div>
@@ -585,7 +585,7 @@ export default function NotificacionesPage() {
                             onClick={() => handleSelect(notif)}
                             className={`w-full text-left px-4 py-3.5 border-b border-white/5 transition-all flex items-start gap-3 group ${
                               isActive
-                                ? "bg-[#C0FF72]/5 border-l-2 border-l-[#C0FF72]"
+                                ? "bg-brand/5 border-l-2 border-l-[#C0FF72]"
                                 : "hover:bg-white/3 border-l-2 border-l-transparent"
                             }`}
                           >
@@ -600,7 +600,7 @@ export default function NotificacionesPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <p
                                   className={`text-sm leading-snug font-medium truncate ${
-                                    notif.leido ? "text-gray-400" : "text-white"
+                                    notif.leido ? "text-[var(--color-text-secondary)]" : "text-white"
                                   }`}
                                 >
                                   {notif.titulo}
@@ -609,7 +609,7 @@ export default function NotificacionesPage() {
                                   <span className="w-2 h-2 rounded-full bg-[#C0FF72] flex-shrink-0 mt-1.5" />
                                 )}
                               </div>
-                              <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">
+                              <p className="text-xs text-[var(--color-text-subtle)] mt-0.5 line-clamp-1">
                                 {notif.mensaje}
                               </p>
                               <p className="text-[10px] text-gray-700 mt-1">
@@ -625,12 +625,12 @@ export default function NotificacionesPage() {
               </div>
 
               {/* ── Panel derecho ── */}
-              <div className="bg-dark-800 border border-white/10 rounded-2xl overflow-hidden">
+              <div className="bg-[var(--color-surface-strong)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
                 {!selected ? (
                   <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-[var(--color-border)] flex items-center justify-center mb-4">
                       <svg
-                        className="w-8 h-8 text-gray-600"
+                        className="w-8 h-8 text-[var(--color-text-subtle)]"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -639,17 +639,17 @@ export default function NotificacionesPage() {
                         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
                       </svg>
                     </div>
-                    <p className="text-gray-500 font-medium">
+                    <p className="text-[var(--color-text-muted)] font-medium">
                       Selecciona una notificación
                     </p>
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="text-[var(--color-text-subtle)] text-sm mt-1">
                       para ver todos los detalles
                     </p>
                   </div>
                 ) : (
                   <div className="p-6">
                     {/* Header de la notificación */}
-                    <div className="flex items-start gap-4 pb-5 border-b border-white/10">
+                    <div className="flex items-start gap-4 pb-5 border-b border-[var(--color-border)]">
                       <div
                         className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${tipoBg(selected.tipo)}`}
                       >
@@ -659,7 +659,7 @@ export default function NotificacionesPage() {
                         <h2 className="font-display font-bold text-white text-xl leading-tight">
                           {selected.titulo}
                         </h2>
-                        <p className="text-gray-500 text-xs mt-1">
+                        <p className="text-[var(--color-text-muted)] text-xs mt-1">
                           {new Date(selected.fecha).toLocaleDateString(
                             "es-ES",
                             {
@@ -684,9 +684,9 @@ export default function NotificacionesPage() {
                       {/* Oferta detalle si aplica */}
                       {selected.tipo === "recomendacion_oferta" &&
                         (loadingOferta ? (
-                          <div className="mt-6 border border-white/10 rounded-2xl p-8 flex items-center justify-center">
+                          <div className="mt-6 border border-[var(--color-border)] rounded-2xl p-8 flex items-center justify-center">
                             <svg
-                              className="animate-spin w-6 h-6 text-[#C0FF72]"
+                              className="animate-spin w-6 h-6 text-brand"
                               viewBox="0 0 24 24"
                               fill="none"
                             >
@@ -717,8 +717,8 @@ export default function NotificacionesPage() {
                             }
                           />
                         ) : (
-                          <div className="mt-6 border border-white/10 rounded-2xl p-6 text-center">
-                            <p className="text-gray-500 text-sm">
+                          <div className="mt-6 border border-[var(--color-border)] rounded-2xl p-6 text-center">
+                            <p className="text-[var(--color-text-muted)] text-sm">
                               La oferta ya no está disponible
                             </p>
                           </div>
