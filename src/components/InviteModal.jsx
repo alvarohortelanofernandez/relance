@@ -234,8 +234,11 @@ export default function InviteModal({
       setGenerating(false);
       return;
     }
+    const BASE_URL = "https://relance-platform.vercel.app"; // TODO: extraer a config
 
-    const url = `${window.location.origin}${inviteRoute}?token=${token}&entity=${user.id}`;
+    const url = `${BASE_URL}${inviteRoute}?token=${token}&entity=${user.id}`;
+    console.log(url);
+
     setInviteUrl(url);
     setExpiresAt(expires);
     setStep("generated");

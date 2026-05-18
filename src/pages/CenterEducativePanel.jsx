@@ -719,12 +719,14 @@ function DraggableStudent({ estudiante, fromTutorId, onDragStart, dragging }) {
   );
 }
 
+// ─── TUTOR ASSIGNMENT — usa tabla estudiante_tutor ────────────────────────────
 function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
   const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Construimos la lista a partir del campo id_tutor que vendrá de estudiante_tutor
   const sinTutor = estudiantes.filter((e) => !e.id_tutor);
   const porTutor = tutores.map((t) => ({
     ...t,
@@ -741,6 +743,7 @@ function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  // ── Drop: upsert en estudiante_tutor (tipo_tutor = 'centro') ─────────────
   const handleDrop = async (e, toTutorId) => {
     e.preventDefault();
     setDragOver(null);
@@ -748,13 +751,33 @@ function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
     if (dragging.fromTutorId === toTutorId) return;
     setSaving(true);
     try {
-      const newVal = toTutorId === "sin_tutor" ? null : toTutorId;
-      const { error } = await supabase
-        .from("centro_estudiante")
-        .update({ id_tutor: newVal })
-        .eq("id_centro", idCentro)
-        .eq("id_estudiante", dragging.estudiante.id);
-      if (error) throw error;
+      const estudianteId = dragging.estudiante.id;
+
+      if (toTutorId === "sin_tutor") {
+        // Eliminar la asignación de tipo 'centro' para este estudiante
+        const { error } = await supabase
+          .from("estudiante_tutor")
+          .delete()
+          .eq("id_estudiante", estudianteId)
+          .eq("tipo_tutor", "centro");
+        if (error) throw error;
+      } else {
+        // Upsert: si ya existe un registro de tipo 'centro' para el estudiante,
+        // actualizamos el tutor; si no, lo insertamos.
+        const { error } = await supabase.from("estudiante_tutor").upsert(
+          {
+            id_estudiante: estudianteId,
+            id_tutor: toTutorId,
+            tipo_tutor: "centro",
+          },
+          {
+            onConflict: "id_estudiante,tipo_tutor",
+            ignoreDuplicates: false,
+          },
+        );
+        if (error) throw error;
+      }
+
       showToast(`${dragging.estudiante.nombre} reasignado correctamente`);
       onUpdate();
     } catch (err) {
@@ -1012,6 +1035,7 @@ export default function CenterEducativePanel() {
   const [centro, setCentro] = useState(null);
   const [stats, setStats] = useState({
     estudiantes: 0,
+    tutores: 0, // ← NUEVO
     empresas: 0,
     candidaturas: 0,
     tasa_contrato: 0,
@@ -1110,7 +1134,7 @@ export default function CenterEducativePanel() {
     if (!user) return;
     setLoading(true);
 
-    // ── Buscar centro: primero por id directo, luego por email ───────────────
+    // ── Buscar centro ────────────────────────────────────────────────────────
     let centroData = null;
 
     const { data: c1 } = await supabase
@@ -1150,44 +1174,84 @@ export default function CenterEducativePanel() {
     const idCentro = centroData.id;
 
     // ── Tutores via centro_tutor ─────────────────────────────────────────────
+    console.log("CENTRO DATA:", centroData);
+    console.log("ID CENTRO:", idCentro);
     const { data: ctRows, error: ctErr } = await supabase
       .from("centro_tutor")
-      .select(
-        "id_tutor, tutor:id_tutor(id, nombre, departamento, telefono, usuario_id)",
-      )
+      .select("id_tutor")
       .eq("id_centro", idCentro);
+
+    // console.log("ctRows:", ctRows);
+    // console.log("ctErr:", ctErr);
+
     if (ctErr) console.error("[centro_tutor]:", ctErr);
 
-    const tutoresData = (ctRows ?? []).map((r) => r.tutor).filter(Boolean);
+    // IDs de tutores asignados al centro
+    const tutorIds = (ctRows ?? []).map((r) => r.id_tutor);
 
+    // ── Traer datos de tutores ─────────────────────────────────────────
+    let tutoresData = [];
+
+    if (tutorIds.length > 0) {
+      const { data: tutoresRows, error: tutoresErr } = await supabase
+        .from("tutor")
+        .select("id, nombre, departamento, telefono, usuario_id")
+        .in("id", tutorIds);
+
+      if (tutoresErr) console.error("[tutor]:", tutoresErr);
+
+      tutoresData = tutoresRows ?? [];
+    }
+
+    // ── Obtener emails de usuarios asociados a tutores ────────────────
     const tutorUserIds = tutoresData.map((t) => t.usuario_id).filter(Boolean);
+
     let tutorEmailMap = {};
+
     if (tutorUserIds.length > 0) {
-      const { data: usuariosData } = await supabase
+      const { data: usuariosData, error: usuariosErr } = await supabase
         .from("usuario")
         .select("id, email")
         .in("id", tutorUserIds);
+
+      if (usuariosErr) console.error("[usuario]:", usuariosErr);
+
       (usuariosData ?? []).forEach((u) => {
         tutorEmailMap[u.id] = u.email;
       });
     }
+
+    // ── ENRIQUECER TUTORES ─────────────────────────────────────────────
     const tutoresEnriquecidos = tutoresData.map((t) => ({
       ...t,
       email: tutorEmailMap[t.usuario_id] ?? "—",
     }));
-
-    // ── Estudiantes ──────────────────────────────────────────────────────────
+    // ── Estudiantes del centro ───────────────────────────────────────────────
     const { data: ceRows, error: ceErr } = await supabase
       .from("centro_estudiante")
-      .select(
-        "id_tutor, estudiante:id_estudiante(id, nombre, apellidos, titulacion)",
-      )
+      .select("estudiante:id_estudiante(id, nombre, apellidos, titulacion)")
       .eq("id_centro", idCentro);
     if (ceErr) console.error("[centro_estudiante]:", ceErr);
 
     const ceData = ceRows ?? [];
     const estudianteIds = ceData.map((r) => r.estudiante?.id).filter(Boolean);
 
+    // ── Asignaciones tutor desde estudiante_tutor (tipo_tutor = 'centro') ───
+    // Construimos un mapa id_estudiante → id_tutor
+    let estudianteTutorMap = {};
+    if (estudianteIds.length > 0) {
+      const { data: etRows, error: etErr } = await supabase
+        .from("estudiante_tutor")
+        .select("id_estudiante, id_tutor")
+        .in("id_estudiante", estudianteIds)
+        .eq("tipo_tutor", "centro");
+      if (etErr) console.error("[estudiante_tutor]:", etErr);
+      (etRows ?? []).forEach((r) => {
+        estudianteTutorMap[r.id_estudiante] = r.id_tutor;
+      });
+    }
+
+    // ── Estados y empresa actual de cada estudiante ──────────────────────────
     let estadoMap = {},
       empresaEstudianteMap = {};
     if (estudianteIds.length > 0) {
@@ -1213,6 +1277,7 @@ export default function CenterEducativePanel() {
       });
     }
 
+    // ── Candidaturas ─────────────────────────────────────────────────────────
     let candidaturasData = [];
     if (estudianteIds.length > 0) {
       const { data: candRows, error: candErr } = await supabase
@@ -1236,6 +1301,7 @@ export default function CenterEducativePanel() {
       }
     });
 
+    // ── Empresas colaboradoras ────────────────────────────────────────────────
     const empresaIdsCand = [
       ...new Set(
         candidaturasData.map((c) => c.oferta?.id_empresa).filter(Boolean),
@@ -1276,11 +1342,13 @@ export default function CenterEducativePanel() {
       alumnosActivosMap[empId] = (alumnosActivosMap[empId] ?? 0) + 1;
     });
 
+    // ── Enriquecer estudiantes — id_tutor viene de estudiante_tutor ──────────
     const estudiantesEnriquecidos = ceData.map((r) => {
       const est = r.estudiante ?? {};
       const estado = estadoMap[est.id] ?? "pendiente";
       const idEmp = empresaEstudianteMap[est.id] ?? null;
-      const tutor = tutoresEnriquecidos.find((t) => t.id === r.id_tutor);
+      const idTutor = estudianteTutorMap[est.id] ?? null; // ← de estudiante_tutor
+      const tutor = tutoresEnriquecidos.find((t) => t.id === idTutor);
       return {
         id: est.id,
         nombre: [est.nombre, est.apellidos].filter(Boolean).join(" ") || "—",
@@ -1288,7 +1356,7 @@ export default function CenterEducativePanel() {
         estado,
         empresa: idEmp ? (empresaNombreMap[idEmp] ?? null) : null,
         tutor: tutor?.nombre ?? "—",
-        id_tutor: r.id_tutor ?? null,
+        id_tutor: idTutor, // ← de estudiante_tutor
         candidaturas: candidaturasData.filter((c) => c.id_estudiante === est.id)
           .length,
       };
@@ -1323,6 +1391,7 @@ export default function CenterEducativePanel() {
       lista: estudiantesEnriquecidos.filter((e) => e.id_tutor === t.id),
     }));
 
+    // ── Stats ─────────────────────────────────────────────────────────────────
     const totalEst = estudiantesEnriquecidos.length;
     const contratados = estudiantesEnriquecidos.filter(
       (e) => e.estado === "contratado",
@@ -1344,6 +1413,7 @@ export default function CenterEducativePanel() {
 
     setStats({
       estudiantes: totalEst,
+      tutores: tutoresData.length,
       empresas: empresasEnriquecidas.length,
       candidaturas: candidaturasData.length,
       tasa_contrato: tasaContrato,
@@ -1573,6 +1643,12 @@ export default function CenterEducativePanel() {
                       value={stats.estudiantes}
                       sub="En el centro"
                       accent
+                    />
+                    {/* ── NUEVO: tarjeta de tutores ── */}
+                    <StatCard
+                      label="Tutores"
+                      value={stats.tutores}
+                      sub="Asignados al centro"
                     />
                     <StatCard
                       label="Empresas"
@@ -2042,7 +2118,7 @@ export default function CenterEducativePanel() {
                   <div>
                     <SectionHeader
                       title="Tutores del centro"
-                      subtitle={`${tutores.length} tutores activos`}
+                      subtitle={`${tutores.length} tutores asignados`}
                     />
                     <div
                       style={{

@@ -309,8 +309,7 @@ export default function TutorRegisterPage() {
     const role = entityType === "empresa" ? "tutor_empresa" : "tutor_centro";
 
     try {
-      // 1. Crear cuenta en Auth — el trigger handle_new_user() inserta
-      //    automáticamente en `usuario` con el rol pasado en los metadatos.
+      // 1. Crear cuenta en Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp(
         {
           email: form.email,
@@ -324,9 +323,7 @@ export default function TutorRegisterPage() {
       if (!newUserId)
         throw new Error("No se pudo obtener el ID del nuevo usuario.");
 
-      // 2. Insertar en la tabla de tutor y vincular a la entidad.
-      //    Esta inserción la hace el cliente porque el trigger no tiene
-      //    acceso a entityId (no viaja en los metadatos de auth).
+      // 2. Insertar en la tabla de tutor y vincular a la entidad
       if (entityType === "empresa") {
         const { error: tutorError } = await supabase
           .from("tutor_empresa")
@@ -337,20 +334,19 @@ export default function TutorRegisterPage() {
             telefono: form.phone || null,
             especialidad: form.specialty || null,
           });
-        if (tutorError)
-          console.warn("tutor_empresa insert:", tutorError.message);
+        if (tutorError) throw new Error(`tutor_empresa: ${tutorError.message}`);
       } else {
         const { error: tutorError } = await supabase
           .from("tutor_centro")
           .insert({
-            id_usuario: newUserId,
-            id_centro: entityId,
+            usuario_id: newUserId, // nombre real de la columna
             nombre: form.fullName,
             telefono: form.phone || null,
-            especialidad: form.specialty || null,
-          });
-        if (tutorError)
-          console.warn("tutor_centro insert:", tutorError.message);
+            departamento: form.specialty || null, // nombre real de la columna
+          })
+          .onConflict("usuario_id") // ← ignora si ya existe
+          .ignoreDuplicates();
+        if (tutorError) throw new Error(`tutor_centro: ${tutorError.message}`);
       }
 
       // 3. Marcar token como usado
@@ -391,6 +387,10 @@ export default function TutorRegisterPage() {
   const entityLabel = entityType === "empresa" ? "empresa" : "centro educativo";
   const roleLabel =
     entityType === "empresa" ? "tutor de empresa" : "tutor de centro educativo";
+  const specialtyLabel =
+    entityType === "empresa" ? "Especialidad / Área" : "Departamento";
+  const specialtyPlaceholder =
+    entityType === "empresa" ? "Ej: Desarrollo Web" : "Ej: Informática";
 
   return (
     <div className="min-h-screen bg-dark py-12 px-4">
@@ -505,13 +505,13 @@ export default function TutorRegisterPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">
-                    Especialidad / Área
+                    {specialtyLabel}
                   </label>
                   <input
                     type="text"
                     value={form.specialty}
                     onChange={s("specialty")}
-                    placeholder="Ej: Desarrollo Web"
+                    placeholder={specialtyPlaceholder}
                     className="input-field"
                   />
                 </div>

@@ -29,7 +29,7 @@ export default function Footer() {
             alt="Relance"
             style={{ height: 22, width: "auto", borderRadius: 5 }} // ← 40→22 px
           />
-          <span
+          {/* <span
             style={{
               fontSize: 12,
               fontWeight: 700,
@@ -39,7 +39,7 @@ export default function Footer() {
             }}
           >
             RELANCE
-          </span>
+          </span> */}
         </div>
 
         {/* Links */}

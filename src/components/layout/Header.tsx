@@ -218,7 +218,7 @@ export default function Header({
                     flexShrink: 0,
                   }}
                 >
-                  ⌘K
+                  Ctrl+K
                 </kbd>
               </button>
 

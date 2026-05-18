@@ -158,12 +158,12 @@ export default function UserMenu({ onClose }) {
       href: "/panel-administracion",
       roles: ["admin"],
     },
-    {
-      icon: "icon-student",
-      label: "Gestionar usuarios",
-      href: "/admin/usuarios",
-      roles: ["admin"],
-    },
+    // {
+    //   icon: "icon-student",
+    //   label: "Gestionar usuarios",
+    //   href: "/admin/usuarios",
+    //   roles: ["admin"],
+    // },
     {
       icon: "icon-briefcase",
       label: "Gestionar ofertas",
