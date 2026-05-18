@@ -705,14 +705,19 @@ function SubmitButton({ loading, label }) {
   );
 }
 
-
 function SuccessModal({ email, role, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="w-full max-w-md rounded-2xl border border-brand/30 bg-dark-800 p-8 shadow-[0_0_40px_rgba(192,255,114,0.2)] animate-fade-in">
         <div className="mb-4 flex justify-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/20 border border-brand/40">
-            <svg className="h-7 w-7 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg
+              className="h-7 w-7 text-brand"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
@@ -723,7 +728,9 @@ function SuccessModal({ email, role, onClose }) {
         <p className="text-center text-sm text-gray-400">
           Se ha creado tu cuenta correctamente.
         </p>
-        <p className="text-center text-brand text-sm font-semibold mt-2">{email}</p>
+        <p className="text-center text-brand text-sm font-semibold mt-2">
+          {email}
+        </p>
         <p className="text-center text-xs text-gray-500 mt-4">
           Revisa tu correo para verificar tu cuenta.
           {(role === "empresa" || role === "centro_educativo") &&
