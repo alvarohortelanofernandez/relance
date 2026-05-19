@@ -191,7 +191,10 @@ function AppContent() {
   // Solo mostramos el spinner en la carga inicial (nunca si ya cargó una vez)
   if (safeLoading && !hasLoadedOnce) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "var(--color-bg)" }}
+      >
         <div className="w-20 h-20 text-[#C0FF72]">
           <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
             <g>
