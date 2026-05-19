@@ -202,12 +202,12 @@ export default function UserMenu({ onClose }) {
     },
 
     // TUTORES
-    {
-      icon: "icon-student",
-      label: "Mis estudiantes",
-      href: "/mis-estudiantes",
-      roles: ["tutor_empresa", "tutor_centro"],
-    },
+    // {
+    //   icon: "icon-student",
+    //   label: "Mis estudiantes",
+    //   href: "/mis-estudiantes",
+    //   roles: ["tutor_empresa", "tutor_centro"],
+    // },
 
     // NOTIFICACIONES
     {
@@ -218,12 +218,12 @@ export default function UserMenu({ onClose }) {
       badge: noLeidas > 0 ? noLeidas : null,
     },
 
-    {
-      icon: "icon-settings",
-      label: "Configuración",
-      href: profilePath,
-      roles: null,
-    },
+    // {
+    //   icon: "icon-settings",
+    //   label: "Configuración",
+    //   href: profilePath,
+    //   roles: null,
+    // },
   ];
 
   const visibleItems = menuItems.filter(

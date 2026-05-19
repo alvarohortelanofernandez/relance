@@ -1228,22 +1228,6 @@ function TabsEmpresa({ tab, setTab, totalMisOfertas }) {
       }}
     >
       <button
-        onClick={() => setTab("explorar")}
-        className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-        style={{
-          background:
-            tab === "explorar"
-              ? "var(--color-surface-elevated)"
-              : "transparent",
-          color:
-            tab === "explorar"
-              ? "var(--color-text)"
-              : "var(--color-text-muted)",
-        }}
-      >
-        Explorar ofertas
-      </button>
-      <button
         onClick={() => setTab("mis-ofertas")}
         className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
         style={{
@@ -1384,7 +1368,7 @@ export default function OfertasPage() {
         oferta_tecnologia(tecnologia(id_tecnologia, nombre))
       `,
       )
-      .in("estado", ["activa", "pendiente"])
+      .in("estado", ["activa"])
       .order("fecha_publicacion", { ascending: false });
 
     if (error) {
@@ -1509,7 +1493,7 @@ export default function OfertasPage() {
       );
     });
 
-  const esMisOfertas = tab === "mis-ofertas";
+  const esMisOfertas = isEmpresa ? true : tab === "mis-ofertas";
   const listaActiva = esMisOfertas ? misOfertas : ofertasPublicas;
   const listaFiltrada = aplicarFiltros(listaActiva);
   const isEmpresaOwnerOf = (oferta) =>

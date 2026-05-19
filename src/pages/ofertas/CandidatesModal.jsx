@@ -254,7 +254,7 @@ function EstadoBadge({ estado, onChange }) {
       className={`text-[11px] font-medium px-2.5 py-1 rounded-full border cursor-pointer appearance-none transition-all focus:outline-none focus:ring-1 focus:ring-white/20 ${ESTADO_PALETTE[meta.color] ?? ESTADO_PALETTE.gray}`}
     >
       {Object.entries(ESTADO_META).map(([val, m]) => (
-        <option key={val} value={val}>
+        <option key={val} value={val} className="bg-[#0B1B2B] text-[#C0FF72]">
           {m.label}
         </option>
       ))}
@@ -279,7 +279,8 @@ function Avatar({ src, nombre, size = "md" }) {
         src={src}
         alt={nombre}
         onError={() => setErr(true)}
-        className={`${sz} rounded-xl object-cover border border-white/10 flex-shrink-0`}
+        className={`${sz} rounded-xl object-cover flex-shrink-0`}
+        style={{ border: "1px solid var(--color-border-strong)" }}
       />
     );
   }
@@ -302,13 +303,23 @@ function StatBox({ label, val, color }) {
     gray: "text-gray-400",
   };
   return (
-    <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 text-center">
+    <div
+      className="rounded-xl p-3 text-center"
+      style={{
+        background: "var(--color-surface-elevated)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+    >
       <p
         className={`text-2xl font-display font-bold tabular-nums ${palette[color] ?? palette.gray}`}
       >
         {val}
       </p>
-      <p className="text-[10px] text-gray-600 mt-0.5 uppercase tracking-wider">
+      <p
+        className="text-[10px] mt-0.5 uppercase tracking-wider"
+        style={{ color: "var(--color-text-subtle)" }}
+        className="text-[10px] text-gray-600 mt-0.5 uppercase tracking-wider"
+      >
         {label}
       </p>
     </div>
@@ -318,12 +329,27 @@ function StatBox({ label, val, color }) {
 // ── InfoChip ──────────────────────────────────────────────────────────────────
 function InfoChip({ icon, label, val }) {
   return (
-    <div className="bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5">
-      <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">
+    <div
+      className="rounded-xl px-3 py-2.5"
+      style={{
+        background: "var(--color-surface-elevated)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+      className="bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5"
+    >
+      <p
+        className="text-[10px] uppercase tracking-wider mb-1"
+        style={{ color: "var(--color-text-subtle)" }}
+        className="text-[10px] text-gray-600 uppercase tracking-wider mb-1"
+      >
         {label}
       </p>
-      <p className="text-gray-300 text-xs font-medium flex items-center gap-1.5">
-        <span className="text-gray-500">{icon}</span>
+      <p
+        className="text-xs font-medium flex items-center gap-1.5"
+        style={{ color: "var(--color-text-secondary)" }}
+        className="text-gray-300 text-xs font-medium flex items-center gap-1.5"
+      >
+        <span style={{ color: "var(--color-text-muted)" }}>{icon}</span>
         {val}
       </p>
     </div>
@@ -847,25 +873,54 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl shadow-black/60">
+        <div
+          className="rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl shadow-black/60"
+          style={{
+            background: "var(--color-surface-strong)",
+            border: "1px solid var(--color-border-strong)",
+          }}
+        >
           {/* ── Header ── */}
-          <div className="px-6 py-5 border-b border-white/8 flex items-center justify-between flex-shrink-0">
+          <div
+            className="px-6 py-5 flex items-center justify-between flex-shrink-0"
+            style={{ borderBottom: "1px solid var(--color-border-strong)" }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#C0FF72]/10 border border-[#C0FF72]/20 flex items-center justify-center flex-shrink-0">
                 <IconUsers className="w-4 h-4 text-[#C0FF72]" />
               </div>
               <div>
-                <h2 className="font-display text-lg font-bold text-white">
+                <h2
+                  className="font-display text-lg font-bold"
+                  style={{ color: "var(--color-text)" }}
+                >
                   Candidatos
                 </h2>
-                <p className="text-gray-500 text-xs mt-0.5 truncate max-w-xs">
+                <p
+                  className="text-xs mt-0.5 truncate max-w-xs"
+                  style={{ color: "var(--color-text-muted)" }}
+                  className="text-gray-500 text-xs mt-0.5 truncate max-w-xs"
+                >
                   {oferta.titulo}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white transition-all ml-4 flex-shrink-0"
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all ml-4 flex-shrink-0"
+              style={{
+                background: "var(--color-surface-elevated)",
+                color: "var(--color-text-muted)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--color-text)";
+                e.currentTarget.style.background = "var(--color-border-strong)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--color-text-muted)";
+                e.currentTarget.style.background =
+                  "var(--color-surface-elevated)";
+              }}
             >
               <IconX className="w-4 h-4" />
             </button>
@@ -923,7 +978,11 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
 
           {/* ── Separador ── */}
           {!loading && candidatos.length > 0 && (
-            <div className="h-px bg-white/8 mx-6 flex-shrink-0" />
+            <div
+              className="h-px mx-6 flex-shrink-0"
+              style={{ background: "var(--color-border-strong)" }}
+              className="h-px bg-white/8 mx-6 flex-shrink-0"
+            />
           )}
 
           {/* ── Lista ── */}
@@ -938,13 +997,30 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
               </div>
             ) : candidatos.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
-                  <IconUsers className="w-7 h-7 text-gray-600" />
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{
+                    background: "var(--color-surface-elevated)",
+                    border: "1px solid var(--color-border-strong)",
+                  }}
+                >
+                  <IconUsers
+                    className="w-7 h-7"
+                    style={{ color: "var(--color-text-subtle)" }}
+                  />
                 </div>
-                <p className="text-gray-400 font-medium text-sm">
+                <p
+                  className="font-medium text-sm"
+                  style={{ color: "var(--color-text-muted)" }}
+                  className="text-gray-400 font-medium text-sm"
+                >
                   Aún no hay candidatos
                 </p>
-                <p className="text-gray-600 text-xs mt-1">
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--color-text-subtle)" }}
+                  className="text-gray-600 text-xs mt-1"
+                >
                   Los estudiantes que se postulen aparecerán aquí
                 </p>
               </div>
@@ -973,7 +1049,23 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                             actualizarNota(c.id_candidatura, nota),
                         })
                       }
-                      className="w-full text-left bg-white/[0.02] hover:bg-white/5 border border-white/8 hover:border-white/15 rounded-xl px-4 py-3.5 transition-all group"
+                      className="w-full text-left rounded-xl px-4 py-3.5 transition-all group"
+                      style={{
+                        background: "var(--color-surface)",
+                        border: "1px solid var(--color-border-strong)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--color-surface-elevated)";
+                        e.currentTarget.style.borderColor =
+                          "var(--color-border-strong)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--color-surface)";
+                        e.currentTarget.style.borderColor =
+                          "var(--color-border-strong)";
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <Avatar src={e?.avatar_url} nombre={nombre} size="sm" />
@@ -983,15 +1075,19 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                               {nombre}
                             </p>
                             {/* Estado badge inline solo lectura */}
-                            <span
+                            {/* <span
                               className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border flex-shrink-0 ${ESTADO_PALETTE[estadoMeta.color] ?? ESTADO_PALETTE.gray}`}
                             >
                               {estadoMeta.label}
-                            </span>
+                            </span> */}
                           </div>
                           <div className="flex items-center gap-3">
                             {e?.titulacion && (
-                              <p className="text-gray-500 text-xs truncate">
+                              <p
+                                className="text-xs truncate"
+                                style={{ color: "var(--color-text-muted)" }}
+                                className="text-gray-500 text-xs truncate"
+                              >
                                 {e.titulacion}
                               </p>
                             )}
@@ -1004,7 +1100,10 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                             )}
                           </div>
                           {c.comentario_estudiante && (
-                            <p className="text-gray-600 text-xs mt-1 line-clamp-1 italic">
+                            <p
+                              className="text-xs mt-1 line-clamp-1 italic"
+                              style={{ color: "var(--color-text-subtle)" }}
+                            >
                               "{c.comentario_estudiante}"
                             </p>
                           )}
@@ -1021,6 +1120,10 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                             }
                           />
                         </div>
+                        <IconChevronRight
+                          className="w-4 h-4 transition-colors flex-shrink-0"
+                          style={{ color: "var(--color-text-subtle)" }}
+                        />
                         <IconChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0" />
                       </div>
                     </button>

@@ -57,50 +57,34 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
     if (!user) return;
     setLoadingAlumnos(true);
 
-    // Intento 1: tabla tutoria
-    let estudiantes = [];
-
-    const { data: tutorias, error: errT } = await supabase
-      .from("tutoria")
-      .select(
-        `id_estudiante,
-         estudiante:estudiante!tutoria_id_estudiante_fkey(
-           id,
-           usuario:usuario!estudiante_id_fkey(id, full_name, email, avatar_url)
-         )`,
-      )
+    const { data: relaciones, error: errR } = await supabase
+      .from("estudiante_tutor")
+      .select("id_estudiante")
       .eq("id_tutor", user.id);
 
-    if (!errT && tutorias?.length) {
-      estudiantes = tutorias
-        .map((t) => ({
-          id: t.id_estudiante,
-          nombre:
-            t.estudiante?.usuario?.full_name ??
-            t.estudiante?.usuario?.email ??
-            "Estudiante",
-          email: t.estudiante?.usuario?.email ?? "",
-          avatar: t.estudiante?.usuario?.avatar_url ?? null,
-        }))
-        .filter((e) => e.id);
-    } else {
-      // Intento 2: campo en tabla estudiante
-      const { data: estudData } = await supabase
-        .from("estudiante")
-        .select(
-          `id,
-           usuario:usuario!estudiante_id_fkey(id, full_name, email, avatar_url)`,
-        )
-        .eq("id_tutor_centro", user.id);
+    const ids = (relaciones ?? []).map((r) => r.id_estudiante);
+    // const ids = (relaciones ?? []).map((r) => r.id_estudiante).filter(Boolean);
 
-      if (estudData?.length) {
-        estudiantes = estudData.map((e) => ({
-          id: e.id,
-          nombre: e.usuario?.full_name ?? e.usuario?.email ?? "Estudiante",
-          email: e.usuario?.email ?? "",
-          avatar: e.usuario?.avatar_url ?? null,
-        }));
-      }
+    // if (ids.length === 0) {
+    //   setAlumnos([]);
+    //   setLoadingAlumnos(false);
+    //   return;
+    // }
+
+    let estudiantes = [];
+
+    if (!errR && ids.length > 0) {
+      const { data: estudData, error: estudErr } = await supabase
+        .from("estudiante")
+        .select("id, nombre, apellidos, avatar_url")
+        .in("id", ids);
+
+      estudiantes = (estudData ?? []).map((e) => ({
+        id: e.id,
+        nombre: `${e.nombre ?? ""} ${e.apellidos ?? ""}`.trim() || "Estudiante",
+        email: "",
+        avatar: e.avatar_url ?? null,
+      }));
     }
 
     setAlumnos(estudiantes);
@@ -140,62 +124,26 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
     setError(null);
 
     try {
-      // Obtener id numérico de cada usuario desde la tabla usuario
-      // La FK id_usuario en notificacion es integer y referencia usuario.id (int)
-      // pero user.id en Supabase Auth es UUID. Necesitamos el id numérico.
-
-      // Vamos a obtener el id numérico para cada estudiante seleccionado
-      const alumnosSeleccionados = alumnos.filter((a) =>
-        seleccionados.has(a.id),
-      );
-
-      // Para cada alumno, buscamos su id numérico en tabla usuario por uuid
-      const { data: usuarios } = await supabase
-        .from("usuario")
-        .select("id, id_auth")
-        .in(
-          "id_auth",
-          alumnosSeleccionados.map((a) => a.id),
-        );
-
-      // Fallback: si no existe columna id_auth, intentar por id directamente
-      // y asumir que id en tabla usuario coincide con uuid de auth (puede variar)
-      const notificaciones = alumnosSeleccionados.map((alumno) => {
-        const usuarioRow = usuarios?.find((u) => u.id_auth === alumno.id);
-        const idUsuarioNumerico = usuarioRow?.id ?? null;
-
-        return {
-          id_usuario: idUsuarioNumerico,
+      const notificaciones = alumnos
+        .filter((a) => seleccionados.has(a.id))
+        .map((alumno) => ({
+          id_usuario_destino: alumno.id,
+          id_usuario_remitente: user.id,
           tipo: "recomendacion_oferta",
           titulo: `Oferta recomendada: ${oferta.titulo}`,
           mensaje: `Tu tutor te ha recomendado la oferta "${oferta.titulo}" de ${oferta.empresa_nombre ?? "una empresa"}. Échale un vistazo, ¡podría ser una gran oportunidad para ti!`,
-          url_destino: `/ofertas?id=${oferta.id_oferta}`,
+          url_destino: `/ofertas?oferta=${oferta.id_oferta}`,
           leido: false,
           fecha: new Date().toISOString(),
-        };
-      });
-
-      // Filtramos los que tenemos id_usuario resuelto
-      const validos = notificaciones.filter((n) => n.id_usuario !== null);
-      const sinResolver = notificaciones.length - validos.length;
-
-      if (validos.length === 0) {
-        throw new Error(
-          "No se pudo resolver el identificador de usuario de ningún alumno. Comprueba la estructura de la tabla usuario.",
-        );
-      }
+        }));
 
       const { error: insErr } = await supabase
         .from("notificacion")
-        .insert(validos);
+        .insert(notificaciones);
+
       if (insErr) throw insErr;
 
       setExito(true);
-      if (sinResolver > 0) {
-        setError(
-          `Enviado a ${validos.length} alumno(s). ${sinResolver} alumno(s) no pudieron recibir la notificación por un problema de identificador.`,
-        );
-      }
     } catch (err) {
       setError(err.message ?? "Error al enviar las notificaciones.");
     } finally {
@@ -219,14 +167,29 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        className="border rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
+        style={{
+          background: "var(--color-surface-strong)",
+          borderColor: "var(--color-border-strong)",
+        }}
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+        <div
+          className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0"
+          style={{ borderColor: "var(--color-border-strong)" }}
+        >
           <div>
-            <h2 className="font-display text-xl font-bold text-white">
+            <h2
+              className="font-display text-xl font-bold"
+              style={{ color: "var(--color-text)" }}
+            >
               Recomendar oferta
             </h2>
-            <p className="text-gray-500 text-sm mt-0.5 truncate max-w-xs">
+            <p
+              className="text-sm mt-0.5 truncate max-w-xs"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               {oferta.titulo}
             </p>
           </div>
@@ -255,10 +218,16 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
               </svg>
             </div>
             <div>
-              <p className="text-white font-display font-bold text-lg">
+              <p
+                className="font-display font-bold text-lg"
+                style={{ color: "var(--color-text)" }}
+              >
                 ¡Recomendación enviada!
               </p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p
+                className="text-sm mt-1"
+                style={{ color: "var(--color-text-muted)" }}
+              >
                 {seleccionados.size} alumno{seleccionados.size !== 1 ? "s" : ""}{" "}
                 recibirá{seleccionados.size !== 1 ? "n" : ""} la notificación en
                 su bandeja.
@@ -306,12 +275,16 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
 
               {/* Buscador alumnos */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">
+                <label
+                  className="block text-xs mb-1.5 uppercase tracking-wider"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
                   Seleccionar alumnos
                 </label>
                 <div className="relative mb-3">
                   <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                    style={{ color: "var(--color-text-muted)" }}
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -335,7 +308,10 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
                   </div>
                 ) : alumnosFiltrados.length === 0 ? (
                   <div className="text-center py-8 border border-dashed border-white/10 rounded-xl">
-                    <p className="text-gray-500 text-sm">
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
                       {alumnos.length === 0
                         ? "No tienes alumnos asignados"
                         : "Ningún alumno coincide con la búsqueda"}
@@ -347,7 +323,14 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
                     <button
                       type="button"
                       onClick={toggleTodos}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/3 transition-colors mb-1 text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors mb-1 text-left"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--color-surface-strong)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
                     >
                       <div
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
@@ -368,7 +351,10 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
                           </svg>
                         )}
                       </div>
-                      <span className="text-sm text-gray-300 font-medium">
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: "var(--color-text-secondary)" }}
+                      >
                         Seleccionar todos ({alumnosFiltrados.length})
                       </span>
                     </button>
@@ -381,11 +367,23 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
                             key={alumno.id}
                             type="button"
                             onClick={() => toggleSeleccion(alumno.id)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left border ${
                               sel
-                                ? "bg-[#C0FF72]/5 border border-[#C0FF72]/15"
-                                : "hover:bg-white/3 border border-transparent"
+                                ? "bg-[#C0FF72]/5 border-[#C0FF72]/15"
+                                : "border-transparent"
                             }`}
+                            onMouseEnter={(e) => {
+                              if (!sel) {
+                                e.currentTarget.style.background =
+                                  "var(--color-surface-strong)";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!sel) {
+                                e.currentTarget.style.background =
+                                  "transparent";
+                              }
+                            }}
                           >
                             <div
                               className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
@@ -414,18 +412,34 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
                                 className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-white/8 border border-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-gray-300">
+                              <div
+                                className="w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                                // style={{ color: "var(--color-text-secondary)" }}
+                                style={{
+                                  background: "var(--color-surface-elevated)",
+                                  borderColor: "var(--color-border-strong)",
+                                  color: "var(--color-text-muted)",
+                                }}
+                              >
                                 {alumno.nombre.slice(0, 2).toUpperCase()}
                               </div>
                             )}
 
                             <div className="min-w-0">
                               <p
-                                className={`text-sm font-medium truncate ${sel ? "text-white" : "text-gray-300"}`}
+                                className="text-sm font-medium truncate"
+                                style={{
+                                  color: sel
+                                    ? "var(--color-text)"
+                                    : "var(--color-text-subtle)",
+                                }}
                               >
                                 {alumno.nombre}
                               </p>
-                              <p className="text-xs text-gray-600 truncate">
+                              <p
+                                className="text-xs truncate"
+                                style={{ color: "var(--color-text-subtle)" }}
+                              >
                                 {alumno.email}
                               </p>
                             </div>
@@ -439,7 +453,10 @@ export default function RecomendarOfertaModal({ oferta, onClose }) {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-white/10 flex-shrink-0 flex items-center gap-3">
+            <div
+              className="px-6 py-4 border-t flex-shrink-0 flex items-center gap-3"
+              style={{ borderColor: "var(--color-border-strong)" }}
+            >
               <button onClick={onClose} className="btn-secondary flex-1">
                 Cancelar
               </button>

@@ -93,6 +93,12 @@ const ESTADO_ACUERDO = {
     bg: "rgba(251,191,36,0.1)",
     border: "rgba(251,191,36,0.25)",
   },
+  rechazado: {
+    label: "Rechazado",
+    color: "var(--color-error)",
+    bg: "rgba(248,113,113,0.1)",
+    border: "rgba(248,113,113,0.25)",
+  },
 };
 
 function IconSearch() {
@@ -1043,10 +1049,8 @@ export default function CenterEducativePanel() {
       setLoadingAcuerdos(true);
       try {
         const { data: acuerdosData, error } = await supabase
-          .from("centro_empresa_acuerdo")
-          .select(
-            "id, id_empresa, plazas_acordadas, fecha_inicio, fecha_fin, estado, notas",
-          )
+          .from("convenio")
+          .select("id, id_empresa, estado, fecha_propuesta, fecha_aceptacion")
           .eq("id_centro", idCentro);
 
         if (!error && acuerdosData && acuerdosData.length > 0) {
@@ -1070,11 +1074,13 @@ export default function CenterEducativePanel() {
             plazas: a.plazas_acordadas,
             fecha_inicio: a.fecha_inicio,
             fecha_fin: a.fecha_fin,
-            estado: a.estado ?? "activo",
+            estado: a.estado ?? "pendiente",
             contacto: a.notas ?? null,
             alumnos_activos: alumnosActivosMap[a.id_empresa] ?? 0,
           }));
           if (mountedRef.current) setAcuerdos(enriquecidos);
+          if (mountedRef.current)
+            setStats((prev) => ({ ...prev, empresas: enriquecidos.length }));
         } else {
           const derivados = empresasEnriquecidas.map((e) => ({
             id: e.id,
@@ -1091,6 +1097,8 @@ export default function CenterEducativePanel() {
             alumnos_activos: alumnosActivosMap[e.id] ?? 0,
           }));
           if (mountedRef.current) setAcuerdos(derivados);
+          if (mountedRef.current)
+            setStats((prev) => ({ ...prev, empresas: derivados.length }));
         }
       } catch {
         const derivados = empresasEnriquecidas.map((e) => ({
@@ -1383,6 +1391,14 @@ export default function CenterEducativePanel() {
       !q ||
       e.nombre.toLowerCase().includes(q) ||
       (e.sector ?? "").toLowerCase().includes(q)
+    );
+  });
+  const acuerdosFiltrados = acuerdos.filter((a) => {
+    const q = searchEmp.toLowerCase();
+    return (
+      !q ||
+      a.empresa.toLowerCase().includes(q) ||
+      (a.sector ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -1861,7 +1877,7 @@ export default function CenterEducativePanel() {
                 <div>
                   <SectionHeader
                     title="Empresas colaboradoras"
-                    subtitle={`${empresas.length} empresas activas`}
+                    subtitle={`${acuerdos.length} empresas con convenio`}
                     action={
                       <SearchInput
                         value={searchEmp}
@@ -1871,23 +1887,17 @@ export default function CenterEducativePanel() {
                     }
                   />
                   <Table
-                    headers={[
-                      "Empresa",
-                      "Sector",
-                      "Alumnos activos",
-                      "Colaboraciones",
-                      "Valoración",
-                    ]}
+                    headers={["Empresa", "Sector", "Alumnos activos", "Estado"]}
                     empty={
-                      empresasFiltradas.length === 0
-                        ? "No se encontraron empresas."
+                      acuerdosFiltrados.length === 0
+                        ? "No se encontraron empresas con convenio."
                         : undefined
                     }
                   >
-                    {empresasFiltradas.map((e, i) => (
+                    {acuerdosFiltrados.map((a, i) => (
                       <TR
-                        key={e.id}
-                        last={i === empresasFiltradas.length - 1}
+                        key={a.id}
+                        last={i === acuerdosFiltrados.length - 1}
                         cells={[
                           <span
                             style={{
@@ -1896,7 +1906,7 @@ export default function CenterEducativePanel() {
                               fontSize: 11,
                             }}
                           >
-                            {e.nombre}
+                            {a.empresa}
                           </span>,
                           <span
                             style={{
@@ -1904,16 +1914,7 @@ export default function CenterEducativePanel() {
                               fontSize: 11,
                             }}
                           >
-                            {e.sector ?? "—"}
-                          </span>,
-                          <span
-                            style={{
-                              fontVariantNumeric: "tabular-nums",
-                              color: "var(--color-text-muted)",
-                              fontSize: 11,
-                            }}
-                          >
-                            {e.alumnos_activos}
+                            {a.sector ?? "—"}
                           </span>,
                           <span
                             style={{
@@ -1922,20 +1923,12 @@ export default function CenterEducativePanel() {
                               fontSize: 11,
                             }}
                           >
-                            {e.colaboraciones}
+                            {a.alumnos_activos}
                           </span>,
-                          e.valoracion > 0 ? (
-                            <Stars rating={e.valoracion} />
-                          ) : (
-                            <span
-                              style={{
-                                color: "var(--color-text-subtle)",
-                                fontSize: 10,
-                              }}
-                            >
-                              Sin valoraciones
-                            </span>
-                          ),
+                          <StatusBadge
+                            estado={a.estado ?? "activo"}
+                            map={ESTADO_ACUERDO}
+                          />,
                         ]}
                       />
                     ))}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import MainLayout from "../components/layout/MainLayout";
+import ConvenioDetailInline from "./ConvenioDetailInline";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -67,6 +68,20 @@ function tipoIcon(tipo) {
           <polyline points="14 2 14 8 20 8" />
         </svg>
       );
+    case "propuesta_convenio":
+    case "convenio_aceptado":
+    case "convenio_rechazado":
+      return (
+        <svg
+          className="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M18 2H6v7a6 6 0 0012 0V2z" />
+        </svg>
+      );
     default:
       return (
         <svg
@@ -90,6 +105,12 @@ function tipoBg(tipo) {
       return "bg-brand/10 border-brand/20 text-brand";
     case "candidatura":
       return "bg-blue-500/10 border-blue-500/20 text-blue-400";
+    case "propuesta_convenio":
+      return "bg-purple-500/10 border-purple-500/20 text-purple-400";
+    case "convenio_aceptado":
+      return "bg-green-500/10 border-green-500/20 text-green-400";
+    case "convenio_rechazado":
+      return "bg-red-500/10 border-red-500/20 text-red-400";
     default:
       return "bg-white/5 border-[var(--color-border)] text-[var(--color-text-secondary)]";
   }
@@ -116,7 +137,8 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
   };
   const meta = TIPO_META[oferta.tipo_oferta] ?? {
     label: "Oferta",
-    color: "bg-white/5 text-[var(--color-text-secondary)] border-[var(--color-border)]",
+    color:
+      "bg-white/5 text-[var(--color-text-secondary)] border-[var(--color-border)]",
   };
 
   return (
@@ -132,7 +154,9 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
             <h3 className="font-display font-bold text-white text-base leading-tight">
               {oferta.titulo}
             </h3>
-            <p className="text-[var(--color-text-secondary)] text-sm">{oferta.empresa_nombre}</p>
+            <p className="text-[var(--color-text-secondary)] text-sm">
+              {oferta.empresa_nombre}
+            </p>
           </div>
         </div>
 
@@ -197,7 +221,9 @@ function OfertaDetailInline({ oferta, onPostular, yaPostulado, onVerOferta }) {
               key={label}
               className="bg-[var(--color-bg)] border border-white/8 rounded-xl p-3 text-center"
             >
-              <p className="text-[var(--color-text-subtle)] text-xs mb-1">{label}</p>
+              <p className="text-[var(--color-text-subtle)] text-xs mb-1">
+                {label}
+              </p>
               <p className="text-white text-sm font-semibold font-display">
                 {val}
               </p>
@@ -372,6 +398,7 @@ function PostulacionModal({ oferta, onClose, onSuccess }) {
 export default function NotificacionesPage() {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+  const [convenioLoading, setConvenioLoading] = useState(false);
 
   const [notificaciones, setNotificaciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -387,7 +414,7 @@ export default function NotificacionesPage() {
     const { data } = await supabase
       .from("notificacion")
       .select("*")
-      .eq("id_usuario", user.id)
+      .eq("id_usuario_destino", user.id)
       .order("fecha", { ascending: false });
     setNotificaciones(data ?? []);
     setLoading(false);
@@ -477,6 +504,82 @@ export default function NotificacionesPage() {
 
   const grupos = groupByDay(notificaciones);
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
+
+  const handleAcceptConvenio = async (notif) => {
+    const meta = notif.metadata ? JSON.parse(notif.metadata) : {};
+    const convenioId = meta.convenio_id;
+    if (!convenioId) return;
+    setConvenioLoading(true);
+    try {
+      await supabase
+        .from("convenio")
+        .update({
+          estado: "activo",
+          fecha_aceptacion: new Date().toISOString(),
+        })
+        .eq("id", convenioId);
+
+      const tabla = notif.url_destino?.startsWith("/empresa/")
+        ? "empresa"
+        : "centro_educativo";
+      const entityId = notif.url_destino?.split("/").pop();
+      const { data: myData } = await supabase
+        .from(tabla === "empresa" ? "centro_educativo" : "empresa")
+        .select("nombre")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      await supabase.from("notificacion").insert({
+        id_usuario_destino: meta.solicitante_id,
+        tipo: "convenio_aceptado",
+        titulo: "Convenio aceptado",
+        mensaje: `${myData?.nombre ?? "La otra parte"} ha aceptado tu propuesta de convenio.`,
+        url_destino: notif.url_destino?.startsWith("/empresa/")
+          ? `/centro/${user.id}`
+          : `/empresa/${user.id}`,
+        leido: false,
+        fecha: new Date().toISOString(),
+      });
+
+      setNotificaciones((prev) =>
+        prev.map((n) =>
+          n.id_notificacion === notif.id_notificacion
+            ? { ...n, tipo: "convenio_aceptado" }
+            : n,
+        ),
+      );
+      setSelected((prev) =>
+        prev ? { ...prev, tipo: "convenio_aceptado" } : prev,
+      );
+    } finally {
+      setConvenioLoading(false);
+    }
+  };
+
+  const handleRejectConvenio = async (notif) => {
+    const meta = notif.metadata ? JSON.parse(notif.metadata) : {};
+    const convenioId = meta.convenio_id;
+    if (!convenioId) return;
+    setConvenioLoading(true);
+    try {
+      await supabase
+        .from("convenio")
+        .update({ estado: "rechazado" })
+        .eq("id", convenioId);
+      setNotificaciones((prev) =>
+        prev.map((n) =>
+          n.id_notificacion === notif.id_notificacion
+            ? { ...n, tipo: "convenio_rechazado" }
+            : n,
+        ),
+      );
+      setSelected((prev) =>
+        prev ? { ...prev, tipo: "convenio_rechazado" } : prev,
+      );
+    } finally {
+      setConvenioLoading(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -600,7 +703,9 @@ export default function NotificacionesPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <p
                                   className={`text-sm leading-snug font-medium truncate ${
-                                    notif.leido ? "text-[var(--color-text-secondary)]" : "text-white"
+                                    notif.leido
+                                      ? "text-[var(--color-text-secondary)]"
+                                      : "text-white"
                                   }`}
                                 >
                                   {notif.titulo}
@@ -743,6 +848,36 @@ export default function NotificacionesPage() {
                               <line x1="10" y1="14" x2="21" y2="3" />
                             </svg>
                             Ver más
+                          </button>
+                        )}
+
+                      {/* Detalle convenio */}
+                      {[
+                        "propuesta_convenio",
+                        "convenio_aceptado",
+                        "convenio_rechazado",
+                      ].includes(selected.tipo) && (
+                        <ConvenioDetailInline
+                          notif={selected}
+                          loading={convenioLoading}
+                          onAccept={() => handleAcceptConvenio(selected)}
+                          onReject={() => handleRejectConvenio(selected)}
+                        />
+                      )}
+
+                      {/* Botón genérico — excluir también tipos de convenio */}
+                      {selected.url_destino &&
+                        ![
+                          "recomendacion_oferta",
+                          "propuesta_convenio",
+                          "convenio_aceptado",
+                          "convenio_rechazado",
+                        ].includes(selected.tipo) && (
+                          <button
+                            onClick={() => navigate(selected.url_destino)}
+                            className="mt-5 btn-primary flex items-center gap-2"
+                          >
+                            ...
                           </button>
                         )}
                     </div>
