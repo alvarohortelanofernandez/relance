@@ -24,7 +24,7 @@ export default function UserMenu({ onClose }) {
     const { data: usuarioRow } = await supabase
       .from("usuario")
       .select("id")
-      .eq("id_auth", user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
     if (!usuarioRow?.id) return;
@@ -32,7 +32,7 @@ export default function UserMenu({ onClose }) {
     const { count } = await supabase
       .from("notificacion")
       .select("id_notificacion", { count: "exact", head: true })
-      .eq("id_usuario", usuarioRow.id)
+      .eq("id_usuario_destino", usuarioRow.id)
       .eq("leido", false);
 
     setNoLeidas(count ?? 0);

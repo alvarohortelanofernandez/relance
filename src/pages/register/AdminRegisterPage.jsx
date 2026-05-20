@@ -5,29 +5,23 @@ import { useAuth } from "../../context/AuthContext";
 import logoUrl from "../../assets/logo_relance.jpg";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-
-function FieldError({ msg }) {
-  return msg ? <p className="text-xs text-red-400 mt-1">{msg}</p> : null;
-}
-
 function Spinner({ className = "w-5 h-5" }) {
   return (
     <svg
-      className={`animate-spin text-brand ${className}`}
+      className={`animate-spin ${className}`}
       viewBox="0 0 24 24"
       fill="none"
     >
       <circle
-        className="opacity-25"
+        className="opacity-20"
         cx="12"
         cy="12"
         r="10"
         stroke="currentColor"
-        strokeWidth="4"
+        strokeWidth="3"
       />
       <path
-        className="opacity-75"
+        className="opacity-80"
         fill="currentColor"
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
       />
@@ -35,7 +29,7 @@ function Spinner({ className = "w-5 h-5" }) {
   );
 }
 
-function PasswordField({ value, onChange, hasError }) {
+function PasswordField({ value, onChange }) {
   const [show, setShow] = useState(false);
   const score = !value
     ? 0
@@ -48,12 +42,20 @@ function PasswordField({ value, onChange, hasError }) {
           : 3;
   const colors = [
     "",
-    "bg-red-500",
+    "bg-[var(--color-error)]",
     "bg-orange-500",
-    "bg-yellow-500",
-    "bg-brand",
+    "bg-[var(--color-warning)]",
+    "bg-[var(--color-brand)]",
   ];
   const labels = ["", "Muy débil", "Débil", "Media", "Fuerte"];
+  const labelColors = [
+    "",
+    "text-[var(--color-error)]",
+    "text-orange-400",
+    "text-[var(--color-warning)]",
+    "text-[var(--color-brand)]",
+  ];
+
   return (
     <div>
       <div className="relative">
@@ -62,17 +64,26 @@ function PasswordField({ value, onChange, hasError }) {
           value={value}
           onChange={onChange}
           placeholder="Mínimo 8 caracteres"
-          className={`input-field pr-10 ${hasError ? "border-red-500/50" : ""}`}
+          required
+          minLength={8}
+          className="input-field pr-10"
         />
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+          style={{ color: "var(--color-text-subtle)" }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.color = "var(--color-text-muted)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.color = "var(--color-text-subtle)")
+          }
         >
           {show ? (
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -83,8 +94,8 @@ function PasswordField({ value, onChange, hasError }) {
             </svg>
           ) : (
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -101,10 +112,12 @@ function PasswordField({ value, onChange, hasError }) {
           {[1, 2, 3, 4].map((lvl) => (
             <div
               key={lvl}
-              className={`h-1 flex-1 rounded-full transition-all ${score >= lvl ? colors[score] : "bg-white/10"}`}
+              className={`h-0.5 flex-1 rounded-full transition-all duration-300 ${score >= lvl ? colors[score] : "bg-white/8"}`}
             />
           ))}
-          <span className="text-xs text-gray-500 w-16 text-right">
+          <span
+            className={`text-xs w-14 text-right font-medium ${labelColors[score]}`}
+          >
             {labels[score]}
           </span>
         </div>
@@ -113,116 +126,177 @@ function PasswordField({ value, onChange, hasError }) {
   );
 }
 
-// ── Pantallas auxiliares ──────────────────────────────────────────────────────
-function AlreadyLoggedIn({ userName, onSignOut }) {
+// ── Pantallas auxiliares ─────────────────────────────────────────────────────
+function StateScreen({ children }) {
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
-        <div className="mb-4 flex justify-center">
-          <svg className="w-14 h-14 text-brand" viewBox="0 0 640 640">
-            <use href="/icons.svg#icon-user-check" />
-          </svg>
-        </div>
-        <h2 className="font-display text-xl font-bold text-white mb-2">
-          Ya tienes sesión iniciada
-        </h2>
-        <p className="text-gray-400 text-sm mb-6">
-          Estás conectado como{" "}
-          <strong className="text-white">{userName}</strong>. Para registrarte
-          como administrador cierra tu sesión primero.
-        </p>
-        <button onClick={onSignOut} className="btn-primary w-full mb-3">
-          Cerrar sesión y continuar
-        </button>
-        <a href="/" className="btn-secondary block w-full text-center">
-          Volver al inicio
-        </a>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div
+        className="w-full max-w-md p-10 text-center rounded-2xl"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+          boxShadow:
+            "0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+        }}
+      >
+        {children}
       </div>
     </div>
+  );
+}
+
+function AlreadyLoggedIn({ userName, onSignOut }) {
+  return (
+    <StateScreen>
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-5"
+        style={{
+          background: "rgba(192,255,114,0.08)",
+          border: "1px solid rgba(192,255,114,0.15)",
+        }}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-brand)"
+          strokeWidth="2"
+        >
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+          <polyline points="16 11 18 13 22 9" />
+        </svg>
+      </div>
+      <h2
+        className="font-display text-lg font-bold mb-2"
+        style={{ color: "var(--color-text)" }}
+      >
+        Ya tienes sesión iniciada
+      </h2>
+      <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+        Estás conectado como{" "}
+        <strong style={{ color: "var(--color-text)" }}>{userName}</strong>. Para
+        registrarte con esta invitación, cierra tu sesión primero.
+      </p>
+      <button onClick={onSignOut} className="btn-primary w-full mb-3">
+        Cerrar sesión y continuar
+      </button>
+      <a href="/" className="btn-secondary block w-full text-center">
+        Volver al inicio
+      </a>
+    </StateScreen>
   );
 }
 
 function InvalidToken() {
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
-        <div className="mb-4 flex justify-center">
-          <svg className="w-14 h-14 text-yellow-400" viewBox="0 0 640 640">
-            <use href="/icons.svg#icon-warning" />
-          </svg>
-        </div>
-        <h2 className="font-display text-xl font-bold text-white mb-2">
-          Invitación inválida o caducada
-        </h2>
-        <p className="text-gray-400 text-sm mb-6">
-          Este enlace de invitación de administrador no es válido, ya ha sido
-          usado o ha caducado. Solicita un nuevo enlace a un administrador
-          existente.
-        </p>
-        <a href="/" className="btn-secondary block w-full text-center">
-          Volver al inicio
-        </a>
+    <StateScreen>
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-5"
+        style={{
+          background: "var(--color-warning-bg)",
+          border: "1px solid rgba(251,191,36,0.2)",
+        }}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-warning)"
+          strokeWidth="2"
+        >
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
       </div>
-    </div>
+      <h2
+        className="font-display text-lg font-bold mb-2"
+        style={{ color: "var(--color-text)" }}
+      >
+        Enlace inválido o caducado
+      </h2>
+      <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+        Este enlace de invitación no es válido, ya ha sido usado o ha caducado
+        (validez: 48 horas). Pide al equipo de administración que genere un
+        nuevo enlace.
+      </p>
+      <a href="/" className="btn-secondary block w-full text-center">
+        Volver al inicio
+      </a>
+    </StateScreen>
   );
 }
 
 function SuccessScreen({ navigate }) {
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-10 text-center">
-        <div className="mb-5 flex justify-center">
-          <svg className="w-16 h-16 text-brand" viewBox="0 0 640 640">
-            <use href="/icons.svg#icon-party" />
-          </svg>
-        </div>
-        <h2 className="font-display text-2xl font-bold text-white mb-3">
-          ¡Cuenta de administrador creada!
-        </h2>
-        <p className="text-gray-400 text-sm mb-2">
-          Tu cuenta ha sido creada con permisos de administrador.
-        </p>
-        <p className="text-gray-500 text-xs mb-8">
-          Revisa tu correo para verificar la cuenta antes de iniciar sesión.
-        </p>
-        <button onClick={() => navigate("/")} className="btn-primary w-full">
-          Ir al inicio
-        </button>
+    <StateScreen>
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
+        style={{
+          background: "rgba(192,255,114,0.08)",
+          border: "1px solid rgba(192,255,114,0.2)",
+        }}
+      >
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-brand)"
+          strokeWidth="2"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <polyline points="9 12 11 14 15 10" />
+        </svg>
       </div>
-    </div>
+      <h2
+        className="font-display text-2xl font-bold mb-2"
+        style={{ color: "var(--color-text)" }}
+      >
+        ¡Bienvenido al equipo!
+      </h2>
+      <p className="text-sm mb-1" style={{ color: "var(--color-text-muted)" }}>
+        Tu cuenta de administrador ha sido creada correctamente.
+      </p>
+      <p className="text-xs mb-8" style={{ color: "var(--color-text-subtle)" }}>
+        Revisa tu correo para verificar tu cuenta antes de iniciar sesión.
+      </p>
+      <button onClick={() => navigate("/")} className="btn-primary w-full">
+        Ir al inicio
+      </button>
+    </StateScreen>
   );
 }
 
-// ── Página principal ──────────────────────────────────────────────────────────
+// ── Formulario principal ─────────────────────────────────────────────────────
 export default function AdminRegisterPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
 
   const token = params.get("token");
-  const entityId = params.get("entity"); // id del admin que generó el token
+  const entityId = params.get("entity");
+  const entityType = params.get("type");
 
-  const [pageState, setPageState] = useState("loading"); // loading|logged_in|invalid|form|success
-  const [invitedBy, setInvitedBy] = useState(null);
-
+  const [pageState, setPageState] = useState("loading");
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
-  const [errs, setErrs] = useState({});
-  const s = (k) => (e) => {
-    setForm((f) => ({ ...f, [k]: e.target.value }));
-    setErrs((p) => ({ ...p, [k]: undefined }));
-  };
-
+  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // ── Validar token ────────────────────────────────────────────────────────
   const validateToken = async () => {
-    if (!token || !entityId) return null;
+    if (!token || !entityId || !entityType) return null;
     const { data, error } = await supabase
       .from("invite_tokens")
       .select("id, entity_id, entity_type, used, expires_at")
@@ -233,26 +307,12 @@ export default function AdminRegisterPage() {
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
     if (error) {
-      console.error("Error validando token admin:", error.message);
+      console.error(error.message);
       return null;
     }
     return data;
   };
 
-  const fetchInviterName = async () => {
-    try {
-      const { data } = await supabase
-        .from("usuario")
-        .select("nombre")
-        .eq("id", entityId)
-        .maybeSingle();
-      return data?.nombre || "un administrador";
-    } catch {
-      return "un administrador";
-    }
-  };
-
-  // ── Efecto: esperar Auth, luego validar ──────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
     const init = async () => {
@@ -265,8 +325,6 @@ export default function AdminRegisterPage() {
         setPageState("invalid");
         return;
       }
-      const name = await fetchInviterName();
-      setInvitedBy(name);
       setPageState("form");
     };
     init();
@@ -277,62 +335,31 @@ export default function AdminRegisterPage() {
     await signOut();
   };
 
-  // ── Validación ───────────────────────────────────────────────────────────
-  const validate = () => {
-    const e = {};
-    if (!form.fullName.trim()) e.fullName = "El nombre es obligatorio.";
-    if (!form.email.trim()) e.email = "El correo es obligatorio.";
-    else if (!isValidEmail(form.email)) e.email = "Introduce un correo válido.";
-    if (!form.password) e.password = "La contraseña es obligatoria.";
-    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres.";
-    else if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
-      e.password = "Debe incluir mayúscula y número.";
-    if (!form.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
-    else if (form.password !== form.confirmPassword)
-      e.confirmPassword = "Las contraseñas no coinciden.";
-    setErrs(e);
-    return Object.keys(e).length === 0;
-  };
-
-  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (form.password !== form.confirmPassword) {
+      setSubmitError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setSubmitError("La contraseña debe tener mínimo 8 caracteres.");
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
-
     try {
-      // 1. Crear cuenta Auth — el trigger handle_new_user() inserta
-      //    automáticamente en `usuario` con rol "admin".
-      const { data: authData, error: signUpError } = await supabase.auth.signUp(
-        {
-          email: form.email,
-          password: form.password,
-          options: { data: { full_name: form.fullName, role: "admin" } },
-        },
-      );
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { full_name: form.fullName, role: "admin" } },
+      });
       if (signUpError) throw signUpError;
-
-      const uid = authData.user?.id;
-      if (!uid) throw new Error("No se pudo obtener el ID del nuevo usuario.");
-
-      // 2. Insertar en tabla administrador.
-      //    El trigger no lo hace porque es una tabla de extensión específica
-      //    de este flujo; el cliente es el responsable de crearla.
-      const { error: adminError } = await supabase
-        .from("administrador")
-        .insert({ id_usuario: uid });
-      if (adminError) console.warn("administrador insert:", adminError.message);
-
-      // 3. Marcar token como usado
       await supabase
         .from("invite_tokens")
         .update({ used: true, used_at: new Date().toISOString() })
         .eq("token", token);
-
       setPageState("success");
     } catch (err) {
-      console.error("Error en registro admin:", err);
       setSubmitError(
         err.message || "Error al crear la cuenta. Inténtalo de nuevo.",
       );
@@ -341,162 +368,299 @@ export default function AdminRegisterPage() {
     }
   };
 
-  // ── Renders ──────────────────────────────────────────────────────────────
   if (pageState === "loading")
     return (
-      <div className="min-h-screen bg-dark flex items-center justify-center">
-        <Spinner className="w-8 h-8" />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--color-bg)" }}
+      >
+        <Spinner className="w-7 h-7 text-[var(--color-brand)]" />
       </div>
     );
-  if (pageState === "logged_in")
-    return (
-      <AlreadyLoggedIn
-        userName={user?.user_metadata?.full_name || user?.email}
-        onSignOut={handleSignOut}
-      />
-    );
+  if (pageState === "logged_in") {
+    const displayName =
+      user?.user_metadata?.full_name || user?.email || "tu cuenta actual";
+    return <AlreadyLoggedIn userName={displayName} onSignOut={handleSignOut} />;
+  }
   if (pageState === "invalid") return <InvalidToken />;
   if (pageState === "success") return <SuccessScreen navigate={navigate} />;
 
   return (
-    <div className="min-h-screen bg-dark py-12 px-4">
+    <div
+      className="min-h-screen py-14 px-4"
+      style={{ background: "var(--color-bg)" }}
+    >
       <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
+        {/* Logo */}
+        <div className="text-center mb-10">
           <a href="/">
             <img
               src={logoUrl}
               alt="Relance"
-              className="h-9 rounded-md mx-auto mb-6"
+              className="h-8 rounded-lg mx-auto"
             />
           </a>
         </div>
 
-        {/* Banner */}
-        <div className="bg-brand/10 border border-brand/25 rounded-2xl p-5 mb-6 flex items-start gap-4">
-          <span className="flex-shrink-0">
-            <svg className="w-8 h-8 text-brand" viewBox="0 0 640 640">
-              <use href="/icons.svg#icon-shield" />
+        {/* Badge de rol */}
+        <div className="flex justify-center mb-6">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase"
+            style={{
+              background: "rgba(192,255,114,0.06)",
+              border: "1px solid rgba(192,255,114,0.15)",
+              color: "var(--color-brand)",
+              letterSpacing: "0.08em",
+            }}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-          </span>
-          <div>
-            <p className="text-white font-semibold font-display">
-              Invitación de administrador
-            </p>
-            <p className="text-gray-400 text-sm mt-1">
-              <strong className="text-brand">{invitedBy}</strong> te ha invitado
-              a unirte como{" "}
-              <strong className="text-brand">administrador</strong> de Relance.
-            </p>
+            Invitación de Administrador
           </div>
         </div>
 
-        {/* Aviso de responsabilidad */}
-        <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl px-4 py-3 mb-6 flex gap-3">
-          <svg
-            className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+        {/* Card principal */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "var(--color-surface-strong)",
+            border: "1px solid var(--color-border-strong)",
+            boxShadow:
+              "0 24px 64px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03)",
+          }}
+        >
+          {/* Header de la card */}
+          <div
+            className="px-8 pt-8 pb-6"
+            style={{ borderBottom: "1px solid var(--color-border)" }}
           >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p className="text-xs text-orange-300/80">
-            Los administradores tienen acceso completo al panel de gestión de
-            ofertas y pueden dar de alta a otros administradores.
-          </p>
-        </div>
+            <h1
+              className="font-display text-xl font-bold mb-1"
+              style={{ color: "var(--color-text)" }}
+            >
+              Completa tu registro
+            </h1>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              Estás a punto de crear tu cuenta con acceso total a la plataforma
+              Relance.
+            </p>
+          </div>
 
-        <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 sm:p-8">
-          <h1 className="font-display text-2xl font-bold text-white mb-6">
-            Crear cuenta de administrador
-          </h1>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="px-8 py-6 space-y-5">
+            {/* Nombre */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Nombre completo *
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "var(--color-text-subtle)" }}
+              >
+                Nombre completo
               </label>
               <input
                 type="text"
+                required
                 value={form.fullName}
                 onChange={s("fullName")}
                 placeholder="Tu nombre y apellidos"
-                className={`input-field ${errs.fullName ? "border-red-500/50" : ""}`}
+                className="input-field"
               />
-              <FieldError msg={errs.fullName} />
             </div>
+
+            {/* Email */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Correo electrónico *
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "var(--color-text-subtle)" }}
+              >
+                Correo electrónico
               </label>
               <input
                 type="email"
+                required
                 value={form.email}
                 onChange={s("email")}
-                placeholder="admin@relance.es"
-                className={`input-field ${errs.email ? "border-red-500/50" : ""}`}
+                placeholder="admin@relance.com"
+                className="input-field"
               />
-              <FieldError msg={errs.email} />
             </div>
+
+            {/* Contraseña */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Contraseña *
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "var(--color-text-subtle)" }}
+              >
+                Contraseña
               </label>
-              <PasswordField
-                value={form.password}
-                onChange={s("password")}
-                hasError={!!errs.password}
-              />
-              <FieldError msg={errs.password} />
+              <PasswordField value={form.password} onChange={s("password")} />
             </div>
+
+            {/* Confirmar contraseña */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Confirmar contraseña *
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "var(--color-text-subtle)" }}
+              >
+                Confirmar contraseña
               </label>
               <input
                 type="password"
+                required
                 value={form.confirmPassword}
                 onChange={s("confirmPassword")}
                 placeholder="Repite la contraseña"
-                className={`input-field ${errs.confirmPassword ? "border-red-500/50" : ""}`}
+                className="input-field"
               />
               {form.confirmPassword &&
-                form.confirmPassword !== form.password &&
-                !errs.confirmPassword && (
-                  <p className="text-xs text-red-400 mt-1">No coinciden</p>
+                form.confirmPassword !== form.password && (
+                  <p
+                    className="text-xs mt-1.5 flex items-center gap-1"
+                    style={{ color: "var(--color-error)" }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                    No coinciden
+                  </p>
                 )}
               {form.confirmPassword &&
                 form.confirmPassword === form.password &&
                 form.password.length >= 8 && (
-                  <p className="text-xs text-brand mt-1">✓ Coinciden</p>
+                  <p
+                    className="text-xs mt-1.5 flex items-center gap-1"
+                    style={{ color: "var(--color-brand)" }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Coinciden
+                  </p>
                 )}
-              <FieldError msg={errs.confirmPassword} />
             </div>
 
+            {/* Aviso acceso total */}
+            <div
+              className="rounded-xl px-4 py-3 flex gap-3 items-start"
+              style={{
+                background: "var(--color-warning-bg)",
+                border: "1px solid rgba(251,191,36,0.15)",
+              }}
+            >
+              <svg
+                className="flex-shrink-0 mt-0.5"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--color-warning)"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: "var(--color-warning)" }}
+              >
+                Los administradores tienen acceso total a la plataforma.
+                Asegúrate de que este registro es legítimo.
+              </p>
+            </div>
+
+            {/* Error */}
             {submitError && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
+              <div
+                className="rounded-xl px-4 py-3 text-sm flex items-start gap-2"
+                style={{
+                  background: "var(--color-error-bg)",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  color: "var(--color-error)",
+                }}
+              >
+                <svg
+                  className="flex-shrink-0 mt-0.5"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
                 {submitError}
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="btn-primary w-full flex justify-center items-center gap-2 py-3.5 text-base disabled:opacity-50"
+              className="btn-primary w-full flex justify-center items-center gap-2 disabled:opacity-40"
+              style={{
+                paddingTop: "0.875rem",
+                paddingBottom: "0.875rem",
+                fontSize: "0.9375rem",
+              }}
             >
               {submitting ? (
                 <>
-                  <Spinner className="w-4 h-4" />
+                  <Spinner className="w-4 h-4 text-current" />
                   Creando cuenta...
                 </>
               ) : (
-                "Crear cuenta de administrador"
+                "Registrarme como administrador"
               )}
             </button>
           </form>
         </div>
+
+        <p
+          className="text-center text-xs mt-5"
+          style={{ color: "var(--color-text-subtle)" }}
+        >
+          ¿Ya tienes cuenta?{" "}
+          <a
+            href="/"
+            className="underline transition-colors"
+            style={{ color: "var(--color-text-muted)" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--color-text)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--color-text-muted)")
+            }
+          >
+            Inicia sesión desde el inicio
+          </a>
+        </p>
       </div>
     </div>
   );

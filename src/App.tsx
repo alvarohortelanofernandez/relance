@@ -10,18 +10,18 @@
  *  /empresa/:id                  → UserProfilePage (empresa)
  *  /centro/:id                   → UserProfilePage (centro_educativo)
  *  /estudiante/:id               → UserProfilePage (estudiante)
- *  /tutor-empresa/:id            → UserProfilePage (tutor_empresa)
+ *  /tutor-empresa/:id            → UserProfilePage (tutor_empresa)S
  *  /tutor-centro/:id             → UserProfilePage (tutor_centro)
  *
  * OFERTAS
  *  /ofertas                      → OfertasPage (listado, sin oferta abierta)
- *  /ofertas/:id                  → redirect a /ofertas?oferta=:id (abre modal)
+ *  /ofertas/:id                  → redirect a /ofertas?oferta=:id (abre modal)S
  *
  * SEARCHMODAL:
  *  Navega directamente a /empresa/:id, /centro/:id, etc.
  *  UserProfilePage infiere el tipo desde window.location.pathname.
  */
-
+import OnboardingInviteModal from "./components/auth/OnboardingInviteModal";
 import {
   BrowserRouter,
   Routes,
@@ -53,6 +53,7 @@ import AdministrationPanel from "./pages/AdministrationPanel";
 import CenterEducativePanel from "./pages/CenterEducativePanel";
 
 import { useEffect, useState, useRef } from "react";
+import AdminRegisterPage from "./pages/register/AdminRegisterPage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ const ROLES_SIN_ONBOARDING = [
   "tutor_empresa",
   "tutor_centro",
   "tutor",
+  "admin",
 ];
 
 // ─── Redirect helpers ─────────────────────────────────────────────────────────
@@ -86,6 +88,10 @@ function AppContent() {
   // ya nunca volvemos a mostrar el spinner (ni por TOKEN_REFRESHED ni por nada).
   const [safeLoading, setSafeLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  const [isInviteFlow, setIsInviteFlow] = useState(
+    () => !!sessionStorage.getItem("invite_context"),
+  );
 
   useEffect(() => {
     if (!loading) {
@@ -154,6 +160,7 @@ function AppContent() {
 
       // Mientras no haya rol en BD, mantenemos el modal abierto de forma forzada
       // (caso típico en altas automáticas con Google sin completar onboarding).
+      console.log("checkOnboarding data:", data);
       if (!data.rol) {
         setShowOnboarding(true);
         return;
@@ -164,7 +171,21 @@ function AppContent() {
         return;
       }
 
-      setShowOnboarding(data.is_profile_completed !== true);
+      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
+        setShowOnboarding(false);
+        return;
+      }
+
+      // Añade "admin" a la lista
+      const ROLES_SIN_ONBOARDING = [
+        "estudiante",
+        "empresa",
+        "centro_educativo",
+        "tutor_empresa",
+        "tutor_centro",
+        "tutor",
+        "admin", // ← añade esto
+      ];
     } catch (err) {
       console.warn("checkOnboarding error:", err);
       setShowOnboarding(false);
@@ -281,13 +302,19 @@ function AppContent() {
     <>
       {showOnboarding && user && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <OnboardingModal
-            user={user}
-            onClose={() => checkOnboarding(user)}
-          />
+          {isInviteFlow ? (
+            <OnboardingInviteModal
+              user={user}
+              onClose={() => checkOnboarding(user)}
+            />
+          ) : (
+            <OnboardingModal
+              user={user}
+              onClose={() => checkOnboarding(user)}
+            />
+          )}
         </div>
       )}
-
       <Routes>
         {/* ── Públicas / Auth ───────────────────────────────────────────── */}
         <Route path="/" element={<Home />} />
@@ -362,6 +389,7 @@ function AppContent() {
             element={<AdministrationPanel />}
           />
         </Route>
+        <Route path="/admin/registro" element={<AdminRegisterPage />} />
 
         {/* ── 404 ─────────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFound />} />

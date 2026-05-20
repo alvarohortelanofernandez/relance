@@ -1,10 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Variables de entorno (Vite)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Cliente Supabase con configuración específica para OAuth (GitHub y Google)
 export const supabase = createClient(
   supabaseUrl ?? "https://placeholder.supabase.co",
   supabaseAnonKey ?? "placeholder",
@@ -12,13 +10,23 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true, // Para OAuth (GitHub y Google)
+      detectSessionInUrl: true,
     },
   },
 );
 
 // LOGIN CON GOOGLE
-export async function loginWithGoogle() {
+// Si se pasa inviteContext, lo guarda en sessionStorage antes del redirect
+// para que OnboardingInviteModal lo recupere al volver de Google.
+export async function loginWithGoogle(inviteContext?: {
+  token: string;
+  entity: string;
+  type: string;
+}) {
+  if (inviteContext) {
+    sessionStorage.setItem("invite_context", JSON.stringify(inviteContext));
+  }
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {

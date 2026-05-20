@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, loginWithGoogle } from "../../lib/supabase";
-import { fetchUserRole, getRoleRoute } from "../../context/AuthContext";
+import { fetchUserRole } from "../../context/AuthContext";
 import logoUrl from "../../assets/logo_relance.jpg";
 
 type View = "login" | "forgot";
@@ -11,7 +11,6 @@ interface LoginModalProps {
   onSwitchToRegister: () => void;
 }
 
-// ── Helpers de validación ────────────────────────────────────────────────
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 export default function LoginModal({
@@ -27,7 +26,6 @@ export default function LoginModal({
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
-
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
@@ -70,7 +68,7 @@ export default function LoginModal({
     } else {
       onClose();
       if (data.user) {
-        const role = await fetchUserRole(data.user.id);
+        await fetchUserRole(data.user.id);
         navigate("/");
       }
     }
@@ -79,7 +77,18 @@ export default function LoginModal({
   const handleGoogle = async () => {
     setLoadingGoogle(true);
     setError(null);
-    await loginWithGoogle();
+
+    // Si hay params de invitación en la URL actual, los guardamos antes del redirect
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const entity = params.get("entity");
+    const type = params.get("type");
+
+    if (token && entity && type) {
+      await loginWithGoogle({ token, entity, type });
+    } else {
+      await loginWithGoogle();
+    }
   };
 
   const handleForgot = async (e: FormEvent<HTMLFormElement>) => {
@@ -131,10 +140,6 @@ export default function LoginModal({
         className="modal-overlay"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        {/*
-          En móvil: ancho completo con margen, padding generoso.
-          En portátil (lg+): ancho máximo más estrecho, padding y texto reducidos.
-        */}
         <div
           className="modal-card w-full max-w-sm lg:max-w-xs"
           style={{ padding: "clamp(16px, 3vw, 28px)" }}
@@ -149,7 +154,6 @@ export default function LoginModal({
             </svg>
           </button>
 
-          {/* Logo */}
           <div className="flex justify-center mb-4 lg:mb-3">
             <img
               src={logoUrl}
@@ -158,7 +162,6 @@ export default function LoginModal({
             />
           </div>
 
-          {/* ── Login ── */}
           {view === "login" && (
             <>
               <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">
@@ -168,7 +171,6 @@ export default function LoginModal({
                 Inicia sesión en tu cuenta
               </p>
 
-              {/* Google */}
               <button
                 type="button"
                 onClick={handleGoogle}
@@ -203,7 +205,6 @@ export default function LoginModal({
                 {loadingGoogle ? "Conectando..." : "Continuar con Google"}
               </button>
 
-              {/* Divider */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex-1 h-px bg-white/10" />
                 <span className="text-gray-600 text-xs">o con correo</span>
@@ -231,7 +232,6 @@ export default function LoginModal({
                   />
                   <FieldError msg={fieldErrors.email} />
                 </div>
-
                 <div>
                   <label
                     className="block text-xs text-gray-400 mb-1"
@@ -286,7 +286,6 @@ export default function LoginModal({
                   </div>
                   <FieldError msg={fieldErrors.password} />
                 </div>
-
                 <div className="text-right">
                   <button
                     type="button"
@@ -300,13 +299,11 @@ export default function LoginModal({
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
-
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 text-xs">
                     {error}
                   </div>
                 )}
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -340,7 +337,6 @@ export default function LoginModal({
                   )}
                 </button>
               </form>
-
               <p className="text-center text-xs text-gray-500 mt-4">
                 ¿No tienes cuenta?{" "}
                 <button
@@ -353,7 +349,6 @@ export default function LoginModal({
             </>
           )}
 
-          {/* ── Recuperar contraseña ── */}
           {view === "forgot" && (
             <>
               <button
@@ -377,14 +372,12 @@ export default function LoginModal({
                 </svg>
                 Volver al inicio de sesión
               </button>
-
               <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">
                 Recuperar contraseña
               </h2>
               <p className="text-gray-500 text-xs text-center mb-4 lg:mb-3">
                 Te enviaremos un enlace para restablecerla
               </p>
-
               {forgotSent ? (
                 <div className="text-center">
                   <div className="mb-3 flex items-center justify-center">
@@ -428,13 +421,11 @@ export default function LoginModal({
                     />
                     <FieldError msg={fieldErrors.email} />
                   </div>
-
                   {error && (
                     <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 text-xs">
                       {error}
                     </div>
                   )}
-
                   <button
                     type="submit"
                     disabled={loading}
