@@ -29,6 +29,27 @@ export const TIPO_META = {
   },
 };
 
+const ESTADO_BADGE = {
+  pendiente: {
+    label: "Pendiente",
+    color: "#f6ad55",
+    bg: "rgba(246,173,85,0.12)",
+    border: "rgba(246,173,85,0.25)",
+  },
+  aceptado: {
+    label: "Aceptado",
+    color: "#68d391",
+    bg: "rgba(104,211,145,0.12)",
+    border: "rgba(104,211,145,0.25)",
+  },
+  rechazado: {
+    label: "Rechazado",
+    color: "#f87171",
+    bg: "rgba(239,68,68,0.12)",
+    border: "rgba(239,68,68,0.25)",
+  },
+};
+
 // ── Badge genérico usando variables CSS ───────────────────────────────────
 export function Badge({
   children,
@@ -437,6 +458,7 @@ export default function OfertaCard({
   isEstudiante = false,
   isTutorCentro = false,
   yaPostulado = false,
+  estadoCandidatura = null,
   onVerDetalle,
   onVerCandidatos,
   onEdit,
@@ -578,11 +600,24 @@ export default function OfertaCard({
             </div>
           )}
 
-          {/* Badge postulado */}
-          {isEstudiante && yaPostulado && (
+          {/* Badge postulado / estado candidatura */}
+          {isEstudiante && yaPostulado && !estadoCandidatura && (
             <div style={{ flexShrink: 0 }}>
               <Badge variant="brand" icon={<Icon id="check" size={10} />}>
                 Postulado
+              </Badge>
+            </div>
+          )}
+          {isEstudiante && estadoCandidatura && (
+            <div style={{ flexShrink: 0 }}>
+              <Badge
+                style={{
+                  background: ESTADO_BADGE[estadoCandidatura]?.bg,
+                  border: `1px solid ${ESTADO_BADGE[estadoCandidatura]?.border}`,
+                  color: ESTADO_BADGE[estadoCandidatura]?.color,
+                }}
+              >
+                {ESTADO_BADGE[estadoCandidatura]?.label}
               </Badge>
             </div>
           )}

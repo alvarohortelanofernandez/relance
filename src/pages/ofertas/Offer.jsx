@@ -346,7 +346,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
-                  descripcion: e.target.value.slice(0, 1000),
+                  descripcion: e.target.value.slice(0, 10000),
                 }))
               }
               rows={4}
@@ -357,7 +357,7 @@ function OfertaModal({ oferta, onClose, onSaved }) {
               className="text-xs mt-1 text-right"
               style={{ color: "var(--color-text-subtle)" }}
             >
-              {form.descripcion.length}/1000
+              {form.descripcion.length}/10000
             </p>
           </div>
 
@@ -1321,6 +1321,322 @@ function EmpresaStats({ ofertas }) {
   );
 }
 
+// ─── Tabs estudiante ───────────────────────────────────────────────────────
+function TabsEstudiante({ tab, setTab }) {
+  const tabs = [
+    { id: "explorar", label: "Explorar ofertas" },
+    { id: "mis-postulaciones", label: "Mis postulaciones" },
+  ];
+  return (
+    <div
+      className="flex gap-1 rounded-xl p-1 mb-6 w-fit"
+      style={{
+        background: "var(--color-surface-strong)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => setTab(t.id)}
+          className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={{
+            background: tab === t.id ? "rgba(192,255,114,0.12)" : "transparent",
+            color:
+              tab === t.id ? "var(--color-brand)" : "var(--color-text-muted)",
+            border:
+              tab === t.id
+                ? "1px solid rgba(192,255,114,0.2)"
+                : "1px solid transparent",
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Estado badge candidatura ──────────────────────────────────────────────
+const ESTADO_CANDIDATURA = {
+  pendiente: {
+    label: "Pendiente",
+    color: "#f6ad55",
+    bg: "rgba(246,173,85,0.12)",
+    border: "rgba(246,173,85,0.25)",
+  },
+  aceptado: {
+    label: "Aceptado",
+    color: "#68d391",
+    bg: "rgba(104,211,145,0.12)",
+    border: "rgba(104,211,145,0.25)",
+  },
+  rechazado: {
+    label: "Rechazado",
+    color: "#f87171",
+    bg: "rgba(239,68,68,0.12)",
+    border: "rgba(239,68,68,0.25)",
+  },
+};
+
+// ─── Mis postulaciones ─────────────────────────────────────────────────────
+function MisPostulaciones({
+  supabase,
+  user,
+  onVerDetalle,
+  onRetirar,
+  postulaciones,
+}) {
+  const [candidaturas, setCandidaturas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("candidatura")
+      .select(
+        `
+        id_candidatura, estado, fecha_envio, comentario_estudiante, comentario_empresa,
+        oferta:oferta(
+          id_oferta, titulo, descripcion, modalidad, ubicacion,
+          duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
+          opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
+          tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
+          empresa:empresa(id, nombre, logo_url),
+          oferta_tecnologia(tecnologia(id_tecnologia, nombre))
+        )
+      `,
+      )
+      .eq("id_estudiante", user.id)
+      .order("fecha_envio", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setLoading(false);
+      return;
+    }
+
+    const items = (data ?? [])
+      .filter((c) => c.oferta)
+      .map((c) => ({
+        candidatura: {
+          id: c.id_candidatura,
+          estado: c.estado,
+          fecha_envio: c.fecha_envio,
+          comentario_estudiante: c.comentario_estudiante,
+          comentario_empresa: c.comentario_empresa,
+        },
+        oferta: {
+          ...c.oferta,
+          empresa_nombre: c.oferta.empresa?.nombre ?? "Empresa",
+          empresa_avatar: c.oferta.empresa?.logo_url ?? null,
+          tecnologias:
+            c.oferta.oferta_tecnologia
+              ?.map((ot) => ot.tecnologia)
+              .filter(Boolean) ?? [],
+        },
+      }));
+    setCandidaturas(items);
+    setLoading(false);
+  }, [supabase, user]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const listaFiltrada = candidaturas.filter(({ candidatura, oferta }) => {
+    const q = search.toLowerCase();
+    return (
+      (!q ||
+        oferta.titulo?.toLowerCase().includes(q) ||
+        oferta.empresa_nombre?.toLowerCase().includes(q) ||
+        oferta.ubicacion?.toLowerCase().includes(q)) &&
+      (!filtroEstado || candidatura.estado === filtroEstado)
+    );
+  });
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="w-8 h-8" />
+      </div>
+    );
+
+  return (
+    <div>
+      {/* Filtros */}
+      <div
+        className="rounded-2xl p-4 mb-6 space-y-3"
+        style={{
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+              style={{ color: "var(--color-text-muted)" }}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por título, empresa o ubicación..."
+              className="input-field pl-9"
+            />
+          </div>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="input-field text-sm py-1.5 w-auto flex-shrink-0"
+          >
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="aceptado">Aceptado</option>
+            <option value="rechazado">Rechazado</option>
+          </select>
+          {(search || filtroEstado) && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setFiltroEstado("");
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+              style={{
+                color: "var(--color-text-muted)",
+                border: "1px solid var(--color-border-strong)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--color-text)";
+                e.currentTarget.style.background =
+                  "var(--color-surface-elevated)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--color-text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              Limpiar
+            </button>
+          )}
+        </div>
+        {/* Stats rápidas */}
+        <div className="flex gap-3 flex-wrap pt-1">
+          {Object.entries(ESTADO_CANDIDATURA).map(([key, cfg]) => {
+            const count = candidaturas.filter(
+              (c) => c.candidatura.estado === key,
+            ).length;
+            if (!count) return null;
+            return (
+              <button
+                key={key}
+                onClick={() => setFiltroEstado(filtroEstado === key ? "" : key)}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-all"
+                style={{
+                  background: filtroEstado === key ? cfg.bg : "transparent",
+                  border: `1px solid ${filtroEstado === key ? cfg.border : "var(--color-border-strong)"}`,
+                  color:
+                    filtroEstado === key
+                      ? cfg.color
+                      : "var(--color-text-muted)",
+                }}
+              >
+                <span className="font-semibold">{count}</span>{" "}
+                {cfg.label.toLowerCase()}
+              </button>
+            );
+          })}
+          <span
+            className="text-xs self-center"
+            style={{ color: "var(--color-text-subtle)" }}
+          >
+            {candidaturas.length} postulación
+            {candidaturas.length !== 1 ? "es" : ""} en total
+          </span>
+        </div>
+      </div>
+
+      {/* Grid */}
+      {listaFiltrada.length === 0 ? (
+        <div
+          className="text-center py-20 rounded-2xl"
+          style={{ border: "1px dashed var(--color-border-strong)" }}
+        >
+          <p
+            className="font-medium"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            {candidaturas.length === 0
+              ? "Aún no te has postulado a ninguna oferta"
+              : "No hay postulaciones con estos filtros"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {listaFiltrada.map(({ candidatura, oferta }) => {
+            const cfg =
+              ESTADO_CANDIDATURA[candidatura.estado] ??
+              ESTADO_CANDIDATURA.pendiente;
+            return (
+              <div key={candidatura.id} className="relative">
+                {/* Badge estado candidatura */}
+                <OfertaCard
+                  oferta={oferta}
+                  isEmpresa={false}
+                  isEstudiante={true}
+                  isTutorCentro={false}
+                  yaPostulado={true}
+                  estadoCandidatura={candidatura.estado}
+                  onVerDetalle={onVerDetalle}
+                  onPostular={() => {}}
+                  onRetirar={
+                    candidatura.estado === "pendiente" ? onRetirar : undefined
+                  }
+                />
+                {/* Respuesta empresa si existe */}
+                {candidatura.comentario_empresa && (
+                  <div
+                    className="mx-0 -mt-2 mb-0 rounded-b-2xl px-4 py-3 text-xs"
+                    style={{
+                      background: cfg.bg,
+                      border: `1px solid ${cfg.border}`,
+                      borderTop: "none",
+                      color: cfg.color,
+                    }}
+                  >
+                    <span className="font-semibold">Respuesta: </span>
+                    {candidatura.comentario_empresa}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Página principal ───────────────────────────────────────────────────────
 export default function OfertasPage() {
   const { user, userRole } = useAuth();
@@ -1364,7 +1680,7 @@ export default function OfertasPage() {
         duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
         opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
         tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
-        empresa:empresa(id, nombre, usuario:usuario!empresa_id_fkey(avatar_url)),
+        empresa:empresa(id, nombre, logo_url),
         oferta_tecnologia(tecnologia(id_tecnologia, nombre))
       `,
       )
@@ -1378,7 +1694,7 @@ export default function OfertasPage() {
     return (data ?? []).map((o) => ({
       ...o,
       empresa_nombre: o.empresa?.nombre ?? "Empresa",
-      empresa_avatar: o.empresa?.usuario?.avatar_url ?? null,
+      empresa_avatar: o.empresa?.logo_url ?? null,
       tecnologias:
         o.oferta_tecnologia?.map((ot) => ot.tecnologia).filter(Boolean) ?? [],
     }));
@@ -1395,7 +1711,7 @@ export default function OfertasPage() {
         duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
         opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
         tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
-        empresa:empresa(id, nombre, usuario:usuario!empresa_id_fkey(avatar_url)),
+        empresa:empresa(id, nombre, logo_url),
         oferta_tecnologia(tecnologia(id_tecnologia, nombre))
       `,
       )
@@ -1409,7 +1725,7 @@ export default function OfertasPage() {
     return (data ?? []).map((o) => ({
       ...o,
       empresa_nombre: o.empresa?.nombre ?? "Empresa",
-      empresa_avatar: o.empresa?.usuario?.avatar_url ?? null,
+      empresa_avatar: o.empresa?.logo_url ?? null,
       tecnologias:
         o.oferta_tecnologia?.map((ot) => ot.tecnologia).filter(Boolean) ?? [],
     }));
@@ -1494,6 +1810,7 @@ export default function OfertasPage() {
     });
 
   const esMisOfertas = isEmpresa ? true : tab === "mis-ofertas";
+  const esMisPostulaciones = isEstudiante && tab === "mis-postulaciones";
   const listaActiva = esMisOfertas ? misOfertas : ofertasPublicas;
   const listaFiltrada = aplicarFiltros(listaActiva);
   const isEmpresaOwnerOf = (oferta) =>
@@ -1548,6 +1865,7 @@ export default function OfertasPage() {
               totalMisOfertas={misOfertas.length}
             />
           )}
+          {isEstudiante && <TabsEstudiante tab={tab} setTab={setTab} />}
           {isEmpresa && esMisOfertas && misOfertas.length > 0 && (
             <EmpresaStats ofertas={misOfertas} />
           )}
@@ -1566,7 +1884,16 @@ export default function OfertasPage() {
           />
 
           {/* Grid */}
-          {loading ? (
+          {esMisPostulaciones ? (
+            <MisPostulaciones
+              supabase={supabase}
+              user={user}
+              onVerDetalle={setDetalleOferta}
+              onPostular={setPostulacionOferta}
+              onRetirar={setRetirarOferta}
+              postulaciones={postulaciones}
+            />
+          ) : loading ? (
             <div className="flex items-center justify-center py-20">
               <Spinner className="w-8 h-8" />
             </div>

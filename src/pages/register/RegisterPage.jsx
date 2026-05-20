@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
@@ -442,11 +442,34 @@ function StudentForm({ onSubmit, loading, error }) {
     email: "",
     password: "",
     confirmPassword: "",
-    centerName: "",
+    centerId: "",
     degree: "",
     graduationYear: "",
+    ciudad: "",
   });
   const [errs, setErrs] = useState({});
+  const [centers, setCenters] = useState([]);
+  const [centersLoading, setCentersLoading] = useState(false);
+
+  const [centerQuery, setCenterQuery] = useState("");
+  const [showCenterDropdown, setShowCenterDropdown] = useState(false);
+
+  const filteredCenters = centers.filter((c) =>
+    c.nombre?.toLowerCase().includes(centerQuery.toLowerCase()),
+  );
+
+  useEffect(() => {
+    const fetchCenters = async () => {
+      setCentersLoading(true);
+      const { data, error } = await supabase
+        .from("centro_educativo")
+        .select("id, nombre, ciudad")
+        .order("nombre", { ascending: true });
+      if (!error && data) setCenters(data);
+      setCentersLoading(false);
+    };
+    fetchCenters();
+  }, []);
   const s = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrs((p) => ({ ...p, [k]: undefined }));
@@ -523,13 +546,58 @@ function StudentForm({ onSubmit, loading, error }) {
       >
         <SectionLabel>Información académica (opcional)</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Centro educativo</label>
-            <Input
-              value={form.centerName}
-              onChange={s("centerName")}
-              placeholder="Ej: IES Trassierra"
+          <div className="sm:col-span-2 relative">
+            <label className="block text-sm text-gray-400 mb-1.5">
+              Centro educativo
+            </label>
+            <input
+              type="text"
+              value={centerQuery}
+              onChange={(e) => {
+                setCenterQuery(e.target.value);
+                setShowCenterDropdown(true);
+                if (!e.target.value) setForm((f) => ({ ...f, centerId: "" }));
+              }}
+              onFocus={() => setShowCenterDropdown(true)}
+              onBlur={() => setTimeout(() => setShowCenterDropdown(false), 150)}
+              placeholder="Busca tu centro educativo..."
+              className="input-field"
+              autoComplete="off"
             />
+            {showCenterDropdown &&
+              centerQuery.length >= 1 &&
+              filteredCenters.length > 0 && (
+                <ul
+                  className="absolute z-50 w-full mt-1 border border-brand/20 rounded-xl overflow-hidden shadow-xl max-h-52 overflow-y-auto"
+                  style={{ backgroundColor: "var(--color-bg)" }}
+                >
+                  {filteredCenters.map((c) => (
+                    <li
+                      key={c.id}
+                      onMouseDown={() => {
+                        setForm((f) => ({ ...f, centerId: c.id }));
+                        setCenterQuery(c.nombre);
+                        setShowCenterDropdown(false);
+                      }}
+                      className="px-4 py-2.5 text-sm text-white hover:bg-brand/10 hover:text-brand cursor-pointer flex justify-between items-center transition-colors duration-150 border-b border-white/5 last:border-0"
+                    >
+                      <span className="font-medium">{c.nombre}</span>
+                      {c.ciudad && (
+                        <span className="text-xs text-brand/60">
+                          {c.ciudad}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            {showCenterDropdown &&
+              centerQuery.length >= 2 &&
+              filteredCenters.length === 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-dark-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-500">
+                  No se encontró ningún centro con ese nombre.
+                </div>
+              )}
           </div>
           <div style={twoCol}>
             <div>
@@ -538,6 +606,18 @@ function StudentForm({ onSubmit, loading, error }) {
                 value={form.degree}
                 onChange={s("degree")}
                 placeholder="Ej: DAM"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Ciudad
+              </label>
+              <input
+                type="text"
+                value={form.ciudad}
+                onChange={s("ciudad")}
+                placeholder="Ej: Córdoba"
+                className="input-field"
               />
             </div>
             <div>
@@ -985,20 +1065,27 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     const { fullName, email, password, role, ...extra } = formData;
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role,
-          ...(role === "empresa" && { cif: extra.cif ?? "" }),
-          ...(role === "centro_educativo" && {
-            institutional_code: extra.institutionalCode ?? "",
-          }),
+    const centerId = formData.centerId ?? null;
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
+      {
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role,
+            ...(role === "estudiante" && {
+              titulacion: extra.degree ?? "",
+            }),
+            ...(role === "empresa" && { cif: extra.cif ?? "" }),
+            ...(role === "centro_educativo" && {
+              institutional_code: extra.institutionalCode ?? "",
+            }),
+          },
         },
       },
-    });
+    );
     if (signUpError) {
       setLoading(false);
       setError(
@@ -1008,6 +1095,28 @@ export default function RegisterPage() {
       );
       return;
     }
+    if (role === "estudiante" && signUpData?.user?.id) {
+      const nameParts = fullName.trim().split(" ");
+      const nombre = nameParts[0] ?? "";
+      const apellidos = nameParts.slice(1).join(" ") || null;
+
+      await supabase.from("estudiante").upsert({
+        id: signUpData.user.id,
+        nombre,
+        apellidos,
+        titulacion: extra.degree || null,
+        ciudad: extra.ciudad || null,
+      });
+
+      if (centerId) {
+        await supabase.from("centro_estudiante").insert({
+          id_estudiante: signUpData.user.id,
+          id_centro: centerId,
+          estado: "pendiente",
+        });
+      }
+    }
+
     setLoading(false);
     setRegisteredEmail(email);
     setSuccess(true);

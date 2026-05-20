@@ -47,24 +47,51 @@ const ESTADO_EST = {
   },
 };
 
+const ESTADO_VINCULO = {
+  pendiente: {
+    label: "Pendiente",
+    dot: "var(--color-warning)",
+    badge: "rgba(251,191,36,0.12)",
+    border: "rgba(251,191,36,0.25)",
+  },
+  aceptado: {
+    label: "Verificado",
+    dot: "var(--color-success)",
+    badge: "rgba(74,222,128,0.12)",
+    border: "rgba(74,222,128,0.25)",
+  },
+  rechazado: {
+    label: "Rechazado",
+    dot: "var(--color-error)",
+    badge: "rgba(248,113,113,0.12)",
+    border: "rgba(248,113,113,0.25)",
+  },
+};
+
 const ESTADO_CAND = {
-  aceptada: {
+  aceptado: {
     label: "Aceptada",
     color: "var(--color-success)",
     bg: "rgba(74,222,128,0.1)",
     border: "rgba(74,222,128,0.25)",
   },
-  rechazada: {
+  rechazado: {
     label: "Rechazada",
     color: "var(--color-error)",
     bg: "rgba(248,113,113,0.1)",
     border: "rgba(248,113,113,0.25)",
   },
-  en_revision: {
+  revisando: {
     label: "En revisión",
     color: "var(--color-warning)",
     bg: "rgba(251,191,36,0.1)",
     border: "rgba(251,191,36,0.25)",
+  },
+  retirado: {
+    label: "Retirado",
+    color: "var(--color-text-subtle)",
+    bg: "rgba(53,78,104,0.15)",
+    border: "rgba(53,78,104,0.3)",
   },
   pendiente: {
     label: "Pendiente",
@@ -1016,6 +1043,7 @@ export default function CenterEducativePanel() {
   const [activeTab, setActiveTab] = useState("resumen");
   const [searchEst, setSearchEst] = useState("");
   const [searchEmp, setSearchEmp] = useState("");
+  const [filtroVinculo, setFiltroVinculo] = useState("todos");
   const [loading, setLoading] = useState(true);
   const [loadingAcuerdos, setLoadingAcuerdos] = useState(false);
 
@@ -1166,7 +1194,7 @@ export default function CenterEducativePanel() {
     const { data: ceRows, error: ceErr } = await supabase
       .from("centro_estudiante")
       .select(
-        "id_tutor, estudiante:id_estudiante(id, nombre, apellidos, titulacion)",
+        "id_tutor, estado, estudiante:id_estudiante(id, nombre, apellidos, titulacion)",
       )
       .eq("id_centro", idCentro);
     if (ceErr) console.error("[centro_estudiante]:", ceErr);
@@ -1179,6 +1207,13 @@ export default function CenterEducativePanel() {
     ceData.forEach((r) => {
       if (r.estudiante?.id && r.id_tutor) {
         estudianteTutorMap[r.estudiante.id] = r.id_tutor;
+      }
+    });
+
+    const estadoVinculoMap = {};
+    ceData.forEach((r) => {
+      if (r.estudiante?.id) {
+        estadoVinculoMap[r.estudiante.id] = r.estado ?? "pendiente";
       }
     });
 
@@ -1227,12 +1262,27 @@ export default function CenterEducativePanel() {
       const { data: candRows, error: candErr } = await supabase
         .from("candidatura")
         .select(
-          "id_candidatura, estado, fecha_envio, id_estudiante, oferta:id_oferta(titulo, id_empresa, empresa:id_empresa(nombre))",
+          "id_candidatura, estado, fecha_envio, id_estudiante, id_oferta, comentario_empresa, comentario_estudiante",
         )
         .in("id_estudiante", estudianteIds)
         .order("fecha_envio", { ascending: false });
       if (candErr) console.error("[candidatura]:", candErr);
       candidaturasData = candRows ?? [];
+    }
+
+    // Fetch de ofertas de esas candidaturas
+    const ofertaIdsCand = [
+      ...new Set(candidaturasData.map((c) => c.id_oferta).filter(Boolean)),
+    ];
+    let ofertaMap = {};
+    if (ofertaIdsCand.length > 0) {
+      const { data: ofertaRows } = await supabase
+        .from("oferta")
+        .select("id_oferta, titulo, id_empresa, modalidad, ubicacion")
+        .in("id_oferta", ofertaIdsCand);
+      (ofertaRows ?? []).forEach((o) => {
+        ofertaMap[o.id_oferta] = o;
+      });
     }
 
     // Mapa id_estudiante → nombre completo
@@ -1249,7 +1299,9 @@ export default function CenterEducativePanel() {
     // ── 7. Empresas colaboradoras (desde candidaturas aceptadas) ─────────────
     const empresaIdsCand = [
       ...new Set(
-        candidaturasData.map((c) => c.oferta?.id_empresa).filter(Boolean),
+        Object.values(ofertaMap)
+          .map((o) => o.id_empresa)
+          .filter(Boolean),
       ),
     ];
     let empresasColaboradoras = [];
@@ -1264,7 +1316,7 @@ export default function CenterEducativePanel() {
     // Colaboraciones por empresa (candidaturas aceptadas)
     const colaboracionesMap = {};
     candidaturasData.forEach((c) => {
-      const empId = c.oferta?.id_empresa;
+      const empId = ofertaMap[c.id_oferta]?.id_empresa;
       if (!empId) return;
       if (!colaboracionesMap[empId]) colaboracionesMap[empId] = 0;
       if (c.estado === "aceptada") colaboracionesMap[empId]++;
@@ -1288,6 +1340,7 @@ export default function CenterEducativePanel() {
         nombre: [est.nombre, est.apellidos].filter(Boolean).join(" ") || "—",
         titulacion: est.titulacion ?? "—",
         estado,
+        estadoVinculo: estadoVinculoMap[est.id] ?? "pendiente",
         empresa: idEmp ? (empresaNombreMap[idEmp] ?? null) : null,
         tutor: tutor?.nombre ?? "—",
         id_tutor: idTutor,
@@ -1303,14 +1356,26 @@ export default function CenterEducativePanel() {
       colaboraciones: colaboracionesMap[e.id] ?? 0,
     }));
 
-    const candidaturasEnriquecidas = candidaturasData.map((c) => ({
-      id: c.id_candidatura,
-      estudiante: estudianteNombreMap[c.id_estudiante] ?? "—",
-      empresa: c.oferta?.empresa?.nombre ?? "—",
-      oferta: c.oferta?.titulo ?? "—",
-      fecha: c.fecha_envio,
-      estado: c.estado ?? "pendiente",
-    }));
+    const empresaCandMap = {};
+    empresasColaboradoras.forEach((e) => {
+      empresaCandMap[e.id] = e;
+    });
+
+    const candidaturasEnriquecidas = candidaturasData.map((c) => {
+      const oferta = ofertaMap[c.id_oferta];
+      const empresa = oferta ? empresaCandMap[oferta.id_empresa] : null;
+      return {
+        id: c.id_candidatura,
+        estudiante: estudianteNombreMap[c.id_estudiante] ?? "—",
+        empresa: empresa?.nombre ?? "—",
+        oferta: oferta?.titulo ?? "—",
+        modalidad: oferta?.modalidad ?? null,
+        ubicacion: oferta?.ubicacion ?? null,
+        fecha: c.fecha_envio,
+        estado: c.estado ?? "pendiente",
+        comentario: c.comentario_empresa ?? null,
+      };
+    });
 
     const tutoresConAlumnos = tutoresEnriquecidos.map((t) => ({
       ...t,
@@ -1318,7 +1383,9 @@ export default function CenterEducativePanel() {
     }));
 
     // ── 9. Stats ──────────────────────────────────────────────────────────────
-    const totalEst = estudiantesEnriquecidos.length;
+    const totalEst = estudiantesEnriquecidos.filter(
+      (e) => e.estadoVinculo === "aceptado",
+    ).length;
     const contratados = estudiantesEnriquecidos.filter(
       (e) => e.estado === "contratado",
     ).length;
@@ -1376,14 +1443,25 @@ export default function CenterEducativePanel() {
     cargarTodo();
   }, [cargarTodo]);
 
+  const handleVinculo = async (estudianteId, nuevoEstado) => {
+    await supabase
+      .from("centro_estudiante")
+      .update({ estado: nuevoEstado })
+      .eq("id_estudiante", estudianteId)
+      .eq("id_centro", centro?.id);
+    await cargarTodo();
+  };
+
   const estudiantesFiltrados = estudiantes.filter((e) => {
     const q = searchEst.toLowerCase();
-    return (
+    const matchSearch =
       !q ||
       e.nombre.toLowerCase().includes(q) ||
       (e.empresa ?? "").toLowerCase().includes(q) ||
-      e.titulacion.toLowerCase().includes(q)
-    );
+      e.titulacion.toLowerCase().includes(q);
+    const matchFiltro =
+      filtroVinculo === "todos" || e.estadoVinculo === filtroVinculo;
+    return matchSearch && matchFiltro;
   });
   const empresasFiltradas = empresas.filter((e) => {
     const q = searchEmp.toLowerCase();
@@ -1788,7 +1866,7 @@ export default function CenterEducativePanel() {
                 <div>
                   <SectionHeader
                     title="Estudiantes registrados"
-                    subtitle={`${estudiantes.length} alumnos en la plataforma`}
+                    subtitle={`${estudiantes.filter((e) => e.estadoVinculo === "aceptado").length} verificados · ${estudiantes.filter((e) => e.estadoVinculo === "pendiente").length} pendientes`}
                     action={
                       <SearchInput
                         value={searchEst}
@@ -1797,13 +1875,56 @@ export default function CenterEducativePanel() {
                       />
                     }
                   />
+
+                  {/* Filtro por estado de vínculo */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                    {[
+                      { key: "todos", label: "Todos" },
+                      { key: "pendiente", label: "Pendientes" },
+                      { key: "aceptado", label: "Verificados" },
+                      { key: "rechazado", label: "Rechazados" },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setFiltroVinculo(f.key)}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: 20,
+                          border: `1px solid ${filtroVinculo === f.key ? "rgba(192,255,114,0.4)" : "var(--color-border)"}`,
+                          background:
+                            filtroVinculo === f.key
+                              ? "rgba(192,255,114,0.1)"
+                              : "transparent",
+                          color:
+                            filtroVinculo === f.key
+                              ? "var(--color-brand)"
+                              : "var(--color-text-muted)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {f.label}
+                        <span style={{ marginLeft: 5, opacity: 0.7 }}>
+                          {f.key === "todos"
+                            ? estudiantes.length
+                            : estudiantes.filter(
+                                (e) => e.estadoVinculo === f.key,
+                              ).length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
                   <Table
                     headers={[
                       "Alumno",
                       "Tutor asignado",
                       "Empresa",
-                      "Candidaturas",
-                      "Estado",
+                      "Solicitud",
+                      "Acciones",
                     ]}
                     empty={
                       estudiantesFiltrados.length === 0
@@ -1855,16 +1976,50 @@ export default function CenterEducativePanel() {
                           >
                             {e.empresa ?? "—"}
                           </span>,
-                          <span
-                            style={{
-                              fontVariantNumeric: "tabular-nums",
-                              color: "var(--color-text-muted)",
-                              fontSize: 11,
-                            }}
-                          >
-                            {e.candidaturas}
-                          </span>,
-                          <StatusBadge estado={e.estado} />,
+                          <StatusBadge
+                            estado={e.estadoVinculo}
+                            map={ESTADO_VINCULO}
+                          />,
+                          <div style={{ display: "flex", gap: 5 }}>
+                            {e.estadoVinculo !== "aceptado" && (
+                              <button
+                                onClick={() => handleVinculo(e.id, "aceptado")}
+                                style={{
+                                  padding: "3px 10px",
+                                  borderRadius: 6,
+                                  border: "1px solid rgba(74,222,128,0.3)",
+                                  background: "rgba(74,222,128,0.08)",
+                                  color: "var(--color-success)",
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                Aceptar
+                              </button>
+                            )}
+                            {e.estadoVinculo !== "rechazado" && (
+                              <button
+                                onClick={() => handleVinculo(e.id, "rechazado")}
+                                style={{
+                                  padding: "3px 10px",
+                                  borderRadius: 6,
+                                  border: "1px solid rgba(248,113,113,0.3)",
+                                  background: "rgba(248,113,113,0.08)",
+                                  color: "var(--color-error)",
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                Rechazar
+                              </button>
+                            )}
+                          </div>,
                         ]}
                       />
                     ))}
@@ -1984,15 +2139,30 @@ export default function CenterEducativePanel() {
                           >
                             {c.empresa}
                           </span>,
-                          <span
-                            style={{
-                              color: "var(--color-text-muted)",
-                              fontSize: 11,
-                              fontStyle: "italic",
-                            }}
-                          >
-                            {c.oferta}
-                          </span>,
+                          <div>
+                            <p
+                              style={{
+                                margin: 0,
+                                color: "var(--color-text-muted)",
+                                fontSize: 11,
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {c.oferta}
+                            </p>
+                            {c.modalidad && (
+                              <p
+                                style={{
+                                  margin: "1px 0 0",
+                                  color: "var(--color-text-subtle)",
+                                  fontSize: 9,
+                                }}
+                              >
+                                {c.modalidad}
+                                {c.ubicacion ? ` · ${c.ubicacion}` : ""}
+                              </p>
+                            )}
+                          </div>,
                           <span
                             style={{
                               color: "var(--color-text-subtle)",

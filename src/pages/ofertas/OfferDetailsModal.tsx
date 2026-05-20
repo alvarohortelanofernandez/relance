@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import React from "react";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -23,9 +24,7 @@ const TIPO_META = {
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(d) {
+function formatDate(d: string | null | undefined): string | null {
   if (!d) return null;
   return new Date(d).toLocaleDateString("es-ES", {
     day: "numeric",
@@ -34,9 +33,9 @@ function formatDate(d) {
   });
 }
 
-// ─── Íconos SVG inline ────────────────────────────────────────────────────────
+// ─── Íconos ───────────────────────────────────────────────────────────────────
 
-const SVG = {
+const SVG: Record<string, React.ReactNode> = {
   clock: (
     <svg
       width="13"
@@ -161,8 +160,8 @@ const SVG = {
   ),
   building: (
     <svg
-      width="20"
-      height="20"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -176,8 +175,8 @@ const SVG = {
   ),
   close: (
     <svg
-      width="15"
-      height="15"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -233,200 +232,69 @@ const SVG = {
       <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
     </svg>
   ),
+  briefcase: (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      <line x1="12" y1="12" x2="12" y2="12" />
+    </svg>
+  ),
+  star: (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
 };
 
-// ─── Pill badge ───────────────────────────────────────────────────────────────
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
-function Pill({ children, color, bg, border }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "4px 11px",
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: "0.03em",
-        color,
-        background: bg,
-        border: `1px solid ${border}`,
-        fontFamily: "Plus Jakarta Sans, sans-serif",
-      }}
-    >
-      {children}
-    </span>
-  );
+interface Oferta {
+  id_oferta?: string;
+  titulo: string;
+  tipo_oferta?: string;
+  empresa_nombre?: string | null;
+  empresa_avatar?: string | null;
+  modalidad?: string | null;
+  ubicacion?: string | null;
+  descripcion?: string | null;
+  requisitos_adicionales?: string | null;
+  beneficios?: string | null;
+  salario_mensual?: number | null;
+  num_plazas?: number | null;
+  num_plazas_restantes?: number | null;
+  duracion_semanas?: number | null;
+  horas_semanales?: number | null;
+  fecha_inicio?: string | null;
+  fecha_fin_solicitud?: string | null;
+  opcion_contrato?: boolean;
+  estado?: string | null;
+  tecnologias?: { id_tecnologia: string; nombre: string }[];
 }
 
-// ─── Tarjeta de stat ──────────────────────────────────────────────────────────
-
-function StatCard({ icon, label, value, accent = false }) {
-  return (
-    <div
-      style={{
-        background: accent
-          ? "rgba(192,255,114,0.04)"
-          : "var(--color-surface-elevated)",
-        border: `1px solid ${accent ? "rgba(192,255,114,0.15)" : "var(--color-border-strong)"}`,
-        borderRadius: 12,
-        padding: "14px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          color: accent ? "var(--color-brand)" : "var(--color-text-muted)",
-        }}
-      >
-        {icon}
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.09em",
-            textTransform: "uppercase",
-            fontFamily: "Plus Jakarta Sans, sans-serif",
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      <p
-        style={{
-          fontSize: 16,
-          fontWeight: 800,
-          color: accent ? "var(--color-brand)" : "var(--color-text)",
-          fontFamily: "Syne, sans-serif",
-          margin: 0,
-          lineHeight: 1.2,
-        }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-// ─── Sección con título ────────────────────────────────────────────────────────
-
-function Section({ title, icon, children }) {
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          marginBottom: 12,
-          color: "var(--color-text-subtle)",
-        }}
-      >
-        {icon}
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            fontFamily: "Plus Jakarta Sans, sans-serif",
-          }}
-        >
-          {title}
-        </span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ─── Fila de fecha ────────────────────────────────────────────────────────────
-
-function DateRow({ label, value, isDeadline = false }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "11px 16px",
-        borderRadius: 10,
-        background: isDeadline
-          ? "rgba(246,173,85,0.05)"
-          : "var(--color-surface-elevated)",
-        border: `1px solid ${isDeadline ? "rgba(246,173,85,0.18)" : "var(--color-border-strong)"}`,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 12,
-          color: "var(--color-text-muted)",
-          fontFamily: "Plus Jakarta Sans, sans-serif",
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: isDeadline ? "#f6ad55" : "var(--color-text)",
-          fontFamily: "Syne, sans-serif",
-        }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// ─── Bloque de texto con fondo ────────────────────────────────────────────────
-
-function TextBlock({ children, variant = "default" }) {
-  const styles = {
-    default: {
-      background: "var(--color-surface-elevated)",
-      border: "1px solid var(--color-border-strong)",
-    },
-    brand: {
-      background: "rgba(192,255,114,0.03)",
-      border: "1px solid rgba(192,255,114,0.1)",
-    },
-  };
-  return (
-    <div
-      style={{
-        borderRadius: 12,
-        padding: "16px 18px",
-        ...styles[variant],
-      }}
-    >
-      <p
-        style={{
-          fontSize: 13.5,
-          lineHeight: 1.8,
-          color: "var(--color-text-secondary)",
-          fontFamily: "Plus Jakarta Sans, sans-serif",
-          whiteSpace: "pre-line",
-          margin: 0,
-        }}
-      >
-        {children}
-      </p>
-    </div>
-  );
-}
-
-// ─── Divider ──────────────────────────────────────────────────────────────────
-
-function Divider() {
-  return <div style={{ height: 1, background: "var(--color-border)" }} />;
+interface Props {
+  oferta: Oferta;
+  onClose: () => void;
+  onPostular?: (oferta: Oferta) => void;
+  yaPostulado?: boolean;
+  isEstudiante?: boolean;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -437,8 +305,8 @@ export default function OfferDetailsModal({
   onPostular,
   yaPostulado,
   isEstudiante,
-}) {
-  const meta = TIPO_META[oferta.tipo_oferta] ?? {
+}: Props) {
+  const meta = TIPO_META[oferta.tipo_oferta as keyof typeof TIPO_META] ?? {
     label: "Oferta",
     color: "var(--color-text-muted)",
     bg: "var(--color-surface)",
@@ -446,52 +314,65 @@ export default function OfferDetailsModal({
   };
   const tecnologias = oferta.tecnologias ?? [];
 
-  // Cerrar con ESC
   useEffect(() => {
-    const h = (e) => {
+    const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // Icono de modalidad
-  const modalidadIcon = {
+  const modalidadIcon: Record<string, React.ReactNode> = {
     Presencial: SVG.building,
     Remoto: SVG.globe,
     Híbrido: SVG.home,
   };
 
-  // Stats grid — solo las que tienen valor
-  const stats = [
-    oferta.duracion_semanas && {
-      icon: SVG.clock,
-      label: "Duración",
-      value: `${oferta.duracion_semanas} semanas`,
-    },
-    oferta.horas_semanales && {
-      icon: SVG.sun,
-      label: "Horas / semana",
-      value: `${oferta.horas_semanales} h`,
-    },
-    oferta.num_plazas_restantes != null && {
-      icon: SVG.users,
-      label: "Plazas libres",
-      value: `${oferta.num_plazas_restantes} de ${oferta.num_plazas ?? "?"}`,
-    },
-    {
-      icon: SVG.euro,
-      label: "Remuneración",
-      value: oferta.salario_mensual
-        ? `${oferta.salario_mensual} €/mes`
-        : "No remunerado",
-      accent: !!oferta.salario_mensual,
-    },
-  ].filter(Boolean);
+  interface QuickInfoItem {
+    icon: React.ReactNode;
+    text: string;
+    accentColor?: string;
+    accentBg?: string;
+    accentBorder?: string;
+  }
+
+  const quickInfoRaw: (QuickInfoItem | null)[] = [
+    oferta.modalidad
+      ? {
+          icon: modalidadIcon[oferta.modalidad] ?? SVG.globe,
+          text: oferta.modalidad,
+        }
+      : null,
+    oferta.ubicacion ? { icon: SVG.pin, text: oferta.ubicacion } : null,
+    oferta.tipo_oferta
+      ? {
+          icon: SVG.briefcase,
+          text: meta.label,
+          accentColor: meta.color,
+          accentBg: meta.bg,
+          accentBorder: meta.border,
+        }
+      : null,
+    oferta.duracion_semanas
+      ? {
+          icon: SVG.clock,
+          text: `${oferta.duracion_semanas} semanas`,
+        }
+      : null,
+    oferta.horas_semanales
+      ? {
+          icon: SVG.sun,
+          text: `${oferta.horas_semanales} h/semana`,
+        }
+      : null,
+  ];
+  const quickInfo: QuickInfoItem[] = quickInfoRaw.filter(
+    (item): item is QuickInfoItem => item !== null,
+  );
 
   return (
     <>
-      {/* Fondo */}
+      {/* Overlay */}
       <div
         onClick={onClose}
         aria-hidden="true"
@@ -499,14 +380,14 @@ export default function OfferDetailsModal({
           position: "fixed",
           inset: 0,
           zIndex: 50,
-          background: "rgba(3,8,15,0.88)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          animation: "modal-bg 0.18s ease forwards",
+          background: "rgba(3,8,15,0.85)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          animation: "om-bg 0.18s ease forwards",
         }}
       />
 
-      {/* Panel */}
+      {/* Contenedor centrado */}
       <div
         style={{
           position: "fixed",
@@ -515,509 +396,369 @@ export default function OfferDetailsModal({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "20px 16px",
+          padding: "16px",
           pointerEvents: "none",
         }}
       >
         <div
           role="dialog"
-          aria-modal
+          aria-modal={true}
           aria-label={oferta.titulo}
           style={{
             width: "100%",
-            maxWidth: 720,
-            background: "var(--color-surface-strong)",
-            border: "1px solid var(--color-border-strong)",
-            borderRadius: 22,
-            boxShadow:
-              "0 50px 120px rgba(3,8,15,0.75), 0 0 0 1px rgba(192,255,114,0.04)",
-            pointerEvents: "all",
-            animation: "modal-in 0.22s cubic-bezier(0.16,1,0.3,1) forwards",
+            maxWidth: 760,
             maxHeight: "92vh",
             display: "flex",
             flexDirection: "column",
+            background: "var(--color-surface-strong)",
+            border: "1px solid var(--color-border-strong)",
+            borderRadius: 20,
+            boxShadow:
+              "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(192,255,114,0.05)",
+            pointerEvents: "all",
+            animation: "om-in 0.24s cubic-bezier(0.16,1,0.3,1) forwards",
             overflow: "hidden",
           }}
         >
-          {/* Franja de color */}
+          {/* ══ HERO HEADER ═══════════════════════════════════════════════════ */}
           <div
             style={{
-              height: 3,
-              background: `linear-gradient(90deg, ${meta.color}, transparent)`,
-              flexShrink: 0,
-            }}
-          />
-
-          {/* ── Header sticky ── */}
-          <div
-            style={{
-              padding: "20px 28px",
+              position: "relative",
+              padding: "28px 28px 24px",
               borderBottom: "1px solid var(--color-border)",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 16,
               flexShrink: 0,
-              background: "var(--color-surface-strong)",
+              overflow: "hidden",
             }}
           >
-            {/* Avatar empresa */}
+            {/* Fondo decorativo sutil */}
             <div
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 15,
-                flexShrink: 0,
-                background: "var(--color-surface-elevated)",
-                border: "1px solid var(--color-border-strong)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(ellipse 60% 80% at 90% -10%, rgba(192,255,114,0.04) 0%, transparent 70%)",
+                pointerEvents: "none",
               }}
-            >
-              {oferta.empresa_avatar ? (
-                <img
-                  src={oferta.empresa_avatar}
-                  alt=""
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                <span style={{ color: "var(--color-brand)" }}>
-                  {SVG.building}
-                </span>
-              )}
-            </div>
+            />
 
-            {/* Título y empresa */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h2
-                style={{
-                  fontFamily: "Syne, sans-serif",
-                  fontWeight: 800,
-                  fontSize: "1.3rem",
-                  color: "var(--color-text)",
-                  margin: "0 0 3px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {oferta.titulo}
-              </h2>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "var(--color-text-muted)",
-                  margin: "0 0 12px",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                }}
-              >
-                {oferta.empresa_nombre ?? "Empresa"}
-              </p>
-
-              {/* Pills row */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {/* Tipo */}
-                <Pill color={meta.color} bg={meta.bg} border={meta.border}>
-                  {meta.label}
-                </Pill>
-
-                {/* Modalidad */}
-                {oferta.modalidad && (
-                  <Pill
-                    color="var(--color-text-secondary)"
-                    bg="var(--color-surface-elevated)"
-                    border="var(--color-border-strong)"
-                  >
-                    {modalidadIcon[oferta.modalidad]}
-                    {oferta.modalidad}
-                  </Pill>
-                )}
-
-                {/* Ubicación */}
-                {oferta.ubicacion && (
-                  <Pill
-                    color="var(--color-text-secondary)"
-                    bg="var(--color-surface-elevated)"
-                    border="var(--color-border-strong)"
-                  >
-                    {SVG.pin}
-                    {oferta.ubicacion}
-                  </Pill>
-                )}
-
-                {/* Opción contrato */}
-                {oferta.opcion_contrato && (
-                  <Pill
-                    color="#68d391"
-                    bg="rgba(104,211,145,0.08)"
-                    border="rgba(104,211,145,0.22)"
-                  >
-                    {SVG.check}
-                    Opción de contratación
-                  </Pill>
-                )}
-
-                {/* Salario / no remunerado */}
-                {oferta.salario_mensual ? (
-                  <Pill
-                    color="var(--color-brand)"
-                    bg="rgba(192,255,114,0.08)"
-                    border="rgba(192,255,114,0.2)"
-                  >
-                    {oferta.salario_mensual} €/mes
-                  </Pill>
-                ) : (
-                  <Pill
-                    color="var(--color-text-subtle)"
-                    bg="var(--color-surface-elevated)"
-                    border="var(--color-border)"
-                  >
-                    No remunerado
-                  </Pill>
-                )}
-
-                {/* Estado (si está disponible) */}
-                {oferta.estado && oferta.estado !== "activa" && (
-                  <Pill
-                    color={
-                      oferta.estado === "pendiente"
-                        ? "#f6ad55"
-                        : "var(--color-text-muted)"
-                    }
-                    bg={
-                      oferta.estado === "pendiente"
-                        ? "rgba(246,173,85,0.08)"
-                        : "var(--color-surface-elevated)"
-                    }
-                    border={
-                      oferta.estado === "pendiente"
-                        ? "rgba(246,173,85,0.2)"
-                        : "var(--color-border-strong)"
-                    }
-                  >
-                    {oferta.estado === "pendiente"
-                      ? "En revisión"
-                      : oferta.estado}
-                  </Pill>
-                )}
-              </div>
-            </div>
-
-            {/* Botón cerrar */}
-            <button
-              onClick={onClose}
-              aria-label="Cerrar"
+            {/* Fila superior: logo + título + cerrar */}
+            <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                flexShrink: 0,
-                background: "var(--color-surface-elevated)",
-                border: "1px solid var(--color-border-strong)",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "var(--color-text-muted)",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--color-text)";
-                e.currentTarget.style.borderColor = "var(--color-brand)";
-                e.currentTarget.style.background =
-                  "var(--color-surface-strong)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--color-text-muted)";
-                e.currentTarget.style.borderColor =
-                  "var(--color-border-strong)";
-                e.currentTarget.style.background =
-                  "var(--color-surface-elevated)";
+                gap: 18,
+                alignItems: "flex-start",
+                position: "relative",
               }}
             >
-              {SVG.close}
-            </button>
-          </div>
-
-          {/* ── Cuerpo scrollable ── */}
-          <div
-            style={{
-              overflowY: "auto",
-              flex: 1,
-              padding: "26px 28px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 26,
-            }}
-          >
-            {/* Stats grid */}
-            {stats.length > 0 && (
+              {/* Logo empresa */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))",
-                  gap: 10,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 16,
+                  flexShrink: 0,
+                  background: "var(--color-surface-elevated)",
+                  border: "1px solid var(--color-border-strong)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
                 }}
               >
-                {stats.map((s) => (
-                  <StatCard
-                    key={s.label}
-                    icon={s.icon}
-                    label={s.label}
-                    value={s.value}
-                    accent={s.accent}
+                {oferta.empresa_avatar ? (
+                  <img
+                    src={oferta.empresa_avatar}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
-                ))}
+                ) : (
+                  <span style={{ color: "var(--color-brand)", opacity: 0.7 }}>
+                    {SVG.building}
+                  </span>
+                )}
               </div>
-            )}
 
-            <Divider />
+              {/* Título y empresa */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  style={{
+                    margin: "0 0 4px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--color-text-muted)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {oferta.empresa_nombre ?? "Empresa"}
+                </p>
+                <h2
+                  style={{
+                    margin: "0 0 14px",
+                    fontFamily: "Syne, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "clamp(1.15rem, 2.5vw, 1.45rem)",
+                    color: "var(--color-text)",
+                    lineHeight: 1.25,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {oferta.titulo}
+                </h2>
 
-            {/* Descripción */}
-            {oferta.descripcion && (
-              <Section title="Descripción del puesto" icon={SVG.building}>
-                <TextBlock>{oferta.descripcion}</TextBlock>
-              </Section>
-            )}
-
-            {/* Tecnologías */}
-            {tecnologias.length > 0 && (
-              <Section title="Tecnologías requeridas" icon={SVG.check}>
+                {/* Quick info chips */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {quickInfo.map((item, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "5px 11px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        fontFamily: "Plus Jakarta Sans, sans-serif",
+                        color:
+                          item.accentColor ?? "var(--color-text-secondary)",
+                        background:
+                          item.accentBg ?? "var(--color-surface-elevated)",
+                        border: `1px solid ${item.accentBorder ?? "var(--color-border-strong)"}`,
+                        letterSpacing: "0.01em",
+                      }}
+                    >
+                      <span style={{ opacity: 0.7, display: "flex" }}>
+                        {item.icon}
+                      </span>
+                      {item.text}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botón cerrar */}
+              <button
+                onClick={onClose}
+                aria-label="Cerrar"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  flexShrink: 0,
+                  background: "var(--color-surface-elevated)",
+                  border: "1px solid var(--color-border-strong)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "var(--color-text-muted)",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--color-text)";
+                  e.currentTarget.style.background =
+                    "var(--color-border-strong)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--color-text-muted)";
+                  e.currentTarget.style.background =
+                    "var(--color-surface-elevated)";
+                }}
+              >
+                {SVG.close}
+              </button>
+            </div>
+
+            {/* ── Stats row ── */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                marginTop: 20,
+              }}
+            >
+              {oferta.num_plazas_restantes != null && (
+                <StatPill
+                  icon={SVG.users}
+                  label="Plazas libres"
+                  value={`${oferta.num_plazas_restantes} / ${oferta.num_plazas ?? "?"}`}
+                />
+              )}
+              <StatPill
+                icon={SVG.euro}
+                label="Remuneración"
+                value={
+                  oferta.salario_mensual
+                    ? `${oferta.salario_mensual} €/mes`
+                    : "No remunerado"
+                }
+                accent={!!oferta.salario_mensual}
+              />
+              {oferta.fecha_inicio && (
+                <StatPill
+                  icon={SVG.calendar}
+                  label="Inicio"
+                  value={formatDate(oferta.fecha_inicio) ?? ""}
+                />
+              )}
+              {oferta.fecha_fin_solicitud && (
+                <StatPill
+                  icon={SVG.alert}
+                  label="Cierre solicitudes"
+                  value={formatDate(oferta.fecha_fin_solicitud) ?? ""}
+                  warning
+                />
+              )}
+              {oferta.opcion_contrato && (
+                <StatPill
+                  icon={SVG.star}
+                  label=""
+                  value="Opción de contratación"
+                  success
+                />
+              )}
+            </div>
+          </div>
+
+          {/* ══ CUERPO SCROLLABLE ════════════════════════════════════════════ */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {oferta.descripcion && (
+              <ContentSection
+                title="Descripción del puesto"
+                icon={SVG.briefcase}
+              >
+                <RichText>{oferta.descripcion}</RichText>
+              </ContentSection>
+            )}
+
+            {tecnologias.length > 0 && (
+              <ContentSection title="Tecnologías requeridas" icon={SVG.check}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {tecnologias.map((t) => (
                     <span
                       key={t.id_tecnologia}
                       style={{
-                        padding: "6px 13px",
+                        padding: "6px 14px",
                         borderRadius: 8,
                         background: "rgba(192,255,114,0.06)",
-                        border: "1px solid rgba(192,255,114,0.18)",
+                        border: "1px solid rgba(192,255,114,0.2)",
                         color: "var(--color-brand)",
                         fontSize: 12,
-                        fontWeight: 600,
+                        fontWeight: 700,
                         fontFamily: "Plus Jakarta Sans, sans-serif",
+                        letterSpacing: "0.01em",
                       }}
                     >
                       {t.nombre}
                     </span>
                   ))}
                 </div>
-              </Section>
+              </ContentSection>
             )}
 
-            {/* Requisitos adicionales */}
             {oferta.requisitos_adicionales && (
-              <Section title="Requisitos adicionales" icon={SVG.alert}>
-                <TextBlock>{oferta.requisitos_adicionales}</TextBlock>
-              </Section>
+              <ContentSection title="Requisitos adicionales" icon={SVG.alert}>
+                <RichText>{oferta.requisitos_adicionales}</RichText>
+              </ContentSection>
             )}
 
-            {/* Beneficios */}
             {oferta.beneficios && (
-              <Section title="Beneficios ofrecidos" icon={SVG.check}>
-                <TextBlock variant="brand">{oferta.beneficios}</TextBlock>
-              </Section>
+              <ContentSection title="Beneficios ofrecidos" icon={SVG.star}>
+                <RichText variant="brand">{oferta.beneficios}</RichText>
+              </ContentSection>
             )}
 
-            {/* Detalles extra — num_plazas total, horas semanales */}
             {(oferta.num_plazas ||
               oferta.horas_semanales ||
               oferta.duracion_semanas) && (
-              <>
-                <Divider />
-                <Section title="Condiciones de la posición" icon={SVG.users}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(200px, 1fr))",
-                      gap: 10,
-                    }}
-                  >
-                    {oferta.num_plazas && (
-                      <div
-                        style={{
-                          background: "var(--color-surface-elevated)",
-                          border: "1px solid var(--color-border-strong)",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--color-text-muted)",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
-                          }}
-                        >
-                          Plazas totales
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            fontFamily: "Syne, sans-serif",
-                          }}
-                        >
-                          {oferta.num_plazas}
-                        </span>
-                      </div>
-                    )}
-                    {oferta.num_plazas_restantes != null && (
-                      <div
-                        style={{
-                          background: "var(--color-surface-elevated)",
-                          border: "1px solid var(--color-border-strong)",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--color-text-muted)",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
-                          }}
-                        >
-                          Plazas disponibles
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            fontFamily: "Syne, sans-serif",
-                          }}
-                        >
-                          {oferta.num_plazas_restantes}
-                        </span>
-                      </div>
-                    )}
-                    {oferta.duracion_semanas && (
-                      <div
-                        style={{
-                          background: "var(--color-surface-elevated)",
-                          border: "1px solid var(--color-border-strong)",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--color-text-muted)",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
-                          }}
-                        >
-                          Duración
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            fontFamily: "Syne, sans-serif",
-                          }}
-                        >
-                          {oferta.duracion_semanas} sem.
-                        </span>
-                      </div>
-                    )}
-                    {oferta.horas_semanales && (
-                      <div
-                        style={{
-                          background: "var(--color-surface-elevated)",
-                          border: "1px solid var(--color-border-strong)",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--color-text-muted)",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
-                          }}
-                        >
-                          Horas / semana
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            fontFamily: "Syne, sans-serif",
-                          }}
-                        >
-                          {oferta.horas_semanales} h
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </Section>
-              </>
+              <ContentSection
+                title="Condiciones de la posición"
+                icon={SVG.clock}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(180px, 1fr))",
+                    gap: 8,
+                  }}
+                >
+                  {oferta.num_plazas && (
+                    <CondRow label="Plazas totales" value={oferta.num_plazas} />
+                  )}
+                  {oferta.num_plazas_restantes != null && (
+                    <CondRow
+                      label="Plazas disponibles"
+                      value={oferta.num_plazas_restantes}
+                    />
+                  )}
+                  {oferta.duracion_semanas && (
+                    <CondRow
+                      label="Duración"
+                      value={`${oferta.duracion_semanas} semanas`}
+                    />
+                  )}
+                  {oferta.horas_semanales && (
+                    <CondRow
+                      label="Horas / semana"
+                      value={`${oferta.horas_semanales} h`}
+                    />
+                  )}
+                </div>
+              </ContentSection>
             )}
 
-            {/* Fechas clave */}
-            {(oferta.fecha_inicio || oferta.fecha_fin_solicitud) && (
-              <>
-                <Divider />
-                <Section title="Fechas clave" icon={SVG.calendar}>
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
-                    {oferta.fecha_inicio && (
-                      <DateRow
-                        label="Inicio de la práctica"
-                        value={formatDate(oferta.fecha_inicio)}
-                      />
-                    )}
-                    {oferta.fecha_fin_solicitud && (
-                      <DateRow
-                        label="Cierre de solicitudes"
-                        value={formatDate(oferta.fecha_fin_solicitud)}
-                        isDeadline
-                      />
-                    )}
-                  </div>
-                </Section>
-              </>
-            )}
+            <div style={{ height: 8 }} />
           </div>
 
-          {/* ── Footer CTA ── */}
+          {/* ══ FOOTER CTA ═══════════════════════════════════════════════════ */}
           {isEstudiante && (
             <div
               style={{
-                padding: "18px 28px",
+                padding: "16px 28px",
                 borderTop: "1px solid var(--color-border)",
                 flexShrink: 0,
                 background: "var(--color-surface-strong)",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
               }}
             >
+              {oferta.fecha_fin_solicitud && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    color: "var(--color-text-subtle)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    flex: 1,
+                  }}
+                >
+                  Cierre:{" "}
+                  <span style={{ color: "#f6ad55", fontWeight: 600 }}>
+                    {formatDate(oferta.fecha_fin_solicitud)}
+                  </span>
+                </p>
+              )}
+
               {yaPostulado ? (
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    gap: 10,
-                    padding: "14px",
+                    gap: 9,
+                    padding: "11px 22px",
                     borderRadius: 12,
                     background: "rgba(192,255,114,0.06)",
-                    border: "1px solid rgba(192,255,114,0.18)",
+                    border: "1px solid rgba(192,255,114,0.2)",
+                    marginLeft: "auto",
                   }}
                 >
                   <span
@@ -1027,13 +768,13 @@ export default function OfferDetailsModal({
                   </span>
                   <span
                     style={{
-                      fontSize: 14,
-                      fontWeight: 600,
+                      fontSize: 13,
+                      fontWeight: 700,
                       color: "var(--color-brand)",
                       fontFamily: "Plus Jakarta Sans, sans-serif",
                     }}
                   >
-                    Ya te has postulado a esta oferta
+                    Ya te has postulado
                   </span>
                 </div>
               ) : (
@@ -1041,15 +782,15 @@ export default function OfferDetailsModal({
                   onClick={() => onPostular?.(oferta)}
                   className="btn-primary"
                   style={{
-                    width: "100%",
+                    marginLeft: "auto",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
                     gap: 9,
-                    padding: "14px",
-                    fontSize: 14,
+                    padding: "11px 28px",
+                    fontSize: 13,
                     fontWeight: 700,
                     borderRadius: 12,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {SVG.send}
@@ -1062,12 +803,231 @@ export default function OfferDetailsModal({
       </div>
 
       <style>{`
-        @keyframes modal-bg { from { opacity:0 } to { opacity:1 } }
-        @keyframes modal-in {
-          from { opacity:0; transform:scale(0.96) translateY(14px) }
+        @keyframes om-bg { from { opacity:0 } to { opacity:1 } }
+        @keyframes om-in {
+          from { opacity:0; transform:scale(0.97) translateY(16px) }
           to   { opacity:1; transform:scale(1)    translateY(0)    }
         }
       `}</style>
     </>
+  );
+}
+
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+function StatPill({
+  icon,
+  label,
+  value,
+  accent = false,
+  warning = false,
+  success = false,
+}: {
+  icon: React.ReactNode;
+  label?: string;
+  value: string;
+  accent?: boolean;
+  warning?: boolean;
+  success?: boolean;
+}) {
+  let color = "var(--color-text-secondary)";
+  let bg = "var(--color-surface-elevated)";
+  let border = "var(--color-border-strong)";
+
+  if (accent) {
+    color = "var(--color-brand)";
+    bg = "rgba(192,255,114,0.07)";
+    border = "rgba(192,255,114,0.2)";
+  }
+  if (warning) {
+    color = "#f6ad55";
+    bg = "rgba(246,173,85,0.07)";
+    border = "rgba(246,173,85,0.2)";
+  }
+  if (success) {
+    color = "#68d391";
+    bg = "rgba(104,211,145,0.07)";
+    border = "rgba(104,211,145,0.2)";
+  }
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 14px",
+        borderRadius: 10,
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
+      }}
+    >
+      <span style={{ display: "flex", flexShrink: 0, opacity: 0.8 }}>
+        {icon}
+      </span>
+      <div>
+        {label && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 9,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--color-text-subtle)",
+              fontFamily: "Plus Jakarta Sans, sans-serif",
+              lineHeight: 1,
+              marginBottom: 2,
+            }}
+          >
+            {label}
+          </p>
+        )}
+        <p
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 700,
+            color,
+            fontFamily: "Plus Jakarta Sans, sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ContentSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        padding: "22px 28px",
+        borderBottom: "1px solid var(--color-border)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 26,
+            height: 26,
+            borderRadius: 8,
+            background: "var(--color-surface-elevated)",
+            border: "1px solid var(--color-border-strong)",
+            color: "var(--color-text-muted)",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--color-text-muted)",
+            fontFamily: "Plus Jakarta Sans, sans-serif",
+          }}
+        >
+          {title}
+        </h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RichText({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "brand";
+}) {
+  const isBrand = variant === "brand";
+  return (
+    <div
+      style={{
+        borderRadius: 12,
+        padding: "16px 20px",
+        background: isBrand
+          ? "rgba(192,255,114,0.03)"
+          : "var(--color-surface-elevated)",
+        border: `1px solid ${isBrand ? "rgba(192,255,114,0.1)" : "var(--color-border-strong)"}`,
+        borderLeft: `3px solid ${isBrand ? "rgba(192,255,114,0.4)" : "var(--color-border-strong)"}`,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13.5,
+          lineHeight: 1.85,
+          color: "var(--color-text-secondary)",
+          fontFamily: "Plus Jakarta Sans, sans-serif",
+          whiteSpace: "pre-line",
+        }}
+      >
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function CondRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "10px 14px",
+        borderRadius: 10,
+        background: "var(--color-surface-elevated)",
+        border: "1px solid var(--color-border-strong)",
+      }}
+    >
+      <span
+        style={{
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          fontFamily: "Plus Jakarta Sans, sans-serif",
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--color-text)",
+          fontFamily: "Syne, sans-serif",
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }

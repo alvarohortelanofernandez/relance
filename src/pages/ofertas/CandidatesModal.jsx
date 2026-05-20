@@ -245,20 +245,35 @@ const ESTADO_PALETTE = {
 };
 
 function EstadoBadge({ estado, onChange }) {
+  const [guardado, setGuardado] = useState(false);
   const meta = ESTADO_META[estado] ?? { label: estado, color: "gray" };
+
+  const handleChange = async (e) => {
+    await onChange(e.target.value);
+    setGuardado(true);
+    setTimeout(() => setGuardado(false), 1500);
+  };
+
   return (
-    <select
-      value={estado ?? "pendiente"}
-      onChange={(e) => onChange(e.target.value)}
-      onClick={(e) => e.stopPropagation()}
-      className={`text-[11px] font-medium px-2.5 py-1 rounded-full border cursor-pointer appearance-none transition-all focus:outline-none focus:ring-1 focus:ring-white/20 ${ESTADO_PALETTE[meta.color] ?? ESTADO_PALETTE.gray}`}
-    >
-      {Object.entries(ESTADO_META).map(([val, m]) => (
-        <option key={val} value={val} className="bg-[#0B1B2B] text-[#C0FF72]">
-          {m.label}
-        </option>
-      ))}
-    </select>
+    <div className="flex items-center gap-1.5">
+      <select
+        value={estado ?? "pendiente"}
+        onChange={handleChange}
+        onClick={(e) => e.stopPropagation()}
+        className={`text-[11px] font-medium px-2.5 py-1 rounded-full border cursor-pointer appearance-none transition-all focus:outline-none focus:ring-1 focus:ring-white/20 ${ESTADO_PALETTE[meta.color] ?? ESTADO_PALETTE.gray}`}
+      >
+        {Object.entries(ESTADO_META).map(([val, m]) => (
+          <option key={val} value={val} className="bg-[#0B1B2B] text-[#C0FF72]">
+            {m.label}
+          </option>
+        ))}
+      </select>
+      {guardado && (
+        <span className="text-[#C0FF72] flex items-center gap-0.5 text-[10px]">
+          <IconCheck className="w-2.5 h-2.5" /> OK
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -816,18 +831,27 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
   }, [cargar]);
 
   const actualizarEstado = async (idCandidatura, nuevoEstado) => {
-    const { error: err } = await supabase
+    console.log("actualizarEstado llamado:", idCandidatura, nuevoEstado);
+    const { data, error: err } = await supabase
       .from("candidatura")
       .update({ estado: nuevoEstado })
-      .eq("id_candidatura", idCandidatura);
+      .eq("id_candidatura", idCandidatura)
+      .select();
+    console.log("UPDATE resultado:", { data, err, idCandidatura, nuevoEstado });
     if (!err) {
-      setCandidatos((prev) =>
-        prev.map((c) =>
+      console.log("Actualizando estado local para:", idCandidatura);
+      setCandidatos((prev) => {
+        const nuevos = prev.map((c) =>
           c.id_candidatura === idCandidatura
             ? { ...c, estado: nuevoEstado }
             : c,
-        ),
-      );
+        );
+        console.log(
+          "Nuevo estado candidatos:",
+          nuevos.map((c) => ({ id: c.id_candidatura, estado: c.estado })),
+        );
+        return nuevos;
+      });
       if (perfilAbierto?.id_candidatura === idCandidatura)
         setPerfilAbierto((prev) => ({ ...prev, estado: nuevoEstado }));
     }
