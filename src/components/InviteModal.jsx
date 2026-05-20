@@ -1,6 +1,8 @@
 // components/InviteModal.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import QRCodeStyling from "qr-code-styling";
+import iconRelance from "../assets/icon_relance.svg";
 
 // ── Sub-modal: enviar por correo ─────────────────────────────────────────────
 function SendInviteEmailModal({
@@ -204,15 +206,47 @@ export default function InviteModal({
   const [expiresAt, setExpiresAt] = useState(null);
   const [qrUrl, setQrUrl] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
+  const qrRef = useRef(null);
+  const qrInstance = useRef(null);
   const [copied, setCopied] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
 
-  // Limpia el blob al desmontar
   useEffect(() => {
-    return () => {
-      if (qrUrl?.startsWith("blob:")) URL.revokeObjectURL(qrUrl);
-    };
-  }, [qrUrl]);
+    if (step === "generated" && qrUrl && qrRef.current) {
+      if (!qrInstance.current) {
+        qrInstance.current = new QRCodeStyling({
+          width: 200,
+          height: 200,
+          type: "canvas",
+          data: qrUrl,
+          image: iconRelance,
+          dotsOptions: {
+            color: "#c0ff72",
+            type: "rounded",
+          },
+          cornersSquareOptions: {
+            color: "#c0ff72",
+            type: "extra-rounded",
+          },
+          cornersDotOptions: {
+            color: "#c0ff72",
+            type: "dot",
+          },
+          backgroundOptions: {
+            color: "#0a0a0a",
+          },
+          imageOptions: {
+            crossOrigin: "anonymous",
+            margin: 6,
+            imageSize: 0.3,
+          },
+        });
+        qrInstance.current.append(qrRef.current);
+      } else {
+        qrInstance.current.update({ data: qrUrl });
+      }
+    }
+  }, [step, qrUrl]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -236,7 +270,9 @@ export default function InviteModal({
       setGenerating(false);
       return;
     }
-    const BASE_URL = "https://relance-platform.vercel.app"; // TODO: extraer a config
+    // const BASE_URL = "https://relance-platform.vercel.app";
+    const BASE_URL = "http://192.168.1.227:5173"; // la IP que te muestre Vite
+    // const BASE_URL = "https://abc123.ngrok.io"; // la que te dé ngrok
 
     const url = `${BASE_URL}${inviteRoute}?token=${token}&entity=${user.id}&type=${entityType}`;
 
@@ -247,51 +283,9 @@ export default function InviteModal({
     setStep("generated");
     setGenerating(false);
 
-    // Generar QR
-    setLoadingQr(true);
-    try {
-      const res = await fetch("https://api.qrcode-monkey.com/qr/custom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          data: url,
-          config: {
-            body: "round",
-            eye: "frame1",
-            eyeBall: "ball1",
-            erf1: [],
-            erf2: [],
-            erf3: [],
-            brf1: [],
-            brf2: [],
-            brf3: [],
-            bodyColor: "#c0ff72",
-            bgColor: "#0A0A0A",
-            eye1Color: "#c0ff72",
-            eye2Color: "#c0ff72",
-            eye3Color: "#c0ff72",
-            eyeBall1Color: "#0A0A0A",
-            eyeBall2Color: "#0A0A0A",
-            eyeBall3Color: "#0A0A0A",
-            gradientColor1: "",
-            gradientColor2: "",
-            gradientType: "linear",
-            gradientOnEyes: "true",
-            logo: "",
-            logoMode: "default",
-          },
-          size: 400,
-          download: false,
-          file: "png",
-        }),
-      });
-      const blob = await res.blob();
-      setQrUrl(URL.createObjectURL(blob));
-    } catch {
-      setQrUrl(
-        `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}&bgcolor=0A0A0A&color=c0ff72&margin=20`,
-      );
-    }
+    // QR generado localmente con qr-code-styling
+    qrInstance.current = null; // resetea para que el useEffect lo recree
+    setQrUrl(url);
     setLoadingQr(false);
   };
 
@@ -302,11 +296,12 @@ export default function InviteModal({
   };
 
   const handleDownload = () => {
-    // const a = document.createElement("a");
-    // a.href = qrUrl;
-    // a.download = `relance-invite-${entityType}.png`;
-    // a.click();
-    window.open(qrUrl, "_blank", "noopener,noreferrer");
+    if (qrInstance.current) {
+      qrInstance.current.download({
+        name: `relance-invite-${entityType}`,
+        extension: "png",
+      });
+    }
   };
 
   const expiresLabel =
@@ -446,35 +441,10 @@ export default function InviteModal({
                 {/* QR */}
                 <div className="flex flex-col items-center mb-5">
                   <div className="p-3 bg-dark rounded-2xl border border-brand/20 mb-3">
-                    {loadingQr ? (
-                      <div className="w-48 h-48 flex items-center justify-center">
-                        <svg
-                          className="animate-spin w-8 h-8 text-brand"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                      </div>
-                    ) : (
-                      <img
-                        src={qrUrl}
-                        alt="QR de invitación"
-                        className="w-48 h-48 rounded-xl"
-                      />
-                    )}
+                    <div
+                      ref={qrRef}
+                      className="w-48 h-48 rounded-xl overflow-hidden"
+                    />
                   </div>
                   <div className="inline-flex items-center gap-1.5 bg-brand/8 border border-brand/20 rounded-full px-3 py-1">
                     <svg

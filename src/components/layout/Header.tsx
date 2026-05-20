@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import UserMenu from "../auth/UserMenu";
-import logoUrl from "../../assets/logo_relance.jpg";
+import logoUrl from "../../assets/logo_relance.png";
 import SearchModal, { type Role } from "../search/SearchModal";
 
 type HeaderProps = {
@@ -9,20 +9,17 @@ type HeaderProps = {
   onRegisterClick?: () => void;
 };
 
-// const navLinks = [{ label: "Inicio", href: "/" }];
-
 export default function Header({
   onLoginClick,
   onRegisterClick,
 }: HeaderProps): JSX.Element {
-  // Avatar y rol vienen directamente del contexto, sin estado local duplicado
   const { user, userRole, avatarUrl } = useAuth();
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Rol desde el contexto, no desde user_metadata (que puede estar vacío)
   const roleMap: Record<string, Role> = {
     admin: "administrador",
     estudiante: "estudiante",
@@ -30,7 +27,6 @@ export default function Header({
     centro_educativo: "centro_educativo",
     tutor_centro: "tutor_centro",
     tutor_empresa: "tutor_empresa",
-    // tutor: "estudiante",
   };
   const role: Role = roleMap[userRole ?? ""] ?? "estudiante";
   const userId: string = user?.id ?? "";
@@ -48,6 +44,15 @@ export default function Header({
     return () => window.removeEventListener("scroll", h);
   }, []);
 
+  // ── Detectar móvil (< 640px = breakpoint sm de Tailwind) ──────────────────
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const h = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+
   // ── Ctrl+K / Cmd+K ────────────────────────────────────────────────────────
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -59,6 +64,73 @@ export default function Header({
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
+
+  // ── Botón de búsqueda (reutilizado en header y bajo el header) ────────────
+  const SearchTrigger = ({ fullWidth = false }: { fullWidth?: boolean }) => (
+    <button
+      onClick={() => setSearchOpen(true)}
+      aria-label="Abrir buscador (Ctrl+K)"
+      style={{
+        width: fullWidth ? "100%" : undefined,
+        flex: fullWidth ? undefined : "1 1 0",
+        maxWidth: fullWidth ? undefined : 260,
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "6px 10px",
+        borderRadius: 9,
+        border: "1px solid var(--color-border-strong)",
+        background: "rgba(255,255,255,0.025)",
+        color: "var(--color-text-muted)",
+        cursor: "pointer",
+        transition: "all 0.18s",
+        fontFamily: "Plus Jakarta Sans, sans-serif",
+        fontSize: 11.5,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "rgba(192,255,114,0.25)";
+        e.currentTarget.style.background = "rgba(192,255,114,0.04)";
+        e.currentTarget.style.color = "var(--color-text-secondary)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "var(--color-border-strong)";
+        e.currentTarget.style.background = "rgba(255,255,255,0.025)";
+        e.currentTarget.style.color = "var(--color-text-muted)";
+      }}
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ flexShrink: 0 }}
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <span style={{ flex: 1, textAlign: "left" }}>Buscar…</span>
+      {!fullWidth && (
+        <kbd
+          style={{
+            fontSize: 9,
+            padding: "1px 5px",
+            borderRadius: 4,
+            border: "1px solid var(--color-border-strong)",
+            background: "rgba(255,255,255,0.04)",
+            color: "var(--color-text-subtle)",
+            fontFamily: "Plus Jakarta Sans, sans-serif",
+            flexShrink: 0,
+          }}
+        >
+          Ctrl+K
+        </kbd>
+      )}
+    </button>
+  );
 
   return (
     <>
@@ -95,6 +167,7 @@ export default function Header({
               padding: "0 16px",
             }}
           >
+            {/* ── Fila principal ── */}
             <div
               style={{
                 display: "flex",
@@ -119,7 +192,7 @@ export default function Header({
                   src={logoUrl}
                   alt="Relance"
                   style={{
-                    height: 24,
+                    height: 96,
                     width: "auto",
                     borderRadius: 6,
                     transition: "opacity 0.2s",
@@ -127,100 +200,8 @@ export default function Header({
                 />
               </a>
 
-              {/* ── Nav ── */}
-              {/* <nav style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                {navLinks.map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    style={{
-                      padding: "5px 11px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: "var(--color-text-muted)",
-                      borderRadius: 8,
-                      textDecoration: "none",
-                      transition: "color 0.15s, background 0.15s",
-                      fontFamily: "Plus Jakarta Sans, sans-serif",
-                      letterSpacing: "-0.01em",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--color-text)";
-                      e.currentTarget.style.background =
-                        "rgba(255,255,255,0.05)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--color-text-muted)";
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav> */}
-
-              {/* ── Search trigger ── */}
-              <button
-                onClick={() => setSearchOpen(true)}
-                aria-label="Abrir buscador (Ctrl+K)"
-                style={{
-                  flex: "1 1 0",
-                  maxWidth: 260,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  padding: "6px 10px",
-                  borderRadius: 9,
-                  border: "1px solid var(--color-border-strong)",
-                  background: "rgba(255,255,255,0.025)",
-                  color: "var(--color-text-muted)",
-                  cursor: "pointer",
-                  transition: "all 0.18s",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                  fontSize: 11.5,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(192,255,114,0.25)";
-                  e.currentTarget.style.background = "rgba(192,255,114,0.04)";
-                  e.currentTarget.style.color = "var(--color-text-secondary)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor =
-                    "var(--color-border-strong)";
-                  e.currentTarget.style.background = "rgba(255,255,255,0.025)";
-                  e.currentTarget.style.color = "var(--color-text-muted)";
-                }}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-                <span style={{ flex: 1, textAlign: "left" }}>Buscar…</span>
-                <kbd
-                  style={{
-                    fontSize: 9,
-                    padding: "1px 5px",
-                    borderRadius: 4,
-                    border: "1px solid var(--color-border-strong)",
-                    background: "rgba(255,255,255,0.04)",
-                    color: "var(--color-text-subtle)",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                    flexShrink: 0,
-                  }}
-                >
-                  Ctrl+K
-                </kbd>
-              </button>
+              {/* ── Búsqueda: solo visible en sm+ (≥ 640px) ── */}
+              {!isMobile && <SearchTrigger />}
 
               {/* ── Usuario / acciones ── */}
               <div
@@ -241,8 +222,6 @@ export default function Header({
                         height: 30,
                         borderRadius: "50%",
                         overflow: "hidden",
-                        // ✅ El borde brand solo cuando el menú está abierto,
-                        // nunca por loading
                         border: menuOpen
                           ? "2px solid var(--color-brand)"
                           : "2px solid rgba(255,255,255,0.1)",
@@ -253,7 +232,6 @@ export default function Header({
                         background: "transparent",
                       }}
                     >
-                      {/* ✅ avatarUrl viene del contexto, siempre actualizado */}
                       {avatarUrl ? (
                         <img
                           src={avatarUrl}
@@ -289,43 +267,46 @@ export default function Header({
                   </div>
                 ) : (
                   <>
-                    {/* Desktop */}
+                    {/* Iniciar sesión: visible en móvil como botón compacto,
+                        en sm+ como btn-secondary normal */}
                     <button
                       onClick={onLoginClick}
-                      className="hidden sm:flex btn-secondary"
-                      style={{ fontSize: 12, padding: "5px 12px" }}
-                    >
-                      Iniciar sesión
-                    </button>
-                    <button
-                      onClick={onRegisterClick}
-                      className="hidden md:flex btn-primary"
-                      style={{ fontSize: 12, padding: "5px 12px" }}
-                    >
-                      Registrarse
-                    </button>
-                    {/* Mobile */}
-                    <button
-                      onClick={onRegisterClick}
-                      className="md:hidden"
+                      className="btn-secondary"
                       style={{
-                        padding: "5px 9px",
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: "Plus Jakarta Sans, sans-serif",
-                        border: "none",
-                        background: "var(--color-brand)",
-                        color: "#02050d",
-                        cursor: "pointer",
+                        fontSize: 12,
+                        padding: isMobile ? "5px 9px" : "5px 12px",
                       }}
                     >
-                      Registro
+                      {isMobile ? "Entrar" : "Iniciar sesión"}
+                    </button>
+
+                    {/* Registrarse: en móvil etiqueta corta, en sm+ etiqueta completa */}
+                    <button
+                      onClick={onRegisterClick}
+                      className="btn-primary"
+                      style={{
+                        fontSize: 12,
+                        padding: isMobile ? "5px 9px" : "5px 12px",
+                      }}
+                    >
+                      {isMobile ? "Registro" : "Registrarse"}
                     </button>
                   </>
                 )}
               </div>
             </div>
+
+            {/* ── Fila de búsqueda en móvil: debajo del header, centrada ── */}
+            {isMobile && (
+              <div
+                style={{
+                  padding: "0 4px 10px",
+                  pointerEvents: "auto",
+                }}
+              >
+                <SearchTrigger fullWidth />
+              </div>
+            )}
           </div>
         </header>
       </div>
