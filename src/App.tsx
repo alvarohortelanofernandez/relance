@@ -167,16 +167,6 @@ function AppContent() {
         return;
       }
 
-      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
-        setShowOnboarding(false);
-        return;
-      }
-
-      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
-        setShowOnboarding(false);
-        return;
-      }
-
       // Añade "admin" a la lista
       const ROLES_SIN_ONBOARDING = [
         "estudiante",
@@ -187,6 +177,16 @@ function AppContent() {
         "tutor",
         "admin", // ← añade esto
       ];
+
+      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
+        setShowOnboarding(false);
+        return;
+      }
+
+      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
+        setShowOnboarding(false);
+        return;
+      }
     } catch (err) {
       console.warn("checkOnboarding error:", err);
       setShowOnboarding(false);
@@ -391,6 +391,7 @@ function AppContent() {
           />
         </Route>
         <Route path="/admin/registro" element={<AdminRegisterPage />} />
+        <Route path="/tutor/registro" element={<TutorRegisterPage />} />
 
         {/* ── Ayuda ────────────────────────────────────────────────────── */}
         <Route path="/ayuda" element={<HelpAndAbout />} />
