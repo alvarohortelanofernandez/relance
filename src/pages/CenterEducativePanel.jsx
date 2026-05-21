@@ -3,6 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import MainLayout from "../components/layout/MainLayout";
 
+import InviteModalRaw from "../components/InviteModal";
+const InviteModal = /** @type {any} */ (InviteModalRaw);
+
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-16">
@@ -1046,6 +1049,7 @@ export default function CenterEducativePanel() {
   const [filtroVinculo, setFiltroVinculo] = useState("todos");
   const [loading, setLoading] = useState(true);
   const [loadingAcuerdos, setLoadingAcuerdos] = useState(false);
+  const [inviteTutorModal, setInviteTutorModal] = useState(false);
 
   const [centro, setCentro] = useState(null);
   const [stats, setStats] = useState({
@@ -1077,8 +1081,10 @@ export default function CenterEducativePanel() {
       setLoadingAcuerdos(true);
       try {
         const { data: acuerdosData, error } = await supabase
-          .from("convenio")
-          .select("id, id_empresa, estado, fecha_propuesta, fecha_aceptacion")
+          .from("centro_empresa_acuerdo")
+          .select(
+            "id, id_empresa, estado, fecha_inicio, fecha_fin, plazas_acordadas, notas",
+          )
           .eq("id_centro", idCentro);
 
         if (!error && acuerdosData && acuerdosData.length > 0) {
@@ -1110,6 +1116,10 @@ export default function CenterEducativePanel() {
           if (mountedRef.current)
             setStats((prev) => ({ ...prev, empresas: enriquecidos.length }));
         } else {
+          console.warn(
+            "[acuerdos] Sin datos en centro_empresa_acuerdo, error:",
+            error,
+          );
           const derivados = empresasEnriquecidas.map((e) => ({
             id: e.id,
             empresa: e.nombre,
@@ -1117,10 +1127,7 @@ export default function CenterEducativePanel() {
             plazas: null,
             fecha_inicio: null,
             fecha_fin: null,
-            estado:
-              e.alumnos_activos > 0 || e.colaboraciones > 0
-                ? "activo"
-                : "pendiente",
+            estado: e.alumnos_activos > 0 ? "activo" : "pendiente",
             contacto: null,
             alumnos_activos: alumnosActivosMap[e.id] ?? 0,
           }));
@@ -1199,8 +1206,23 @@ export default function CenterEducativePanel() {
       .eq("id_centro", idCentro);
     if (ceErr) console.error("[centro_estudiante]:", ceErr);
 
+    console.log(
+      "[DEBUG centro_estudiante] filas:",
+      ceRows?.length,
+      "| primer item:",
+      ceRows?.[0],
+    );
+
     const ceData = ceRows ?? [];
     const estudianteIds = ceData.map((r) => r.estudiante?.id).filter(Boolean);
+    const filasHuerfanas = ceData.filter((r) => !r.estudiante?.id);
+    if (filasHuerfanas.length > 0) {
+      console.warn(
+        "[HUERFANOS] centro_estudiante sin estudiante válido:",
+        filasHuerfanas.length,
+        "filas",
+      );
+    }
 
     // Mapa id_estudiante → id_tutor (viene directo de centro_estudiante)
     const estudianteTutorMap = {};
@@ -1228,6 +1250,13 @@ export default function CenterEducativePanel() {
         .select("id_estudiante, id_empresa, activo, tipo")
         .in("id_estudiante", estudianteIds);
       if (empEstErr) console.error("[empresa_estudiante]:", empEstErr);
+
+      console.log(
+        "[DEBUG centro_estudiante] filas:",
+        ceRows?.length,
+        "| primer item:",
+        ceRows?.[0],
+      );
 
       (empEstRows ?? []).forEach((r) => {
         if (r.activo) {
@@ -1266,6 +1295,13 @@ export default function CenterEducativePanel() {
         )
         .in("id_estudiante", estudianteIds)
         .order("fecha_envio", { ascending: false });
+      console.log(
+        "[DEBUG centro_estudiante] filas:",
+        ceRows?.length,
+        "| primer item:",
+        ceRows?.[0],
+      );
+
       if (candErr) console.error("[candidatura]:", candErr);
       candidaturasData = candRows ?? [];
     }
@@ -1304,12 +1340,24 @@ export default function CenterEducativePanel() {
           .filter(Boolean),
       ),
     ];
+
+    // También cargamos las empresas que tienen acuerdo directo con el centro
+    const { data: acuerdoEmpRows } = await supabase
+      .from("centro_empresa_acuerdo")
+      .select("id_empresa")
+      .eq("id_centro", idCentro);
+    const empresaIdsAcuerdo = (acuerdoEmpRows ?? []).map((r) => r.id_empresa);
+
+    const todasEmpresaIds = [
+      ...new Set([...empresaIdsCand, ...empresaIdsAcuerdo]),
+    ];
+
     let empresasColaboradoras = [];
-    if (empresaIdsCand.length > 0) {
+    if (todasEmpresaIds.length > 0) {
       const { data: empRows } = await supabase
         .from("empresa")
         .select("id, nombre, sector, logo_url")
-        .in("id", empresaIdsCand);
+        .in("id", todasEmpresaIds);
       empresasColaboradoras = empRows ?? [];
     }
 
@@ -1319,7 +1367,7 @@ export default function CenterEducativePanel() {
       const empId = ofertaMap[c.id_oferta]?.id_empresa;
       if (!empId) return;
       if (!colaboracionesMap[empId]) colaboracionesMap[empId] = 0;
-      if (c.estado === "aceptada") colaboracionesMap[empId]++;
+      if (c.estado === "aceptado") colaboracionesMap[empId]++;
     });
 
     // Alumnos activos por empresa
@@ -1383,7 +1431,8 @@ export default function CenterEducativePanel() {
     }));
 
     // ── 9. Stats ──────────────────────────────────────────────────────────────
-    const totalEst = estudiantesEnriquecidos.filter(
+    const totalEst = estudiantesEnriquecidos.length;
+    const aceptados = estudiantesEnriquecidos.filter(
       (e) => e.estadoVinculo === "aceptado",
     ).length;
     const contratados = estudiantesEnriquecidos.filter(
@@ -1393,7 +1442,7 @@ export default function CenterEducativePanel() {
       (e) => e.estado === "en_practicas",
     ).length;
     const tasaContrato =
-      totalEst > 0 ? Math.round((contratados / totalEst) * 100) : 0;
+      aceptados > 0 ? Math.round((contratados / aceptados) * 100) : 0;
 
     if (!mountedRef.current) return;
 
@@ -1420,8 +1469,12 @@ export default function CenterEducativePanel() {
       },
       {
         label: "Sin actividad",
-        count: estudiantesEnriquecidos.filter((e) => e.estado === "pendiente")
-          .length,
+        count: estudiantesEnriquecidos.filter(
+          (e) =>
+            e.estado !== "en_practicas" &&
+            e.estado !== "contratado" &&
+            e.estado !== "buscando",
+        ).length,
         color: "var(--color-text-subtle)",
       },
     ]);
@@ -2190,6 +2243,27 @@ export default function CenterEducativePanel() {
                     <SectionHeader
                       title="Tutores del centro"
                       subtitle={`${tutores.length} tutores asignados`}
+                      action={
+                        <button
+                          onClick={() => setInviteTutorModal(true)}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 9,
+                            border: "1px solid rgba(192,255,114,0.3)",
+                            background: "rgba(192,255,114,0.1)",
+                            color: "var(--color-brand)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          + Invitar tutor
+                        </button>
+                      }
                     />
                     <div
                       style={{
@@ -2341,6 +2415,20 @@ export default function CenterEducativePanel() {
           )}
         </div>
       </div>
+      {inviteTutorModal && (
+        <InviteModal
+          user={user}
+          onClose={() => setInviteTutorModal(false)}
+          entityType="tutor_centro"
+          inviteRoute="/tutor/registro"
+          expiresInHours={48}
+          title="Invitar tutor"
+          description="Genera un enlace para que un tutor cree su cuenta y quede vinculado a este centro."
+          warningText="El tutor tendrá acceso a los alumnos asignados. Comparte este enlace solo con la persona correspondiente."
+          roleLabel="tutor"
+          inviterName={centro?.nombre ?? "el centro"}
+        />
+      )}
     </MainLayout>
   );
 }

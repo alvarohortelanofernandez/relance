@@ -68,8 +68,9 @@ export default function UserMenu({ onClose }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
-  // ✅ Solo ocultamos si no hay usuario en absoluto, nunca por loading
+  // Solo ocultamos si no hay usuario en absoluto, nunca por loading
   if (!user) return null;
+  
 
   const handleSignOut = async () => {
     const identities = user?.identities ?? [];
@@ -218,6 +219,14 @@ export default function UserMenu({ onClose }) {
       badge: noLeidas > 0 ? noLeidas : null,
     },
 
+    // AYUDA
+    {
+      icon: "icon-help",
+      label: "Ayuda",
+      href: "/ayuda",
+      roles: null,
+    },
+
     // {
     //   icon: "icon-settings",
     //   label: "Configuración",
@@ -330,6 +339,18 @@ export default function UserMenu({ onClose }) {
                     strokeWidth="1.8"
                   >
                     <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
+                ) : item.icon === "icon-help" ? (
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
                 ) : (
                   <svg className="w-4 h-4" viewBox="0 0 640 640">

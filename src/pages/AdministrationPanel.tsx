@@ -1144,6 +1144,8 @@ export default function AdministrationPanel() {
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchUsuario, setSearchUsuario] = useState("");
+  const [filtroRol, setFiltroRol] = useState("todos");
+  const [filtroPerfil, setFiltroPerfil] = useState("todos");
 
   const [stats, setStats] = useState({
     estudiantes: 0,
@@ -1173,38 +1175,37 @@ export default function AdministrationPanel() {
 
   const cargarStats = useCallback(async () => {
     setLoadingStats(true);
-    const [est, emp, cen, tut, ofPend, ofActiva] = await Promise.all([
-      supabase
-        .from("usuario")
-        .select("id", { count: "exact", head: true })
-        .eq("rol", "estudiante"),
-      supabase
-        .from("usuario")
-        .select("id", { count: "exact", head: true })
-        .eq("rol", "empresa"),
-      supabase
-        .from("usuario")
-        .select("id", { count: "exact", head: true })
-        .eq("rol", "centro_educativo"),
-      supabase
-        .from("usuario")
-        .select("id", { count: "exact", head: true })
-        .in("rol", ["tutor_empresa", "tutor_centro"]),
-      supabase
-        .from("oferta")
-        .select("id_oferta", { count: "exact", head: true })
-        .eq("estado", "pendiente"),
-      supabase
-        .from("oferta")
-        .select("id_oferta", { count: "exact", head: true })
-        .eq("estado", "activa"),
-    ]);
+    const [est, emp, cen, tutCen, tutEmp, ofPend, ofActiva] = await Promise.all(
+      [
+        supabase
+          .from("estudiante")
+          .select("id", { count: "exact", head: true }),
+        supabase.from("empresa").select("id", { count: "exact", head: true }),
+        supabase
+          .from("centro_educativo")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("tutor_centro")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("tutor_empresa")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("oferta")
+          .select("id_oferta", { count: "exact", head: true })
+          .eq("estado", "pendiente"),
+        supabase
+          .from("oferta")
+          .select("id_oferta", { count: "exact", head: true })
+          .eq("estado", "activa"),
+      ],
+    );
     if (!mountedRef.current) return;
     setStats({
       estudiantes: est.count ?? 0,
       empresas: emp.count ?? 0,
       centros: cen.count ?? 0,
-      tutores: tut.count ?? 0,
+      tutores: (tutCen.count ?? 0) + (tutEmp.count ?? 0),
       ofertas_pendientes: ofPend.count ?? 0,
       ofertas_activas: ofActiva.count ?? 0,
     });
@@ -1269,12 +1270,15 @@ export default function AdministrationPanel() {
 
   const cargarUsuarios = useCallback(async () => {
     setLoadingUsuarios(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("usuario")
-      .select("id, email, nombre, rol, created_at, avatar_url")
+      .select(
+        "id, email, nombre, rol, created_at, avatar_url, is_profile_completed",
+      )
       .not("rol", "eq", "admin")
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
+    if (error) console.error("[cargarUsuarios]:", error);
     if (!mountedRef.current) return;
     setUsuarios(data ?? []);
     setLoadingUsuarios(false);
@@ -1309,11 +1313,19 @@ export default function AdministrationPanel() {
 
   const usuariosFiltrados = usuarios.filter((u) => {
     const q = searchUsuario.toLowerCase();
-    return (
+    const matchSearch =
       !q ||
       u.nombre?.toLowerCase().includes(q) ||
-      u.email?.toLowerCase().includes(q)
-    );
+      u.email?.toLowerCase().includes(q);
+    const matchRol =
+      filtroRol === "todos" ||
+      u.rol === filtroRol ||
+      (filtroRol === "sin_rol" && !u.rol);
+    const matchPerfil =
+      filtroPerfil === "todos" ||
+      (filtroPerfil === "completo" && u.is_profile_completed) ||
+      (filtroPerfil === "pendiente" && !u.is_profile_completed);
+    return matchSearch && matchRol && matchPerfil;
   });
 
   const TABS = [
@@ -1911,7 +1923,7 @@ export default function AdministrationPanel() {
               <div style={{ animation: "fadeUp 0.22s ease" }}>
                 <SectionHeader
                   title="Usuarios registrados"
-                  subtitle={`${usuarios.length} usuarios sin admins`}
+                  subtitle={`${usuarios.length} usuarios · ${usuarios.filter((u) => !u.is_profile_completed).length} pendientes de completar perfil`}
                   action={
                     <SearchInput
                       value={searchUsuario}
@@ -1920,11 +1932,104 @@ export default function AdministrationPanel() {
                     />
                   }
                 />
+
+                {/* Filtros */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginBottom: 14,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {/* Filtro por rol */}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[
+                      { key: "todos", label: "Todos" },
+                      { key: "estudiante", label: "Estudiantes" },
+                      { key: "empresa", label: "Empresas" },
+                      { key: "centro_educativo", label: "Centros" },
+                      { key: "tutor_centro", label: "Tutor centro" },
+                      { key: "tutor_empresa", label: "Tutor empresa" },
+                      { key: "sin_rol", label: "Sin rol" },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setFiltroRol(f.key)}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 20,
+                          border: `1px solid ${filtroRol === f.key ? "rgba(192,255,114,0.4)" : "var(--color-border)"}`,
+                          background:
+                            filtroRol === f.key
+                              ? "rgba(192,255,114,0.1)"
+                              : "transparent",
+                          color:
+                            filtroRol === f.key
+                              ? "var(--color-brand)"
+                              : "var(--color-text-muted)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Separador */}
+                  <div
+                    style={{
+                      width: 1,
+                      background: "var(--color-border)",
+                      margin: "0 4px",
+                    }}
+                  />
+
+                  {/* Filtro por perfil */}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[
+                      { key: "todos", label: "Todos" },
+                      { key: "completo", label: "Perfil completo" },
+                      { key: "pendiente", label: "Pendiente" },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setFiltroPerfil(f.key)}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 20,
+                          border: `1px solid ${filtroPerfil === f.key ? "rgba(96,165,250,0.4)" : "var(--color-border)"}`,
+                          background:
+                            filtroPerfil === f.key
+                              ? "rgba(96,165,250,0.1)"
+                              : "transparent",
+                          color:
+                            filtroPerfil === f.key
+                              ? "var(--color-info)"
+                              : "var(--color-text-muted)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {loadingUsuarios ? (
                   <Spinner />
                 ) : (
                   <Table
-                    headers={["Usuario", "Rol", "Fecha registro", "Acción"]}
+                    headers={["Usuario", "Rol", "Registro", "Acción"]}
                     empty={
                       usuariosFiltrados.length === 0
                         ? "No se encontraron usuarios."
@@ -1997,20 +2102,41 @@ export default function AdministrationPanel() {
                               </p>
                             </div>
                           </div>,
-                          <RolBadge rol={u.rol} />,
-                          <span
+                          <RolBadge rol={u.rol ?? "sin_rol"} />,
+                          <div
                             style={{
-                              color: "var(--color-text-subtle)",
-                              fontSize: 10,
-                              fontVariantNumeric: "tabular-nums",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
                             }}
                           >
-                            {u.created_at
-                              ? new Date(u.created_at).toLocaleDateString(
-                                  "es-ES",
-                                )
-                              : "—"}
-                          </span>,
+                            <span
+                              style={{
+                                color: "var(--color-text-subtle)",
+                                fontSize: 10,
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {u.created_at
+                                ? new Date(u.created_at).toLocaleDateString(
+                                    "es-ES",
+                                  )
+                                : "—"}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 600,
+                                color: u.is_profile_completed
+                                  ? "var(--color-success)"
+                                  : "var(--color-warning)",
+                              }}
+                            >
+                              {u.is_profile_completed
+                                ? "✓ Perfil completo"
+                                : "⚠ Pendiente"}
+                            </span>
+                          </div>,
                           <Btn
                             variant={
                               u.rol === "bloqueado" ? "success" : "danger"

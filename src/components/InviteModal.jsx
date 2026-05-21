@@ -40,14 +40,14 @@ function SendInviteEmailModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-[#010812]/80 backdrop-blur-sm p-4"
       style={{ zIndex: 60 }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md relative p-6">
+      <div className="bg-[#051628] border border-[#1a3560] rounded-2xl w-full max-w-md relative p-6">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-[#4a7aaa] hover:text-white transition-colors"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
@@ -73,14 +73,14 @@ function SendInviteEmailModal({
             <h2 className="font-display text-xl font-bold text-white mb-1">
               Enviar invitación por correo
             </h2>
-            <p className="text-gray-500 text-sm mb-5">
+            <p className="text-[#6b9fd4] text-sm mb-5">
               Escribe el correo de la persona que quieres invitar a unirse como{" "}
               <strong className="text-white">{inviterType}</strong>.
             </p>
 
             <form onSubmit={handleSend} className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
+                <label className="block text-xs text-[#6b9fd4] mb-1.5">
                   Correo electrónico
                 </label>
                 <input
@@ -93,11 +93,11 @@ function SendInviteEmailModal({
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
+                <label className="block text-xs text-[#6b9fd4] mb-1.5">
                   Enlace de invitación
                 </label>
-                <div className="bg-dark border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
-                  <span className="text-gray-500 text-xs truncate flex-1 font-mono">
+                <div className="bg-[#020e1f] border border-[#1a3560] rounded-xl px-3 py-2 flex items-center gap-2">
+                  <span className="text-[#6b9fd4] text-xs truncate flex-1 font-mono">
                     {inviteUrl}
                   </span>
                   <button
@@ -106,7 +106,7 @@ function SendInviteEmailModal({
                     className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all font-medium ${
                       copied
                         ? "bg-brand/20 text-brand"
-                        : "bg-white/10 text-gray-400 hover:text-white hover:bg-white/15"
+                        : "bg-[#0a2040] text-[#6b9fd4] hover:text-white hover:bg-[#1a3560]"
                     }`}
                   >
                     {copied ? "✓ Copiado" : "Copiar"}
@@ -270,8 +270,8 @@ export default function InviteModal({
       setGenerating(false);
       return;
     }
-    // const BASE_URL = "https://relance-platform.vercel.app";
-    const BASE_URL = "http://192.168.1.227:5173"; // la IP que te muestre Vite
+    const BASE_URL = "https://relance-platform.vercel.app";
+    // const BASE_URL = "http://192.168.1.227:5173"; // la IP que te muestre Vite
     // const BASE_URL = "https://abc123.ngrok.io"; // la que te dé ngrok
 
     const url = `${BASE_URL}${inviteRoute}?token=${token}&entity=${user.id}&type=${entityType}`;
@@ -312,10 +312,10 @@ export default function InviteModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#010812]/80 backdrop-blur-sm p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md relative">
+        <div className="bg-[#051628] border border-[#1a3560] rounded-2xl w-full max-w-md relative">
           <div className="p-6">
             <button
               onClick={onClose}
@@ -351,7 +351,7 @@ export default function InviteModal({
                 <h2 className="font-display text-xl font-bold text-white mb-1">
                   {title}
                 </h2>
-                <p className="text-gray-500 text-sm mb-5">
+                <p className="text-[#6b9fd4] text-sm mb-5">
                   {description} El enlace caduca en{" "}
                   <strong className="text-white">{expiresLabel}</strong>.
                 </p>
@@ -427,7 +427,7 @@ export default function InviteModal({
                 <h2 className="font-display text-xl font-bold text-white mb-1">
                   Código QR de invitación
                 </h2>
-                <p className="text-gray-500 text-sm mb-5">
+                <p className="text-[#6b9fd4] text-sm mb-5">
                   Caduca el{" "}
                   <strong className="text-white">
                     {expiresAt?.toLocaleString("es-ES", {
@@ -464,8 +464,8 @@ export default function InviteModal({
                 </div>
 
                 {/* URL copiable */}
-                <div className="bg-dark border border-white/10 rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2">
-                  <span className="text-gray-500 text-xs truncate flex-1 font-mono">
+                <div className="bg-[#020e1f] border border-[#1a3560] rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2">
+                  <span className="text-[#6b9fd4] text-xs truncate flex-1 font-mono">
                     {inviteUrl}
                   </span>
                   <button
@@ -480,7 +480,7 @@ export default function InviteModal({
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-600 mb-4 flex items-center gap-1.5">
+                <p className="text-xs text-[#4a7aaa] mb-4 flex items-center gap-1.5">
                   <svg
                     className="w-3.5 h-3.5"
                     viewBox="0 0 24 24"

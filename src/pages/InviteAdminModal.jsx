@@ -47,7 +47,7 @@ export function InviteAdminModal({ user, onClose }) {
   const [showEmailModal, setShowEmailModal] = useState(false);
 
   // ── Generar token e insertar en BD ────────────────────────────────────────
-  onst handleGenerate = async () => {
+  const handleGenerate = async () => {
     setGenerating(true);
     const token = crypto.randomUUID();
     const expires = new Date(Date.now() + 48 * 60 * 60 * 1000);
@@ -89,8 +89,12 @@ export function InviteAdminModal({ user, onClose }) {
             body: "round",
             eye: "frame1",
             eyeBall: "ball1",
-            erf1: [], erf2: [], erf3: [],
-            brf1: [], brf2: [], brf3: [],
+            erf1: [],
+            erf2: [],
+            erf3: [],
+            brf1: [],
+            brf2: [],
+            brf3: [],
             bodyColor: "#c0ff72",
             bgColor: "#0A0A0A",
             eye1Color: "#c0ff72",
@@ -135,7 +139,7 @@ export function InviteAdminModal({ user, onClose }) {
     a.click();
   };
 
-   return (
+  return (
     <>
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
@@ -147,7 +151,12 @@ export function InviteAdminModal({ user, onClose }) {
               onClick={onClose}
               className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
                 <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
               </svg>
             </button>
@@ -165,8 +174,8 @@ export function InviteAdminModal({ user, onClose }) {
                 </h2>
                 <p className="text-gray-500 text-sm mb-5">
                   Genera un enlace y código QR de invitación de{" "}
-                  <strong className="text-white">48 horas</strong> para que
-                  otra persona cree su cuenta de administrador.
+                  <strong className="text-white">48 horas</strong> para que otra
+                  persona cree su cuenta de administrador.
                 </p>
 
                 <div className="bg-orange-500/8 border border-orange-500/20 rounded-xl px-4 py-3 mb-5 flex gap-3">

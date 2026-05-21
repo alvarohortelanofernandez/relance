@@ -27,7 +27,7 @@ export default function Footer() {
           <img
             src={logoUrl}
             alt="Relance"
-            style={{ height: 22, width: "auto", borderRadius: 5 }} // ← 40→22 px
+            style={{ height: 28, width: "auto", borderRadius: 5 }} // ← 40→22 px
           />
           {/* <span
             style={{
@@ -44,7 +44,10 @@ export default function Footer() {
 
         {/* Links */}
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-          {[{ label: "Inicio", href: "/" }].map((link) => (
+          {[
+            { label: "Inicio", href: "/" },
+            { label: "Ayuda", href: "/ayuda" },
+          ].map((link) => (
             <a
               key={link.label}
               href={link.href}

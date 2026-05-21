@@ -51,6 +51,7 @@ import ProtectedRoute from "./components/routes/ProtectedRoute";
 import AdminProfile from "./pages/profiles/AdminProfile";
 import AdministrationPanel from "./pages/AdministrationPanel";
 import CenterEducativePanel from "./pages/CenterEducativePanel";
+import HelpAndAbout from "./pages/help/HelpAndAbout";
 
 import { useEffect, useState, useRef } from "react";
 import AdminRegisterPage from "./pages/register/AdminRegisterPage";
@@ -390,6 +391,9 @@ function AppContent() {
           />
         </Route>
         <Route path="/admin/registro" element={<AdminRegisterPage />} />
+
+        {/* ── Ayuda ────────────────────────────────────────────────────── */}
+        <Route path="/ayuda" element={<HelpAndAbout />} />
 
         {/* ── 404 ─────────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFound />} />
