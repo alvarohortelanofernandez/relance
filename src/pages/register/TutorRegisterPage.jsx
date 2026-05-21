@@ -64,7 +64,6 @@ function PasswordField({ value, onChange, error }) {
           value={value}
           onChange={onChange}
           placeholder="Mínimo 8 caracteres"
-          required
           minLength={8}
           className="input-field pr-10"
         />
