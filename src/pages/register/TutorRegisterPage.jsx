@@ -262,7 +262,7 @@ function SuccessScreen({ navigate }) {
         ¡Bienvenido al equipo!
       </h2>
       <p className="text-sm mb-1" style={{ color: "var(--color-text-muted)" }}>
-        Tu cuenta de administrador ha sido creada correctamente.
+        Tu cuenta de tutor ha sido creada correctamente.
       </p>
       <p className="text-xs mb-8" style={{ color: "var(--color-text-subtle)" }}>
         Revisa tu correo para verificar tu cuenta antes de iniciar sesión.
@@ -302,7 +302,7 @@ export default function AdminRegisterPage() {
       .select("id, entity_id, entity_type, used, expires_at")
       .eq("token", token)
       .eq("entity_id", entityId)
-      .eq("entity_type", "admin")
+      .eq("entity_type", entityType)
       .eq("used", false)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
@@ -351,7 +351,7 @@ export default function AdminRegisterPage() {
       const { error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { full_name: form.fullName, role: "admin" } },
+        options: { data: { full_name: form.fullName, role: "tutor" } },
       });
       if (signUpError) throw signUpError;
       await supabase
@@ -423,7 +423,7 @@ export default function AdminRegisterPage() {
             >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            Invitación de Administrador
+            Invitación de Tutor
           </div>
         </div>
 
@@ -449,7 +449,7 @@ export default function AdminRegisterPage() {
               Completa tu registro
             </h1>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Estás a punto de crear tu cuenta con acceso total a la plataforma
+              Estás a punto de crear tu cuenta como tutor en la plataforma
               Relance.
             </p>
           </div>
@@ -562,36 +562,6 @@ export default function AdminRegisterPage() {
                 )}
             </div>
 
-            {/* Aviso acceso total */}
-            <div
-              className="rounded-xl px-4 py-3 flex gap-3 items-start"
-              style={{
-                background: "var(--color-warning-bg)",
-                border: "1px solid rgba(251,191,36,0.15)",
-              }}
-            >
-              <svg
-                className="flex-shrink-0 mt-0.5"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--color-warning)"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <p
-                className="text-xs leading-relaxed"
-                style={{ color: "var(--color-warning)" }}
-              >
-                Los administradores tienen acceso total a la plataforma.
-                Asegúrate de que este registro es legítimo.
-              </p>
-            </div>
-
             {/* Error */}
             {submitError && (
               <div
@@ -636,7 +606,7 @@ export default function AdminRegisterPage() {
                   Creando cuenta...
                 </>
               ) : (
-                "Registrarme como administrador"
+                "Registrarme como tutor"
               )}
             </button>
           </form>
