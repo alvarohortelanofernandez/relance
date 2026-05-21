@@ -238,7 +238,7 @@ export default function InviteModal({
           imageOptions: {
             crossOrigin: "anonymous",
             margin: 6,
-            imageSize: 0,
+            imageSize: 0.35,
           },
         });
         qrInstance.current.append(qrRef.current);
