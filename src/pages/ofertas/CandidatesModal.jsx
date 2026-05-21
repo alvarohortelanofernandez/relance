@@ -331,7 +331,6 @@ function StatBox({ label, val, color }) {
         {val}
       </p>
       <p
-        className="text-[10px] mt-0.5 uppercase tracking-wider"
         style={{ color: "var(--color-text-subtle)" }}
         className="text-[10px] text-gray-600 mt-0.5 uppercase tracking-wider"
       >
@@ -345,7 +344,6 @@ function StatBox({ label, val, color }) {
 function InfoChip({ icon, label, val }) {
   return (
     <div
-      className="rounded-xl px-3 py-2.5"
       style={{
         background: "var(--color-surface-elevated)",
         border: "1px solid var(--color-border-strong)",
@@ -353,14 +351,12 @@ function InfoChip({ icon, label, val }) {
       className="bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5"
     >
       <p
-        className="text-[10px] uppercase tracking-wider mb-1"
         style={{ color: "var(--color-text-subtle)" }}
         className="text-[10px] text-gray-600 uppercase tracking-wider mb-1"
       >
         {label}
       </p>
       <p
-        className="text-xs font-medium flex items-center gap-1.5"
         style={{ color: "var(--color-text-secondary)" }}
         className="text-gray-300 text-xs font-medium flex items-center gap-1.5"
       >
@@ -921,7 +917,6 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                   Candidatos
                 </h2>
                 <p
-                  className="text-xs mt-0.5 truncate max-w-xs"
                   style={{ color: "var(--color-text-muted)" }}
                   className="text-gray-500 text-xs mt-0.5 truncate max-w-xs"
                 >
@@ -1003,7 +998,6 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
           {/* ── Separador ── */}
           {!loading && candidatos.length > 0 && (
             <div
-              className="h-px mx-6 flex-shrink-0"
               style={{ background: "var(--color-border-strong)" }}
               className="h-px bg-white/8 mx-6 flex-shrink-0"
             />
@@ -1034,14 +1028,12 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                   />
                 </div>
                 <p
-                  className="font-medium text-sm"
                   style={{ color: "var(--color-text-muted)" }}
                   className="text-gray-400 font-medium text-sm"
                 >
                   Aún no hay candidatos
                 </p>
                 <p
-                  className="text-xs mt-1"
                   style={{ color: "var(--color-text-subtle)" }}
                   className="text-gray-600 text-xs mt-1"
                 >
@@ -1108,7 +1100,6 @@ export default function CandidatosModal({ oferta, onClose, supabase }) {
                           <div className="flex items-center gap-3">
                             {e?.titulacion && (
                               <p
-                                className="text-xs truncate"
                                 style={{ color: "var(--color-text-muted)" }}
                                 className="text-gray-500 text-xs truncate"
                               >

@@ -90,9 +90,9 @@ function AppContent() {
   const [safeLoading, setSafeLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const [isInviteFlow, setIsInviteFlow] = useState(
-    () => !!sessionStorage.getItem("invite_context"),
-  );
+  // const [isInviteFlow, setIsInviteFlow] = useState(
+  //   () => !!sessionStorage.getItem("invite_context"),
+  // );
 
   useEffect(() => {
     if (!loading) {
@@ -127,6 +127,12 @@ function AppContent() {
     if (!currentUser) {
       setShowOnboarding(false);
       lastCheckedUserId.current = null;
+      return;
+    }
+
+    const metaRole = currentUser.user_metadata?.role as string | undefined;
+    if (metaRole && ROLES_SIN_ONBOARDING.includes(metaRole)) {
+      setShowOnboarding(false);
       return;
     }
 
@@ -303,10 +309,10 @@ function AppContent() {
     <>
       {showOnboarding && user && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          {isInviteFlow ? (
+          {sessionStorage.getItem("invite_context") ? (
             <OnboardingInviteModal
               user={user}
-              onClose={() => checkOnboarding(user)}
+              onClose={() => setShowOnboarding(false)}
             />
           ) : (
             <OnboardingModal

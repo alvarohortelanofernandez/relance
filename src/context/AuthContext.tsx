@@ -67,6 +67,7 @@ type AuthContextType = {
   avatarUrl: string | null;
   loading: boolean;
   refreshAvatar: () => Promise<void>;
+  refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -120,6 +121,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Refresca solo el avatar desde `usuario.avatar_url`.
    * Llamar tras subir una nueva foto en cualquier perfil.
    */
+  const refreshRole = async () => {
+    if (!user?.email) return;
+    const { data } = await supabase
+      .from("usuario")
+      .select("rol, avatar_url")
+      .eq("email", user.email)
+      .maybeSingle();
+    if (data?.rol) setUserRole(data.rol as UserRole);
+    if (data?.avatar_url !== undefined) setAvatarUrl(data.avatar_url);
+  };
+
   const refreshAvatar = async () => {
     if (!user?.email) return;
     const { data } = await supabase
@@ -221,7 +233,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, userRole, avatarUrl, loading, refreshAvatar, signOut }}
+      value={{
+        user,
+        userRole,
+        avatarUrl,
+        loading,
+        refreshAvatar,
+        refreshRole,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>

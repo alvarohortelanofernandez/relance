@@ -322,10 +322,12 @@ export default function AdminRegisterPage() {
       .select("id, entity_id, entity_type, used, expires_at")
       .eq("token", token)
       .eq("entity_id", entityId)
-      .eq("entity_type", entityType)
+      // .eq("entity_type", entityType)
       .eq("used", false)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
+    console.log("validateToken params:", { token, entityId, entityType });
+
     if (error) {
       console.error(error.message);
       return null;
@@ -402,10 +404,20 @@ export default function AdminRegisterPage() {
         options: { data: { full_name: form.fullName, role: "tutor" } },
       });
       if (signUpError) throw signUpError;
-      await supabase
+
+      const { error: tokenError } = await supabase
         .from("invite_tokens")
-        .update({ used: true, used_at: new Date().toISOString() })
-        .eq("token", token);
+        .update({ used: true })
+        .eq("token", token)
+        .eq("entity_id", entityId);
+
+      if (tokenError)
+        console.error("No se pudo marcar el token:", tokenError.message);
+
+      sessionStorage.setItem(
+        "invite_context",
+        JSON.stringify({ token, entity: entityId, type: entityType }),
+      );
       setPageState("success");
     } catch (err) {
       setSubmitError(
@@ -642,26 +654,6 @@ export default function AdminRegisterPage() {
               )}
               {!fieldErrors.confirmPassword &&
                 form.confirmPassword &&
-                form.confirmPassword === form.password &&
-                form.password.length >= 8 && (
-                  <p
-                    className="text-xs mt-1.5 flex items-center gap-1"
-                    style={{ color: "var(--color-brand)" }}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Coinciden
-                  </p>
-                )}
-              {form.confirmPassword &&
                 form.confirmPassword === form.password &&
                 form.password.length >= 8 && (
                   <p

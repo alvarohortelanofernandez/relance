@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
@@ -29,7 +29,7 @@ function Spinner({ className = "w-5 h-5" }) {
   );
 }
 
-function PasswordField({ value, onChange }) {
+function PasswordField({ value, onChange, error }) {
   const [show, setShow] = useState(false);
   const score = !value
     ? 0
@@ -64,7 +64,6 @@ function PasswordField({ value, onChange }) {
           value={value}
           onChange={onChange}
           placeholder="Mínimo 8 caracteres"
-          required
           minLength={8}
           className="input-field pr-10"
         />
@@ -121,6 +120,26 @@ function PasswordField({ value, onChange }) {
             {labels[score]}
           </span>
         </div>
+      )}
+      {error && (
+        <p
+          className="text-xs mt-1.5 flex items-center gap-1"
+          style={{ color: "var(--color-error)" }}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          {error}
+        </p>
       )}
     </div>
   );
@@ -267,7 +286,10 @@ function SuccessScreen({ navigate }) {
       <p className="text-xs mb-8" style={{ color: "var(--color-text-subtle)" }}>
         Revisa tu correo para verificar tu cuenta antes de iniciar sesión.
       </p>
-      <button onClick={() => navigate("/")} className="btn-primary w-full">
+      <button
+        onClick={() => window.location.replace("/")}
+        className="btn-primary w-full"
+      >
         Ir al inicio
       </button>
     </StateScreen>
@@ -278,13 +300,15 @@ function SuccessScreen({ navigate }) {
 export default function AdminRegisterPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, refreshRole } = useAuth();
 
   const token = params.get("token");
   const entityId = params.get("entity");
   const entityType = params.get("type");
 
   const [pageState, setPageState] = useState("loading");
+  const registeredRef = useRef(false);
+  const initializedRef = useRef(false);
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -294,6 +318,7 @@ export default function AdminRegisterPage() {
   const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const validateToken = async () => {
     if (!token || !entityId || !entityType) return null;
@@ -315,6 +340,9 @@ export default function AdminRegisterPage() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (registeredRef.current) return;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     const init = async () => {
       if (user) {
         setPageState("logged_in");
@@ -332,34 +360,81 @@ export default function AdminRegisterPage() {
 
   const handleSignOut = async () => {
     setPageState("loading");
+    initializedRef.current = false;
     await signOut();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      setSubmitError("Las contraseñas no coinciden.");
+
+    const errors = {};
+
+    if (!form.fullName.trim()) {
+      errors.fullName = "El nombre completo es obligatorio.";
+    } else if (form.fullName.trim().length < 3) {
+      errors.fullName = "El nombre debe tener al menos 3 caracteres.";
+    }
+
+    if (!form.email.trim()) {
+      errors.email = "El correo electrónico es obligatorio.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Introduce un correo electrónico válido.";
+    }
+
+    if (!form.password) {
+      errors.password = "La contraseña es obligatoria.";
+    } else if (form.password.length < 8) {
+      errors.password = "La contraseña debe tener mínimo 8 caracteres.";
+    } else if (!/[A-Z]/.test(form.password)) {
+      errors.password = "Debe contener al menos una letra mayúscula.";
+    } else if (!/[0-9]/.test(form.password)) {
+      errors.password = "Debe contener al menos un número.";
+    }
+
+    if (!form.confirmPassword) {
+      errors.confirmPassword = "Por favor, confirma tu contraseña.";
+    } else if (form.confirmPassword !== form.password) {
+      errors.confirmPassword = "Las contraseñas no coinciden.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    if (form.password.length < 8) {
-      setSubmitError("La contraseña debe tener mínimo 8 caracteres.");
-      return;
-    }
+    setFieldErrors({});
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { full_name: form.fullName, role: "admin" } },
-      });
+      registeredRef.current = true;
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: { data: { full_name: form.fullName, role: "admin" } },
+        });
       if (signUpError) throw signUpError;
+      const userId = signUpData.user?.id;
+      if (userId) {
+        const { error: insertError } = await supabase.from("usuario").upsert(
+          {
+            id: userId,
+            email: form.email,
+            nombre: form.fullName,
+            rol: "admin",
+            is_profile_completed: false,
+          },
+          { onConflict: "id" },
+        );
+        if (insertError) throw insertError;
+      }
       await supabase
         .from("invite_tokens")
         .update({ used: true, used_at: new Date().toISOString() })
         .eq("token", token);
+      await refreshRole();
       setPageState("success");
     } catch (err) {
+      registeredRef.current = false;
       setSubmitError(
         err.message || "Error al crear la cuenta. Inténtalo de nuevo.",
       );
@@ -466,12 +541,34 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="text"
-                required
                 value={form.fullName}
-                onChange={s("fullName")}
+                onChange={(e) => {
+                  s("fullName")(e);
+                  setFieldErrors((fe) => ({ ...fe, fullName: null }));
+                }}
                 placeholder="Tu nombre y apellidos"
-                className="input-field"
+                className={`input-field ${fieldErrors.fullName ? "border-[var(--color-error)]" : ""}`}
               />
+              {fieldErrors.fullName && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.fullName}
+                </p>
+              )}
             </div>
 
             {/* Email */}
@@ -484,12 +581,34 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="email"
-                required
                 value={form.email}
-                onChange={s("email")}
+                onChange={(e) => {
+                  s("email")(e);
+                  setFieldErrors((fe) => ({ ...fe, email: null }));
+                }}
                 placeholder="admin@relance.com"
-                className="input-field"
+                className={`input-field ${fieldErrors.email ? "border-[var(--color-error)]" : ""}`}
               />
+              {fieldErrors.email && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             {/* Contraseña */}
@@ -500,7 +619,14 @@ export default function AdminRegisterPage() {
               >
                 Contraseña
               </label>
-              <PasswordField value={form.password} onChange={s("password")} />
+              <PasswordField
+                value={form.password}
+                onChange={(e) => {
+                  s("password")(e);
+                  setFieldErrors((fe) => ({ ...fe, password: null }));
+                }}
+                error={fieldErrors.password}
+              />
             </div>
 
             {/* Confirmar contraseña */}
@@ -513,34 +639,36 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="password"
-                required
                 value={form.confirmPassword}
-                onChange={s("confirmPassword")}
+                onChange={(e) => {
+                  s("confirmPassword")(e);
+                  setFieldErrors((fe) => ({ ...fe, confirmPassword: null }));
+                }}
                 placeholder="Repite la contraseña"
-                className="input-field"
+                className={`input-field ${fieldErrors.confirmPassword ? "border-[var(--color-error)]" : ""}`}
               />
-              {form.confirmPassword &&
-                form.confirmPassword !== form.password && (
-                  <p
-                    className="text-xs mt-1.5 flex items-center gap-1"
-                    style={{ color: "var(--color-error)" }}
+              {fieldErrors.confirmPassword && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
                   >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
-                    </svg>
-                    No coinciden
-                  </p>
-                )}
-              {form.confirmPassword &&
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+              {!fieldErrors.confirmPassword &&
+                form.confirmPassword &&
                 form.confirmPassword === form.password &&
                 form.password.length >= 8 && (
                   <p

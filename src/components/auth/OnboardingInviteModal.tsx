@@ -167,6 +167,13 @@ function AdminForm({
     nombre: defaultName,
     telefono: "",
   });
+  useEffect(() => {
+    console.log("useEffect defaultName:", JSON.stringify(defaultName));
+
+    if (defaultName) {
+      setForm((f) => ({ ...f, nombre: defaultName }));
+    }
+  }, [defaultName]);
   const set = (k: keyof AdminFormState) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -278,6 +285,13 @@ function TutorEmpresaForm({
     cargo: "",
     telefono: "",
   });
+  useEffect(() => {
+    console.log("useEffect defaultName:", JSON.stringify(defaultName));
+
+    if (defaultName) {
+      setForm((f) => ({ ...f, nombre: defaultName }));
+    }
+  }, [defaultName]);
   const set =
     (k: keyof TutorEmpresaFormState) => (e: ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -422,6 +436,13 @@ function TutorCentroForm({
     departamento: "",
     telefono: "",
   });
+  useEffect(() => {
+    if (defaultName) {
+      console.log("useEffect defaultName:", JSON.stringify(defaultName));
+
+      setForm((f) => ({ ...f, nombre: defaultName }));
+    }
+  }, [defaultName]);
   const set =
     (k: keyof TutorCentroFormState) => (e: ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -693,8 +714,13 @@ export default function OnboardingInviteModal({ user, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaultName =
-    user.user_metadata?.full_name || user.user_metadata?.name || "";
+  const defaultName = (
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    ""
+  )
+    .replace(/\s+/g, " ")
+    .trim();
   const email = user.email ?? "";
 
   // ── Inicialización: validar token ───────────────────────────────────────
@@ -887,6 +913,8 @@ export default function OnboardingInviteModal({ user, onClose }: Props) {
     ),
   };
 
+  console.log("user_metadata:", user.user_metadata);
+  console.log("defaultName:", JSON.stringify(defaultName));
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div
@@ -987,6 +1015,7 @@ export default function OnboardingInviteModal({ user, onClose }: Props) {
             )}
             {inviteRole === "tutor_centro" && (
               <TutorCentroForm
+                key={defaultName}
                 email={email}
                 defaultName={defaultName}
                 entityName={entityName}
