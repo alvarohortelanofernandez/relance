@@ -355,8 +355,6 @@ export default function AdminRegisterPage() {
     await signOut();
   };
 
-  const [fieldErrors, setFieldErrors] = useState({});
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -394,7 +392,7 @@ export default function AdminRegisterPage() {
       setFieldErrors(errors);
       return;
     }
-
+    fieldErrors && setFieldErrors({});
     setSubmitting(true);
     setSubmitError(null);
     try {
