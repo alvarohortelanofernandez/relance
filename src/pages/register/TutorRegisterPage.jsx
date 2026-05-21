@@ -29,7 +29,7 @@ function Spinner({ className = "w-5 h-5" }) {
   );
 }
 
-function PasswordField({ value, onChange }) {
+function PasswordField({ value, onChange, error }) {
   const [show, setShow] = useState(false);
   const score = !value
     ? 0
@@ -121,6 +121,26 @@ function PasswordField({ value, onChange }) {
             {labels[score]}
           </span>
         </div>
+      )}
+      {error && (
+        <p
+          className="text-xs mt-1.5 flex items-center gap-1"
+          style={{ color: "var(--color-error)" }}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          {error}
+        </p>
       )}
     </div>
   );
@@ -294,6 +314,7 @@ export default function AdminRegisterPage() {
   const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const validateToken = async () => {
     if (!token || !entityId || !entityType) return null;
@@ -335,16 +356,46 @@ export default function AdminRegisterPage() {
     await signOut();
   };
 
+  const [fieldErrors, setFieldErrors] = useState({});
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      setSubmitError("Las contraseñas no coinciden.");
+
+    const errors = {};
+
+    if (!form.fullName.trim()) {
+      errors.fullName = "El nombre completo es obligatorio.";
+    } else if (form.fullName.trim().length < 3) {
+      errors.fullName = "El nombre debe tener al menos 3 caracteres.";
+    }
+
+    if (!form.email.trim()) {
+      errors.email = "El correo electrónico es obligatorio.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Introduce un correo electrónico válido.";
+    }
+
+    if (!form.password) {
+      errors.password = "La contraseña es obligatoria.";
+    } else if (form.password.length < 8) {
+      errors.password = "La contraseña debe tener mínimo 8 caracteres.";
+    } else if (!/[A-Z]/.test(form.password)) {
+      errors.password = "Debe contener al menos una letra mayúscula.";
+    } else if (!/[0-9]/.test(form.password)) {
+      errors.password = "Debe contener al menos un número.";
+    }
+
+    if (!form.confirmPassword) {
+      errors.confirmPassword = "Por favor, confirma tu contraseña.";
+    } else if (form.confirmPassword !== form.password) {
+      errors.confirmPassword = "Las contraseñas no coinciden.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    if (form.password.length < 8) {
-      setSubmitError("La contraseña debe tener mínimo 8 caracteres.");
-      return;
-    }
+
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -466,12 +517,34 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="text"
-                required
                 value={form.fullName}
-                onChange={s("fullName")}
+                onChange={(e) => {
+                  s("fullName")(e);
+                  setFieldErrors((fe) => ({ ...fe, fullName: null }));
+                }}
                 placeholder="Tu nombre y apellidos"
-                className="input-field"
+                className={`input-field ${fieldErrors.fullName ? "border-[var(--color-error)]" : ""}`}
               />
+              {fieldErrors.fullName && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.fullName}
+                </p>
+              )}
             </div>
 
             {/* Email */}
@@ -484,12 +557,34 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="email"
-                required
                 value={form.email}
-                onChange={s("email")}
-                placeholder="admin@relance.com"
-                className="input-field"
+                onChange={(e) => {
+                  s("email")(e);
+                  setFieldErrors((fe) => ({ ...fe, email: null }));
+                }}
+                placeholder="tutor@relance.com"
+                className={`input-field ${fieldErrors.email ? "border-[var(--color-error)]" : ""}`}
               />
+              {fieldErrors.email && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             {/* Contraseña */}
@@ -500,7 +595,14 @@ export default function AdminRegisterPage() {
               >
                 Contraseña
               </label>
-              <PasswordField value={form.password} onChange={s("password")} />
+              <PasswordField
+                value={form.password}
+                onChange={(e) => {
+                  s("password")(e);
+                  setFieldErrors((fe) => ({ ...fe, password: null }));
+                }}
+                error={fieldErrors.password}
+              />
             </div>
 
             {/* Confirmar contraseña */}
@@ -513,17 +615,41 @@ export default function AdminRegisterPage() {
               </label>
               <input
                 type="password"
-                required
                 value={form.confirmPassword}
-                onChange={s("confirmPassword")}
+                onChange={(e) => {
+                  s("confirmPassword")(e);
+                  setFieldErrors((fe) => ({ ...fe, confirmPassword: null }));
+                }}
                 placeholder="Repite la contraseña"
-                className="input-field"
+                className={`input-field ${fieldErrors.confirmPassword ? "border-[var(--color-error)]" : ""}`}
               />
-              {form.confirmPassword &&
-                form.confirmPassword !== form.password && (
+              {fieldErrors.confirmPassword && (
+                <p
+                  className="text-xs mt-1.5 flex items-center gap-1"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+              {!fieldErrors.confirmPassword &&
+                form.confirmPassword &&
+                form.confirmPassword === form.password &&
+                form.password.length >= 8 && (
                   <p
                     className="text-xs mt-1.5 flex items-center gap-1"
-                    style={{ color: "var(--color-error)" }}
+                    style={{ color: "var(--color-brand)" }}
                   >
                     <svg
                       width="12"
@@ -533,11 +659,9 @@ export default function AdminRegisterPage() {
                       stroke="currentColor"
                       strokeWidth="2.5"
                     >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    No coinciden
+                    Coinciden
                   </p>
                 )}
               {form.confirmPassword &&
