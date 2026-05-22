@@ -13,7 +13,6 @@ export const useHeroStats = () => {
     empresas: 0,
     centros: 0,
   });
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,31 +20,13 @@ export const useHeroStats = () => {
     const fetchStats = async () => {
       setLoading(true);
       setError(null);
-
       try {
-        const [estudiantesRes, empresasRes, centrosRes] = await Promise.all([
-          supabase
-            .from("usuario")
-            .select("*", { count: "exact", head: true })
-            .eq("rol", "estudiante"),
-          supabase
-            .from("usuario")
-            .select("*", { count: "exact", head: true })
-            .eq("rol", "empresa"),
-          supabase
-            .from("usuario")
-            .select("*", { count: "exact", head: true })
-            .eq("rol", "centro_educativo"),
-        ]);
-
-        if (estudiantesRes.error || empresasRes.error || centrosRes.error) {
-          throw new Error("Error al obtener estadísticas");
-        }
-
+        const { data, error } = await supabase.rpc("get_hero_stats");
+        if (error) throw error;
         setStats({
-          estudiantes: estudiantesRes.count ?? 0,
-          empresas: empresasRes.count ?? 0,
-          centros: centrosRes.count ?? 0,
+          estudiantes: data?.estudiantes ?? 0,
+          empresas: data?.empresas ?? 0,
+          centros: data?.centros ?? 0,
         });
       } catch (err: any) {
         setError(err.message || "Error desconocido");
@@ -53,7 +34,6 @@ export const useHeroStats = () => {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, []);
 
