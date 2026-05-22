@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabase";
-import MainLayout from "../components/layout/MainLayout";
+import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../lib/supabase";
+import MainLayout from "../../components/layout/MainLayout";
 
 // ─── InviteModal props interface (fixes the TS error) ──────────────────────────
 interface InviteModalProps {
@@ -18,7 +18,7 @@ interface InviteModalProps {
 }
 
 // Import with cast so existing InviteModal JS component accepts the typed props
-import InviteModalRaw from "../components/InviteModal";
+import InviteModalRaw from "../../components/InviteModal";
 const InviteModal = InviteModalRaw as React.ComponentType<InviteModalProps>;
 
 // ─── Shared atoms (same style language as CenterEducativePanel) ───────────────

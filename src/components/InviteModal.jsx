@@ -271,7 +271,8 @@ export default function InviteModal({
       return;
     }
     // const BASE_URL = "https://relance-platform.vercel.app";
-    const BASE_URL = "http://192.168.1.227:5173"; // la IP que te muestre Vite
+    //const BASE_URL = "http://192.168.1.227:5173";// la IP que te muestre Vite
+    const BASE_URL = "http://10.15.101.138:5173"; // la IP que te muestre Vite
     // const BASE_URL = "https://abc123.ngrok.io"; // la que te dé ngrok
 
     const url = `${BASE_URL}${inviteRoute}?token=${token}&entity=${user.id}&type=${entityType}`;

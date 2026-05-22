@@ -49,8 +49,8 @@ import UserProfilePage from "./pages/profiles/UserProfilePage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/routes/ProtectedRoute";
 import AdminProfile from "./pages/profiles/AdminProfile";
-import AdministrationPanel from "./pages/AdministrationPanel";
-import CenterEducativePanel from "./pages/CenterEducativePanel";
+import AdministrationPanel from "./pages/panel/AdministrationPanel";
+import CenterEducativePanel from "./pages/panel/CenterEducativePanel";
 import HelpAndAbout from "./pages/help/HelpAndAbout";
 
 import { useEffect, useState, useRef } from "react";

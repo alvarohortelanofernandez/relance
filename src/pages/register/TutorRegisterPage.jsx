@@ -398,10 +398,12 @@ export default function AdminRegisterPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      console.log("entityType:", entityType);
+
       const { error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { full_name: form.fullName, role: "tutor" } },
+        options: { data: { full_name: form.fullName, role: entityType, entity_id: entityId} },
       });
       if (signUpError) throw signUpError;
 
