@@ -70,7 +70,6 @@ export default function UserMenu({ onClose }) {
 
   // Solo ocultamos si no hay usuario en absoluto, nunca por loading
   if (!user) return null;
-  
 
   const handleSignOut = async () => {
     const identities = user?.identities ?? [];
@@ -154,7 +153,7 @@ export default function UserMenu({ onClose }) {
 
     // ADMIN
     {
-      icon: "icon-settings",
+      icon: "icon-dashboard",
       label: "Panel de administración",
       href: "/panel-administracion",
       roles: ["admin"],
@@ -331,26 +330,18 @@ export default function UserMenu({ onClose }) {
             >
               <span className="relative flex-shrink-0">
                 {item.icon === "icon-bell" ? (
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+                  <svg className="w-4 h-4">
+                    <use href="/icons.svg#icon-bell" />
                   </svg>
                 ) : item.icon === "icon-help" ? (
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  // Burbuja de chat con interrogación
+                  <svg className="w-4 h-4">
+                    <use href="/icons.svg#icon-help" />
+                  </svg>
+                ) : item.icon === "icon-dashboard" ? (
+                  // Dashboard / cuadrícula
+                  <svg className="w-4 h-4">
+                    <use href="/icons.svg#icon-dashboard" />
                   </svg>
                 ) : (
                   <svg className="w-4 h-4" viewBox="0 0 640 640">
@@ -406,7 +397,7 @@ export default function UserMenu({ onClose }) {
               e.currentTarget.style.color = "var(--color-error)";
             }}
           >
-            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 640 640">
+            <svg className="w-4 h-8 flex-shrink-0" viewBox="0 0 640 640">
               <use
                 href="/icons.svg#icon-exit"
                 xlinkHref="/icons.svg#icon-exit"

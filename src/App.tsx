@@ -81,7 +81,7 @@ function OfertaDirecta() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshRole } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
 
   // safeLoading: solo bloquea la UI en la carga inicial.
@@ -148,7 +148,7 @@ function AppContent() {
       const { data, error } = await supabase
         .from("usuario")
         .select("is_profile_completed, rol")
-        .eq("id", currentUser.id)
+        .eq("email", currentUser.email)
         .maybeSingle();
 
       if (error) throw error;
@@ -167,32 +167,30 @@ function AppContent() {
 
       // Mientras no haya rol en BD, mantenemos el modal abierto de forma forzada
       // (caso típico en altas automáticas con Google sin completar onboarding).
-      console.log("checkOnboarding data:", data);
-      if (!data.rol) {
-        setShowOnboarding(true);
-        return;
-      }
-
-      // Añade "admin" a la lista
-      const ROLES_SIN_ONBOARDING = [
+      const ROLES_VALIDOS = [
         "estudiante",
         "empresa",
         "centro_educativo",
         "tutor_empresa",
         "tutor_centro",
         "tutor",
-        "admin", // ← añade esto
+        "admin",
       ];
 
-      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
-        setShowOnboarding(false);
+      // Sin rol o rol desconocido → onboarding
+      if (!data.rol || !ROLES_VALIDOS.includes(data.rol)) {
+        setShowOnboarding(true);
         return;
       }
 
-      if (ROLES_SIN_ONBOARDING.includes(data.rol)) {
-        setShowOnboarding(false);
+      // Rol asignado por trigger pero perfil sin completar → onboarding
+      if (!data.is_profile_completed) {
+        setShowOnboarding(true);
         return;
       }
+
+      // Todo OK → no mostrar
+      setShowOnboarding(false);
     } catch (err) {
       console.warn("checkOnboarding error:", err);
       setShowOnboarding(false);

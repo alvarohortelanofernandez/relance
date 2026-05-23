@@ -21,12 +21,9 @@ function SendInviteEmailModal({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: fnError } = await supabase.functions.invoke(
-      "send-invite-email",
-      {
-        body: { to: email, inviterName, inviterType, inviteUrl },
-      },
-    );
+    const { error: fnError } = await supabase.functions.invoke("resend-email", {
+      body: { to: email, inviterName, inviterType, inviteUrl },
+    });
     setLoading(false);
     if (fnError) setError("No se pudo enviar el correo. Inténtalo de nuevo.");
     else setSent(true);

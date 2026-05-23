@@ -13,84 +13,100 @@ export default function HeroSection({ onRegisterClick }) {
   const profileUrl = getRoleRoute(userRole);
 
   return (
-    <section
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ background: "var(--color-bg)" }}
-    >
-      {/* Grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(192,255,114,1) 1px, transparent 1px), linear-gradient(90deg, rgba(192,255,114,1) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
-      />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="hero-bg" />
+      {/* Fondo: cuadrícula + spotlight */}
+      {/* <div
+        className="absolute inset-0"
+        style={{ background: "var(--color-bg)" }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(to right, #4f4f4f2e 1px, transparent 1px), linear-gradient(to bottom, #8080800a 1px, transparent 1px)`,
+            backgroundSize: "14px 24px",
+          }}
+        />
+        <div
+          className="absolute left-0 right-0 rounded-full"
+          style={{
+            top: "-10%",
+            height: 1000,
+            width: 1000,
+            margin: "0 auto",
+            background:
+              "radial-gradient(circle 400px at 50% 300px, #fbfbfb36, var(--color-bg))",
+          }}
+        />
+      </div> */}
 
-      {/* Central glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        style={{
-          width: 700,
-          height: 500,
-          borderRadius: "50%",
-          opacity: 0.07,
-          filter: "blur(120px)",
-          background:
-            "radial-gradient(ellipse, #c0ff72 0%, #1a3a5c 60%, transparent 100%)",
-        }}
-      />
-
-      {/* Bottom-right accent */}
-      <div
-        className="absolute bottom-20 right-10 pointer-events-none"
-        style={{
-          width: 320,
-          height: 320,
-          borderRadius: "50%",
-          opacity: 0.08,
-          filter: "blur(80px)",
-          background: "#1e4a8a",
-        }}
-      />
-
-      {/* Top-left accent */}
-      <div
-        className="absolute top-10 left-0 pointer-events-none"
-        style={{
-          width: 400,
-          height: 300,
-          borderRadius: "50%",
-          opacity: 0.06,
-          filter: "blur(100px)",
-          background: "#0a1f4e",
-        }}
-      />
-
+      {/* ── Contenido ── */}
       <div
         style={{
           position: "relative",
           zIndex: 10,
           maxWidth: 860,
           margin: "0 auto",
-          padding: "0 20px",
+          padding: "0 24px",
           textAlign: "center",
         }}
       >
-        {/* Título — más compacto en portátil */}
+        {/* Badge flotante */}
+        <div
+          className="animate-hero-in opacity-0"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            borderRadius: 999,
+            marginBottom: "1.5rem",
+            animationDelay: "0s",
+            background: "rgba(192,255,114,0.06)",
+            border: "1px solid rgba(192,255,114,0.18)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "#c0ff72",
+              boxShadow: "0 0 8px rgba(192,255,114,0.8)",
+              display: "inline-block",
+              animation: "pulse 2s ease-in-out infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#c0ff72",
+              letterSpacing: "0.08em",
+              fontFamily: "Plus Jakarta Sans, sans-serif",
+              textTransform: "uppercase",
+            }}
+          >
+            Plataforma de prácticas profesionales
+          </span>
+        </div>
+
+        {/* Título */}
         <h1
           className="animate-hero-in opacity-0"
           style={{
             fontFamily: "Syne, sans-serif",
-            fontSize: "clamp(2rem, 5vw, 3.5rem)", // ← fluido: 32px → 56px
+            fontSize: "clamp(2.2rem, 5.5vw, 3.8rem)",
             fontWeight: 800,
             color: "white",
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-            marginBottom: "1.25rem", // ← mb-6 → mb-5
+            lineHeight: 1.08,
+            letterSpacing: "-0.03em",
+            marginBottom: "1.5rem",
             animationDelay: "0.1s",
           }}
         >
-          Conecta talento con{" "}
+          Conecta talento con <br className="hidden sm:block" />
           <span
             className="text-brand"
             style={{ textShadow: "0 0 40px rgba(192,255,114,0.3)" }}
@@ -103,20 +119,46 @@ export default function HeroSection({ onRegisterClick }) {
         <p
           className="animate-hero-in opacity-0"
           style={{
-            color: "#9ca3af",
-            fontSize: "clamp(0.9rem, 2vw, 1.1rem)", // ← fluido: 14.4px → 17.6px
-            maxWidth: 560,
-            margin: "0 auto 2rem", // ← mb-10 → mb-8
-            lineHeight: 1.65,
+            color: "rgba(156,163,175,0.9)",
+            fontSize: "clamp(0.9rem, 2vw, 1.05rem)",
+            maxWidth: 520,
+            margin: "0 auto 2.5rem",
+            lineHeight: 1.7,
             animationDelay: "0.2s",
             fontFamily: "Plus Jakarta Sans, sans-serif",
           }}
         >
           La plataforma que une{" "}
-          <span style={{ color: "#d1d5db", fontWeight: 500 }}>estudiantes</span>
-          , <span style={{ color: "#d1d5db", fontWeight: 500 }}>empresas</span>{" "}
+          <span
+            style={{
+              color: "rgba(255,255,255,0.85)",
+              fontWeight: 500,
+              borderBottom: "1px solid rgba(192,255,114,0.3)",
+              paddingBottom: 1,
+            }}
+          >
+            estudiantes
+          </span>
+          ,{" "}
+          <span
+            style={{
+              color: "rgba(255,255,255,0.85)",
+              fontWeight: 500,
+              borderBottom: "1px solid rgba(192,255,114,0.3)",
+              paddingBottom: 1,
+            }}
+          >
+            empresas
+          </span>{" "}
           y{" "}
-          <span style={{ color: "#d1d5db", fontWeight: 500 }}>
+          <span
+            style={{
+              color: "rgba(255,255,255,0.85)",
+              fontWeight: 500,
+              borderBottom: "1px solid rgba(192,255,114,0.3)",
+              paddingBottom: 1,
+            }}
+          >
             centros educativos
           </span>{" "}
           en un mismo lugar.
@@ -134,31 +176,85 @@ export default function HeroSection({ onRegisterClick }) {
             animationDelay: "0.35s",
           }}
         >
-          {!user && (
+          {user ? (
+            <a
+              href={profileUrl}
+              className="btn-primary"
+              style={{
+                fontSize: 13,
+                padding: "11px 28px",
+                borderRadius: 12,
+                boxShadow:
+                  "0 0 0 1px rgba(192,255,114,0.3), 0 8px 32px rgba(192,255,114,0.15)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                fontFamily: "Plus Jakarta Sans, sans-serif",
+                fontWeight: 700,
+                transition: "box-shadow 0.3s, transform 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 1px rgba(192,255,114,0.5), 0 12px 40px rgba(192,255,114,0.25)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 1px rgba(192,255,114,0.3), 0 8px 32px rgba(192,255,114,0.15)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Ir a mi perfil
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          ) : (
             <button
               onClick={onRegisterClick}
               className="btn-primary"
               style={{
-                fontSize: 13, // ← text-base(16) → 13
-                padding: "10px 24px", // ← py-3.5 px-8 → más compacto
+                fontSize: 13,
+                padding: "11px 28px",
                 borderRadius: 12,
-                boxShadow: "0 8px 24px rgba(192,255,114,0.2)",
+                boxShadow:
+                  "0 0 0 1px rgba(192,255,114,0.3), 0 8px 32px rgba(192,255,114,0.15)",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                transition: "box-shadow 0.3s",
                 fontFamily: "Plus Jakarta Sans, sans-serif",
                 fontWeight: 700,
+                transition: "box-shadow 0.3s, transform 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 1px rgba(192,255,114,0.5), 0 12px 40px rgba(192,255,114,0.25)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 1px rgba(192,255,114,0.3), 0 8px 32px rgba(192,255,114,0.15)";
+                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Empieza gratis
               <svg
-                width="16"
-                height="16"
+                width="15"
+                height="15"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -167,52 +263,40 @@ export default function HeroSection({ onRegisterClick }) {
             </button>
           )}
 
-          {user && (
-            <a
-              href={profileUrl}
-              className="btn-primary"
-              style={{
-                fontSize: 13,
-                padding: "10px 24px",
-                borderRadius: 12,
-                boxShadow: "0 8px 24px rgba(192,255,114,0.2)",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                textDecoration: "none",
-                fontFamily: "Plus Jakarta Sans, sans-serif",
-                fontWeight: 700,
-              }}
-            >
-              Ir a mi perfil
-              <svg className="size-6" viewBox="0 0 24 24" strokeWidth="2">
-                <use href="icons.svg#icon-arrowStart" />
-              </svg>
-            </a>
-          )}
-
-          <button
-            onClick={scrollToNext}
+          {/* Botón secundario: Ver ofertas */}
+          <a
+            href="/ofertas"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              color: "#9ca3af",
-              fontSize: 12, // ← text-sm(14) → 12
-              fontWeight: 500,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              transition: "color 0.2s",
+              gap: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.6)",
+              textDecoration: "none",
+              padding: "11px 22px",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.03)",
+              backdropFilter: "blur(8px)",
               fontFamily: "Plus Jakarta Sans, sans-serif",
+              transition: "all 0.2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "white")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#9ca3af")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.6)";
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+            }}
           >
-            Saber más
+            Ver ofertas
             <svg
-              width="14"
-              height="14"
+              width="13"
+              height="13"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -220,21 +304,21 @@ export default function HeroSection({ onRegisterClick }) {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M12 5v14M5 12l7 7 7-7" />
+              <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-          </button>
+          </a>
         </div>
 
         {/* Stats */}
         <div
           className="animate-hero-in opacity-0"
           style={{
-            marginTop: "3rem", // ← mt-16 → mt-12
+            marginTop: "3.5rem",
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "center",
-            gap: "1.5rem 2.5rem", // ← gap-8 sm:gap-12 → más compacto
+            gap: 0,
             animationDelay: "0.5s",
           }}
         >
@@ -251,24 +335,36 @@ export default function HeroSection({ onRegisterClick }) {
               value: stats?.centros ? stats.centros + "+" : "0+",
               label: "Centros educativos",
             },
-          ].map((stat) => (
-            <div key={stat.label} style={{ textAlign: "center" }}>
+          ].map((stat, i, arr) => (
+            <div
+              key={stat.label}
+              style={{
+                textAlign: "center",
+                padding: "0 2.5rem",
+                borderRight:
+                  i < arr.length - 1
+                    ? "1px solid rgba(255,255,255,0.07)"
+                    : "none",
+              }}
+            >
               <div
                 style={{
                   fontFamily: "Syne, sans-serif",
-                  fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)", // ← text-2xl fluido
-                  fontWeight: 700,
+                  fontSize: "clamp(1.3rem, 2.5vw, 1.7rem)",
+                  fontWeight: 800,
                   color: "white",
+                  letterSpacing: "-0.02em",
                 }}
               >
                 {stat.value}
               </div>
               <div
                 style={{
-                  fontSize: 10.5, // ← text-xs(12) → 10.5
-                  color: "#6b7280",
-                  marginTop: 2,
+                  fontSize: 11,
+                  color: "rgba(107,114,128,0.9)",
+                  marginTop: 3,
                   fontFamily: "Plus Jakarta Sans, sans-serif",
+                  letterSpacing: "0.02em",
                 }}
               >
                 {stat.label}
@@ -278,29 +374,16 @@ export default function HeroSection({ onRegisterClick }) {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 28,
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
-          color: "#4b5563",
-        }}
-      >
-        <div
-          style={{
-            width: 1,
-            height: 28,
-            background:
-              "linear-gradient(to bottom, transparent, rgba(192,255,114,0.4))",
-          }}
-        />
-      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        @keyframes scrollPulse {
+          0%, 100% { opacity: 0.5; transform: scaleY(1); }
+          50% { opacity: 1; transform: scaleY(1.1); }
+        }
+      `}</style>
     </section>
   );
 }

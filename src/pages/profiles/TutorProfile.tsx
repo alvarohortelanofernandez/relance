@@ -3,41 +3,156 @@ import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
 import MainLayout from "../../components/layout/MainLayout";
 
-// ─── Section Card ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ESTILOS COMPARTIDOS
+// ─────────────────────────────────────────────────────────────────────────────
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 11,
+  color: "var(--color-text-muted)",
+  marginBottom: 5,
+  fontFamily: "Plus Jakarta Sans, sans-serif",
+};
 
+const inputSmall: React.CSSProperties = {
+  fontSize: 12,
+  padding: "8px 11px",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ICONOS
+// ─────────────────────────────────────────────────────────────────────────────
+interface IconProps {
+  size?: number;
+}
+
+function IconCamera({ size = 12 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+function IconCheck({ size = 13 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="animate-spin"
+      style={{ width: 14, height: 14 }}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+        style={{ opacity: 0.25 }}
+      />
+      <path
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        style={{ opacity: 0.75 }}
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION CARD
+// ─────────────────────────────────────────────────────────────────────────────
 function SectionCard({
   title,
+  subtitle,
   children,
 }: {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="section-card">
-      <p className="section-card-label">{title}</p>
+    <section
+      style={{
+        background: "var(--color-surface-strong)",
+        border: "1px solid var(--color-border-strong)",
+        borderRadius: 14,
+        padding: "18px 20px",
+      }}
+    >
+      <div style={{ marginBottom: 14 }}>
+        <h2
+          style={{
+            fontFamily: "Plus Jakarta Sans, sans-serif",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--color-text-subtle)",
+            margin: 0,
+          }}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p
+            style={{
+              color: "var(--color-text-muted)",
+              fontSize: 11,
+              marginTop: 3,
+              marginBottom: 0,
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+      </div>
       {children}
     </section>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+// PÁGINA PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
 export default function TutorProfile() {
-  const { user, userRole, avatarUrl, refreshAvatar } = useAuth();
+  const { user, userRole, avatarUrl: ctxAvatarUrl, refreshAvatar } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const meta = user?.user_metadata ?? {};
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(ctxAvatarUrl);
   const [fullName, setFullName] = useState<string>(meta.full_name ?? "");
-  const [bio, setBio] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [specialty, setSpecialty] = useState<string>(meta.specialty ?? "");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState<string>("");
-  const [linkedinUrl, setLinkedinUrl] = useState<string>("");
   const [entityInfo, setEntityInfo] = useState<{ name: string } | null>(null);
 
   const role = userRole ?? meta.role ?? "";
@@ -49,336 +164,218 @@ export default function TutorProfile() {
   const initials = fullName
     .split(" ")
     .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase())
+    .map((n: string) => n[0]?.toUpperCase())
     .join("");
 
-  // ─── Load data ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setAvatarUrl(ctxAvatarUrl);
+  }, [ctxAvatarUrl]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id || !role) return;
+    if (role !== "tutor_empresa" && role !== "tutor_centro" && role !== "tutor")
+      return;
+
     const isEmpresa = role === "tutor_empresa";
     const tutorTable = isEmpresa ? "tutor_empresa" : "tutor_centro";
-    const entityFk = isEmpresa ? "empresa_id" : "centro_id";
 
     const load = async () => {
       const { data } = await supabase
         .from(tutorTable)
         .select("*")
-        .eq("id", user.id)
+        .eq("usuario_id", user.id)
         .maybeSingle();
 
       if (data) {
         setFullName(data.nombre ?? meta.full_name ?? "");
-        setBio(data.bio ?? "");
         setPhone(data.telefono ?? "");
         setSpecialty(
           isEmpresa ? (data.cargo ?? "") : (data.departamento ?? ""),
         );
-        setSkills(data.habilidades ?? []);
-        setLinkedinUrl(data.linkedin ?? "");
+
+        if (isEmpresa) {
+          const { data: empresaTutorRow } = await supabase
+            .from("empresa_tutor")
+            .select("id_empresa")
+            .eq("id_tutor", data.id)
+            .maybeSingle();
+          if (empresaTutorRow?.id_empresa) {
+            const { data: emp } = await supabase
+              .from("empresa")
+              .select("nombre")
+              .eq("id", empresaTutorRow.id_empresa)
+              .maybeSingle();
+            if (emp) setEntityInfo({ name: emp.nombre || "Empresa" });
+          }
+        } else {
+          const { data: centroTutorRow } = await supabase
+            .from("centro_tutor")
+            .select("id_centro")
+            .eq("id_tutor", data.id)
+            .maybeSingle();
+          if (centroTutorRow?.id_centro) {
+            const { data: cen } = await supabase
+              .from("centro_educativo")
+              .select("nombre")
+              .eq("id", centroTutorRow.id_centro)
+              .maybeSingle();
+            if (cen) setEntityInfo({ name: cen.nombre || "Centro" });
+          }
+        }
       } else {
         setFullName(meta.full_name ?? "");
         setSpecialty(meta.specialty ?? "");
       }
-
-      const entityId = data?.[entityFk] ?? meta.entity_id;
-      if (entityId) {
-        if (isEmpresa) {
-          const { data: emp } = await supabase
-            .from("empresa")
-            .select("nombre")
-            .eq("id_usuario", entityId)
-            .maybeSingle();
-          if (emp) setEntityInfo({ name: emp.nombre || "Empresa" });
-        } else {
-          const { data: cen } = await supabase
-            .from("centro_educativo")
-            .select("nombre")
-            .eq("id_centro", entityId)
-            .maybeSingle();
-          if (cen) setEntityInfo({ name: cen.nombre || "Centro" });
-        }
-      }
     };
+
     load();
-  }, [user, userRole]);
+  }, [user?.id, role]);
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError("La imagen no puede superar 2 MB.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setUploadError("Formato no válido. Usa JPG, PNG o WebP.");
+      return;
+    }
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    setUploadError(null);
+    const ext = file.name.split(".").pop()?.toLowerCase();
     const path = `avatars/${user.id}.${ext}`;
     const { error } = await supabase.storage
       .from("profiles")
-      .upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = supabase.storage.from("profiles").getPublicUrl(path);
-      await supabase
-        .from("usuario")
-        .update({
-          avatar_url: data.publicUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-      await refreshAvatar();
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      setUploadError("Error al subir: " + error.message);
+      setUploading(false);
+      return;
     }
+    const { data } = supabase.storage.from("profiles").getPublicUrl(path);
+    const freshUrl = `${data.publicUrl}?t=${Date.now()}`;
+    setAvatarUrl(freshUrl);
+    await supabase
+      .from("usuario")
+      .update({ avatar_url: freshUrl, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    await refreshAvatar();
     setUploading(false);
   };
 
-  const handleSkillKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && skillInput.trim()) {
-      e.preventDefault();
-      if (!skills.includes(skillInput.trim()))
-        setSkills([...skills, skillInput.trim()]);
-      setSkillInput("");
-    }
-  };
-
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!user) return;
     setSaving(true);
+    setSaveError(null);
     const isEmpresa = role === "tutor_empresa";
     const tutorTable = isEmpresa ? "tutor_empresa" : "tutor_centro";
 
     const payload = isEmpresa
       ? {
-          id: user.id,
           nombre: fullName,
-          bio,
           telefono: phone,
           cargo: specialty,
-          habilidades: skills,
-          linkedin: linkedinUrl,
-          updated_at: new Date().toISOString(),
         }
       : {
-          id: user.id,
           nombre: fullName,
-          bio,
           telefono: phone,
           departamento: specialty,
-          habilidades: skills,
-          linkedin: linkedinUrl,
-          updated_at: new Date().toISOString(),
         };
 
-    await supabase.from(tutorTable).upsert(payload, { onConflict: "id" });
+    // Comprobamos si ya existe un registro para este usuario
+    const { data: existing } = await supabase
+      .from(tutorTable)
+      .select("id")
+      .eq("usuario_id", user.id)
+      .maybeSingle();
+
+    let errorMsg: string | null = null;
+
+    if (existing?.id) {
+      // Ya existe → UPDATE
+      const { error } = await supabase
+        .from(tutorTable)
+        .update(payload)
+        .eq("usuario_id", user.id);
+      if (error) errorMsg = error.message;
+    } else {
+      // No existe → INSERT
+      const { error } = await supabase
+        .from(tutorTable)
+        .insert({ ...payload, usuario_id: user.id });
+      if (error) errorMsg = error.message;
+    }
+
+    // Actualizamos también la tabla usuario
     await supabase
       .from("usuario")
       .update({ nombre: fullName, updated_at: new Date().toISOString() })
       .eq("id", user.id);
 
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (errorMsg) setSaveError("Error al guardar: " + errorMsg);
+    else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // Colores unificados con StudentProfile — siempre brand verde
+  const accentColor = "var(--color-brand)";
+  const accentBg = "rgba(192,255,114,0.08)";
+  const accentBorder = "rgba(192,255,114,0.2)";
 
   return (
     <MainLayout>
-      <div
-        style={{
-          maxWidth: 680,
-          margin: "0 auto",
-          padding: "3rem 1.25rem",
-        }}
-      >
-        {/* ── Page header ── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: "2rem",
-            gap: "1rem",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontFamily: "Syne, sans-serif",
-                fontSize: "1.875rem",
-                fontWeight: 800,
-                color: "var(--color-text)",
-                marginBottom: "0.375rem",
-                lineHeight: 1.15,
-              }}
-            >
-              Mi perfil
-            </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {/* Role dot */}
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: isCompanyTutor ? "var(--color-brand)" : "#63b3ed",
-                  display: "inline-block",
-                  flexShrink: 0,
-                }}
-              />
-              <p
-                style={{
-                  color: "var(--color-text-muted)",
-                  fontSize: "0.875rem",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                }}
-              >
-                {roleLabel}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary"
+      <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+        <main style={{ maxWidth: 680, margin: "0 auto", padding: "32px 16px" }}>
+          {/* ── CABECERA ── */}
+          <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              opacity: saving ? 0.6 : 1,
-              flexShrink: 0,
+              justifyContent: "space-between",
+              marginBottom: 24,
             }}
           >
-            {saving ? (
-              <>
-                <svg
-                  className="animate-spin"
-                  style={{ width: 15, height: 15 }}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    style={{ opacity: 0.25 }}
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    style={{ opacity: 0.75 }}
-                  />
-                </svg>
-                Guardando…
-              </>
-            ) : saved ? (
-              <>
-                <svg
-                  style={{ width: 15, height: 15 }}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Guardado
-              </>
-            ) : (
-              "Guardar cambios"
-            )}
-          </button>
-        </div>
-
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-        >
-          {/* ── Entidad vinculada ── */}
-          {entityInfo && (
-            <div
-              style={{
-                background: "rgba(192,255,114,0.04)",
-                border: "1px solid rgba(192,255,114,0.14)",
-                borderRadius: "1rem",
-                padding: "1rem 1.25rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "1rem",
-              }}
-            >
-              <div
+            <div>
+              <h1
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "0.75rem",
-                  background: "var(--color-surface-elevated)",
-                  border: "1px solid var(--color-border-strong)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  fontFamily: "Syne, sans-serif",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: "var(--color-text)",
+                  margin: 0,
                 }}
               >
-                {isCompanyTutor ? (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--color-brand)"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="2" y="7" width="20" height="14" rx="2" />
-                    <path d="M16 7V5a2 2 0 0 0-4 0v2" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#63b3ed"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
-                  </svg>
-                )}
-              </div>
-              <div>
+                Mi perfil
+              </h1>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginTop: 4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: accentColor,
+                    display: "inline-block",
+                  }}
+                />
                 <p
                   style={{
-                    fontSize: "0.7rem",
                     color: "var(--color-text-muted)",
-                    marginBottom: 2,
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                  }}
-                >
-                  Vinculado a
-                </p>
-                <p
-                  style={{
-                    fontFamily: "Syne, sans-serif",
-                    fontWeight: 700,
-                    color: "var(--color-text)",
-                    fontSize: "1rem",
-                  }}
-                >
-                  {entityInfo.name}
-                </p>
-                <p
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--color-brand)",
-                    marginTop: 2,
+                    fontSize: 11,
+                    margin: 0,
                     fontFamily: "Plus Jakarta Sans, sans-serif",
                   }}
                 >
@@ -386,364 +383,368 @@ export default function TutorProfile() {
                 </p>
               </div>
             </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                padding: "7px 14px",
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {saving ? (
+                <>
+                  <Spinner /> Guardando...
+                </>
+              ) : saved ? (
+                <>
+                  <IconCheck /> Guardado
+                </>
+              ) : (
+                "Guardar cambios"
+              )}
+            </button>
+          </div>
+
+          {saveError && (
+            <div
+              style={{
+                marginBottom: 16,
+                background: "var(--color-error-bg)",
+                border: "1px solid rgba(248,113,113,0.3)",
+                borderRadius: 10,
+                padding: "10px 14px",
+                color: "#f87171",
+                fontSize: 12,
+              }}
+            >
+              {saveError}
+            </div>
           )}
 
-          {/* ── Avatar ── */}
-          <SectionCard title="Foto de perfil">
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}
-            >
-              {/* Avatar */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={fullName}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* ── ENTIDAD VINCULADA ── */}
+            {entityInfo && (
+              <div
+                style={{
+                  background: "var(--color-surface-strong)",
+                  border: `1px solid ${accentBorder}`,
+                  borderRadius: 14,
+                  padding: "14px 18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: "var(--color-surface-elevated)",
+                    border: "1px solid var(--color-border-strong)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isCompanyTutor ? (
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={accentColor}
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="2" y="7" width="20" height="14" rx="2" />
+                      <path d="M16 7V5a2 2 0 0 0-4 0v2" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={accentColor}
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p
                     style={{
-                      width: 76,
-                      height: 76,
-                      borderRadius: "0.875rem",
-                      objectFit: "cover",
-                      border: "1px solid var(--color-border-strong)",
+                      fontSize: 9,
+                      color: "var(--color-text-muted)",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                      margin: "0 0 2px",
                     }}
-                  />
-                ) : (
-                  <div
+                  >
+                    Vinculado a
+                  </p>
+                  <p
                     style={{
-                      width: 76,
-                      height: 76,
-                      borderRadius: "0.875rem",
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 700,
+                      color: "var(--color-text)",
+                      fontSize: "0.95rem",
+                      margin: "0 0 2px",
+                    }}
+                  >
+                    {entityInfo.name}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: accentColor,
+                      margin: 0,
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}
+                  >
+                    {roleLabel}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── 1. INFORMACIÓN PERSONAL (incluye foto) ── */}
+            <SectionCard title="Información personal">
+              {/* Foto de perfil */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={fullName}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 14,
+                        objectFit: "cover",
+                        border: "2px solid var(--color-border-strong)",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 14,
+                        background: accentBg,
+                        border: `1px solid ${accentBorder}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "Syne, sans-serif",
+                        fontWeight: 800,
+                        fontSize: "1.4rem",
+                        color: accentColor,
+                      }}
+                    >
+                      {initials || "?"}
+                    </div>
+                  )}
+                  {uploading && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: 14,
+                        background: "rgba(0,0,0,0.7)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Spinner />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setUploadError(null);
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={uploading}
+                    style={{
+                      position: "absolute",
+                      bottom: -6,
+                      right: -6,
+                      width: 26,
+                      height: 26,
+                      borderRadius: "50%",
                       background: "var(--color-brand)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontFamily: "Syne, sans-serif",
-                      fontWeight: 800,
-                      fontSize: "1.5rem",
-                      color: "var(--color-bg)",
+                      color: "#02050d",
+                      border: "2px solid var(--color-surface-strong)",
+                      cursor: "pointer",
+                      opacity: uploading ? 0.5 : 1,
                     }}
                   >
-                    {initials || "?"}
-                  </div>
-                )}
-                {uploading && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      borderRadius: "0.875rem",
-                      background: "rgba(3,8,15,0.7)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      className="animate-spin"
-                      style={{
-                        width: 20,
-                        height: 20,
-                        color: "var(--color-brand)",
-                      }}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        style={{ opacity: 0.25 }}
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        style={{ opacity: 0.75 }}
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-
-              {/* Info + upload */}
-              <div>
-                <p
-                  style={{
-                    fontFamily: "Syne, sans-serif",
-                    fontWeight: 700,
-                    color: "var(--color-text)",
-                    fontSize: "1.1rem",
-                    marginBottom: 2,
-                  }}
-                >
-                  {fullName || "Sin nombre"}
-                </p>
-                <p
-                  style={{
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.8rem",
-                    marginBottom: "0.875rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  {user?.email}
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handleAvatarUpload}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="btn-secondary"
-                  style={{ fontSize: "0.75rem", padding: "0.375rem 0.875rem" }}
-                >
-                  Cambiar foto
-                </button>
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* ── Info personal ── */}
-          <SectionCard title="Información personal">
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.875rem",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "0.375rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  Nombre completo
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Tu nombre y apellidos"
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "0.375rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  Sobre mí
-                </label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value.slice(0, 300))}
-                  rows={3}
-                  placeholder="Describe tu experiencia como tutor, áreas en las que puedes orientar a los estudiantes…"
-                  className="input-field"
-                  style={{ resize: "none" }}
-                />
-                <p
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "var(--color-text-subtle)",
-                    textAlign: "right",
-                    marginTop: "0.25rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  {bio.length}/300
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.75rem",
-                }}
-              >
+                    <IconCamera size={12} />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: "none" }}
+                    onChange={handleAvatarUpload}
+                  />
+                </div>
                 <div>
-                  <label
+                  <p
                     style={{
-                      display: "block",
-                      fontSize: "0.75rem",
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 700,
+                      color: "var(--color-text)",
+                      fontSize: "1rem",
+                      margin: "0 0 2px",
+                    }}
+                  >
+                    {fullName || "Sin nombre"}
+                  </p>
+                  <p
+                    style={{
                       color: "var(--color-text-muted)",
-                      marginBottom: "0.375rem",
+                      fontSize: "0.75rem",
+                      margin: "0 0 4px",
                       fontFamily: "Plus Jakarta Sans, sans-serif",
                     }}
                   >
-                    {isCompanyTutor ? "Cargo" : "Departamento"}
-                  </label>
+                    {user?.email}
+                  </p>
+                  <p
+                    style={{
+                      color: "var(--color-text-subtle)",
+                      fontSize: 10,
+                      margin: 0,
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}
+                  >
+                    JPG, PNG o WebP · Máx. 2 MB
+                  </p>
+                  {uploadError && (
+                    <p
+                      style={{
+                        color: "#f87171",
+                        fontSize: 10,
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {uploadError}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Campos */}
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                <div>
+                  <label style={labelStyle}>Nombre completo</label>
                   <input
                     type="text"
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    placeholder="Desarrollo Web, Diseño…"
+                    value={fullName}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFullName(e.target.value)
+                    }
+                    placeholder="Tu nombre y apellidos"
                     className="input-field"
+                    style={inputSmall}
                   />
                 </div>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "var(--color-text-muted)",
-                      marginBottom: "0.375rem",
-                      fontFamily: "Plus Jakarta Sans, sans-serif",
-                    }}
-                  >
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+34 600 000 000"
-                    className="input-field"
-                  />
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <label style={labelStyle}>
+                      {isCompanyTutor ? "Cargo" : "Departamento"}
+                    </label>
+                    <input
+                      type="text"
+                      value={specialty}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setSpecialty(e.target.value)
+                      }
+                      placeholder="Desarrollo Web, Diseño…"
+                      className="input-field"
+                      style={inputSmall}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Teléfono</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setPhone(e.target.value)
+                      }
+                      placeholder="+34 600 000 000"
+                      className="input-field"
+                      style={inputSmall}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
 
-          {/* ── Habilidades ── */}
-          <SectionCard title="Áreas de conocimiento">
-            <input
-              type="text"
-              value={skillInput}
-              onChange={(e) => setSkillInput(e.target.value)}
-              onKeyDown={handleSkillKey}
-              placeholder="Escribe un área y pulsa Enter…"
-              className="input-field"
-              style={{ marginBottom: "0.875rem" }}
-            />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {skills.map((s) => (
-                <span
-                  key={s}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.375rem",
-                    background: "rgba(192,255,114,0.08)",
-                    border: "1px solid rgba(192,255,114,0.2)",
-                    color: "var(--color-brand)",
-                    fontSize: "0.8125rem",
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "9999px",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s}
-                  <button
-                    onClick={() => setSkills(skills.filter((x) => x !== s))}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "rgba(192,255,114,0.45)",
-                      lineHeight: 1,
-                      fontSize: "1rem",
-                      padding: 0,
-                      transition: "color 0.15s",
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLElement).style.color =
-                        "var(--color-brand)")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLElement).style.color =
-                        "rgba(192,255,114,0.45)")
-                    }
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {skills.length === 0 && (
-                <p
-                  style={{
-                    color: "var(--color-text-subtle)",
-                    fontSize: "0.875rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  Aún no has añadido áreas de conocimiento
-                </p>
-              )}
-            </div>
-          </SectionCard>
-
-          {/* ── LinkedIn ── */}
-          <SectionCard title="Perfil profesional">
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}
+            {/* ── BOTÓN GUARDAR FINAL ── */}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary"
+              style={{
+                width: "100%",
+                justifyContent: "center",
+                display: "flex",
+                gap: 6,
+                padding: "11px 0",
+                fontSize: 13,
+                opacity: saving ? 0.6 : 1,
+              }}
             >
-              {/* LinkedIn icon */}
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "0.5rem",
-                  background: "var(--color-surface-elevated)",
-                  border: "1px solid var(--color-border-strong)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="var(--color-text-muted)"
-                >
-                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-                  <rect x="2" y="9" width="4" height="12" />
-                  <circle cx="4" cy="4" r="2" />
-                </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "0.25rem",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  LinkedIn
-                </label>
-                <input
-                  type="url"
-                  value={linkedinUrl}
-                  onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="https://linkedin.com/in/tuusuario"
-                  className="input-field"
-                  style={{ fontSize: "0.875rem" }}
-                />
-              </div>
-            </div>
-          </SectionCard>
-        </div>
+              {saving ? (
+                <>
+                  <Spinner /> Guardando...
+                </>
+              ) : saved ? (
+                <>
+                  <IconCheck /> Perfil guardado
+                </>
+              ) : (
+                "Guardar perfil"
+              )}
+            </button>
+          </div>
+        </main>
       </div>
     </MainLayout>
   );

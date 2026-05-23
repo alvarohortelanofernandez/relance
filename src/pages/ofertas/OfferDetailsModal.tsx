@@ -354,16 +354,10 @@ export default function OfferDetailsModal({
         }
       : null,
     oferta.duracion_semanas
-      ? {
-          icon: SVG.clock,
-          text: `${oferta.duracion_semanas} semanas`,
-        }
+      ? { icon: SVG.clock, text: `${oferta.duracion_semanas} semanas` }
       : null,
     oferta.horas_semanales
-      ? {
-          icon: SVG.sun,
-          text: `${oferta.horas_semanales} h/semana`,
-        }
+      ? { icon: SVG.sun, text: `${oferta.horas_semanales} h/semana` }
       : null,
   ];
   const quickInfo: QuickInfoItem[] = quickInfoRaw.filter(
@@ -497,15 +491,17 @@ export default function OfferDetailsModal({
                 >
                   {oferta.empresa_nombre ?? "Empresa"}
                 </p>
+
+                {/* ── TÍTULO: más legible ── */}
                 <h2
                   style={{
                     margin: "0 0 14px",
-                    fontFamily: "Syne, sans-serif",
-                    fontWeight: 800,
-                    fontSize: "clamp(1.15rem, 2.5vw, 1.45rem)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "clamp(1.1rem, 2.5vw, 1.35rem)",
                     color: "var(--color-text)",
-                    lineHeight: 1.25,
-                    letterSpacing: "-0.02em",
+                    lineHeight: 1.35,
+                    letterSpacing: "-0.01em",
                   }}
                 >
                   {oferta.titulo}
@@ -1023,7 +1019,7 @@ function CondRow({ label, value }: { label: string; value: string | number }) {
           fontSize: 13,
           fontWeight: 700,
           color: "var(--color-text)",
-          fontFamily: "Syne, sans-serif",
+          fontFamily: "Plus Jakarta Sans, sans-serif",
         }}
       >
         {value}

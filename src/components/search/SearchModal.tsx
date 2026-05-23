@@ -38,6 +38,7 @@ export interface SearchModalProps {
   userId: string;
   useExplorarPage?: boolean;
   explorarBasePath?: string;
+  triggerRef?: React.RefObject<HTMLButtonElement>;
 }
 
 // ─── RBAC ─────────────────────────────────────────────────────────────────────
@@ -200,16 +201,16 @@ const ENTITY_PLACEHOLDER: Record<EntityType, string> = {
   oferta: "Buscar ofertas…",
 };
 
-const RECENT: string[] = [
-  "Accenture",
-  "IES Ramiro de Maeztu",
-  "Prácticas marketing",
-];
-const POPULAR: string[] = [
-  "Empresas tecnología",
-  "Centros Madrid",
-  "Ofertas 2025",
-];
+// const RECENT: string[] = [
+//   "Accenture",
+//   "IES Ramiro de Maeztu",
+//   "Prácticas marketing",
+// ];
+// const POPULAR: string[] = [
+//   "Empresas tecnología",
+//   "Centros Madrid",
+//   "Ofertas 2025",
+// ];
 
 // ─── SearchContext ─────────────────────────────────────────────────────────────
 
@@ -281,69 +282,91 @@ async function resolveSearchContext(
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
+async function getBlockedIds(): Promise<Set<string>> {
+  const { data, error } = await supabase.rpc("get_blocked_ids");
+  if (error) {
+    console.error("[getBlockedIds]:", error);
+    return new Set();
+  }
+  return new Set((data ?? []).map((u: { id: string }) => u.id));
+}
+
 async function fetchEstudiantesDirecto(
   term: string,
   scopedIds?: string[],
 ): Promise<SearchResult[]> {
+  const blocked = await getBlockedIds();
+
   let query = supabase
     .from("estudiante")
     .select("id, nombre, apellidos, titulacion, ciudad, avatar_url")
     .or(`nombre.ilike.%${term}%,apellidos.ilike.%${term}%`)
-    .limit(8);
+    .limit(20);
+
   if (scopedIds && scopedIds.length > 0) query = query.in("id", scopedIds);
+
   const { data, error } = await query;
   if (error) {
     console.error("[Search] fetchEstudiantesDirecto:", error.message);
     return [];
   }
-  return (data ?? []).map((s) => ({
-    id: s.id,
-    type: "estudiante" as const,
-    name: `${s.nombre ?? ""} ${s.apellidos ?? ""}`.trim(),
-    subtitle: [s.titulacion, s.ciudad].filter(Boolean).join(" · "),
-    avatarUrl: s.avatar_url ?? undefined,
-    href: `/estudiante/${s.id}`,
-  }));
+  return (data ?? [])
+    .filter((s) => !blocked.has(s.id))
+    .slice(0, 8)
+    .map((s) => ({
+      id: s.id,
+      type: "estudiante" as const,
+      name: `${s.nombre ?? ""} ${s.apellidos ?? ""}`.trim(),
+      subtitle: [s.titulacion, s.ciudad].filter(Boolean).join(" · "),
+      avatarUrl: s.avatar_url ?? undefined,
+      href: `/estudiante/${s.id}`,
+    }));
 }
 
 async function fetchEmpresas(term: string): Promise<SearchResult[]> {
+  const blocked = await getBlockedIds();
+
   const { data, error } = await supabase
     .from("empresa")
     .select("id, nombre, sector, ciudad, logo_url")
     .ilike("nombre", `%${term}%`)
-    .limit(8);
-  if (error) {
-    console.error("[Search] empresa:", error.message);
-    return [];
-  }
-  return (data ?? []).map((e) => ({
-    id: e.id,
-    type: "empresa" as const,
-    name: e.nombre ?? "",
-    subtitle: [e.sector, e.ciudad].filter(Boolean).join(" · "),
-    avatarUrl: e.logo_url ?? undefined,
-    href: `/empresa/${e.id}`,
-  }));
+    .limit(20);
+
+  if (error) return [];
+  return (data ?? [])
+    .filter((e) => !blocked.has(e.id))
+    .slice(0, 8)
+    .map((e) => ({
+      id: e.id,
+      type: "empresa" as const,
+      name: e.nombre ?? "",
+      subtitle: [e.sector, e.ciudad].filter(Boolean).join(" · "),
+      avatarUrl: e.logo_url ?? undefined,
+      href: `/empresa/${e.id}`,
+    }));
 }
 
 async function fetchCentros(term: string): Promise<SearchResult[]> {
+  const blocked = await getBlockedIds();
+
   const { data, error } = await supabase
     .from("centro_educativo")
     .select("id, nombre, tipo_centro, ciudad, avatar_url")
     .ilike("nombre", `%${term}%`)
-    .limit(8);
-  if (error) {
-    console.error("[Search] centro_educativo:", error.message);
-    return [];
-  }
-  return (data ?? []).map((c) => ({
-    id: c.id,
-    type: "centro_educativo" as const,
-    name: c.nombre ?? "",
-    subtitle: [c.tipo_centro, c.ciudad].filter(Boolean).join(" · "),
-    avatarUrl: c.avatar_url ?? undefined,
-    href: `/centro/${c.id}`,
-  }));
+    .limit(20);
+
+  if (error) return [];
+  return (data ?? [])
+    .filter((c) => !blocked.has(c.id))
+    .slice(0, 8)
+    .map((c) => ({
+      id: c.id,
+      type: "centro_educativo" as const,
+      name: c.nombre ?? "",
+      subtitle: [c.tipo_centro, c.ciudad].filter(Boolean).join(" · "),
+      avatarUrl: c.avatar_url ?? undefined,
+      href: `/centro/${c.id}`,
+    }));
 }
 
 async function fetchEstudiantes(
@@ -438,41 +461,31 @@ async function fetchTutoresEmpresa(
   role: Role,
   ctx: SearchContext,
 ): Promise<SearchResult[]> {
+  const blocked = await getBlockedIds();
+
   let query = supabase
     .from("tutor_empresa")
-    .select("id, nombre, cargo, empresa_id")
+    .select("id, nombre, cargo, usuario_id")
     .ilike("nombre", `%${term}%`)
-    .limit(8);
-  if (role === "empresa") {
-    if (!ctx.empresaId) return [];
-    query = query.eq("empresa_id", ctx.empresaId);
-  }
+    .limit(20);
+
   const { data, error } = await query;
   if (error) {
     console.error("[Search] tutor_empresa:", error.message);
     return [];
   }
   if (!data?.length) return [];
-  const empresaIds = [
-    ...new Set(data.map((t) => t.empresa_id).filter(Boolean)),
-  ];
-  let empresaMap: Record<string, string> = {};
-  if (empresaIds.length > 0) {
-    const { data: emps } = await supabase
-      .from("empresa")
-      .select("id, nombre")
-      .in("id", empresaIds);
-    empresaMap = Object.fromEntries((emps ?? []).map((e) => [e.id, e.nombre]));
-  }
-  return data.map((t) => ({
-    id: t.id,
-    type: "tutor_empresa" as const,
-    name: t.nombre ?? "",
-    subtitle: [empresaMap[t.empresa_id] ?? null, t.cargo]
-      .filter(Boolean)
-      .join(" · "),
-    href: `/tutor-empresa/${t.id}`,
-  }));
+
+  return (data ?? [])
+    .filter((t) => !blocked.has(t.usuario_id))
+    .slice(0, 8)
+    .map((t) => ({
+      id: t.id,
+      type: "tutor_empresa" as const,
+      name: t.nombre ?? "",
+      subtitle: t.cargo ?? "",
+      href: `/tutor-empresa/${t.id}`,
+    }));
 }
 
 async function fetchTutoresCentro(
@@ -588,7 +601,7 @@ async function runSearchForType(
   role: Role,
   ctx: SearchContext,
 ): Promise<SearchResult[]> {
-  if (!term.trim() || term.trim().length < 2) return [];
+  if (!term.trim()) return [];
   switch (type) {
     case "empresa":
       return fetchEmpresas(term);
@@ -1183,6 +1196,26 @@ function ExplorarLink({
   );
 }
 
+const RECENT_KEY = "search_recents";
+const MAX_RECENTS = 5;
+
+function getRecents(): SearchResult[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(result: SearchResult) {
+  try {
+    const prev = getRecents().filter((r) => r.id !== result.id);
+    const next = [result, ...prev].slice(0, MAX_RECENTS);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {}
+}
+
 // ─── SearchModal ──────────────────────────────────────────────────────────────
 
 export default function SearchModal({
@@ -1192,6 +1225,7 @@ export default function SearchModal({
   userId,
   useExplorarPage = false,
   explorarBasePath = "/explorar",
+  triggerRef,
 }: SearchModalProps) {
   const allowedTypes = ROLE_PERMISSIONS[role] ?? [];
   const [query, setQuery] = useState("");
@@ -1204,6 +1238,9 @@ export default function SearchModal({
     centroId: null,
     tutorStudentIds: null,
   });
+  const [recents, setRecents] = useState<SearchResult[]>([]);
+  const [closing, setClosing] = useState(false);
+  const [origin, setOrigin] = useState({ x: "50%", y: "50%" });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -1216,6 +1253,16 @@ export default function SearchModal({
   useScrollLock(open);
 
   useEffect(() => {
+    if (open && triggerRef?.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setOrigin({
+        x: `${rect.left + rect.width / 2}px`,
+        y: `${rect.top + rect.height / 2}px`,
+      });
+    }
+  }, [open, triggerRef]);
+
+  useEffect(() => {
     if (!open || !userId) return;
     resolveSearchContext(role, userId).then(setSearchCtx);
   }, [open, role, userId]);
@@ -1226,6 +1273,7 @@ export default function SearchModal({
       setResults([]);
       setActive(-1);
       setActiveType(allowedTypes[0]);
+      setRecents(getRecents());
     }
   }, [open]);
   useEffect(() => {
@@ -1236,14 +1284,14 @@ export default function SearchModal({
   }, [activeType]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
   useEffect(() => {
-    if (!dq.trim() || dq.trim().length < 2) {
+    if (!dq.trim()) {
       setResults([]);
       setLoading(false);
       return;
@@ -1298,19 +1346,28 @@ export default function SearchModal({
 
   const c = ENTITY_COLOR[activeType];
 
-  if (!open) return null;
+  if (!open && !closing) return null;
 
   function handleResultClick(result: SearchResult) {
+    saveRecent(result);
     window.location.href = useExplorarPage
       ? buildExplorarUrl(explorarBasePath, result)
       : result.href;
     onClose();
   }
 
+  const handleClose = () => {
+    setClosing(true);
+    setTimeout(() => {
+      setClosing(false);
+      onClose();
+    }, 280);
+  };
+
   return (
     <>
       <div
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
         style={{
           position: "fixed",
@@ -1319,7 +1376,9 @@ export default function SearchModal({
           background: "rgba(1,3,8,0.85)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
-          animation: "srch-bg 0.15s ease forwards",
+          animation: closing
+            ? "srch-bg-out 0.28s ease forwards"
+            : "srch-bg-in 0.2s ease forwards",
         }}
       />
 
@@ -1341,7 +1400,7 @@ export default function SearchModal({
         <div
           style={{
             width: "100%",
-            maxWidth: 500,
+            maxWidth: 620,
             background: "var(--color-surface-strong)",
             border: "1px solid var(--color-border-strong)",
             borderRadius: 14,
@@ -1349,10 +1408,13 @@ export default function SearchModal({
               "0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(192,255,114,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
             overflow: "hidden",
             pointerEvents: "all",
-            animation: "srch-in 0.2s cubic-bezier(0.16,1,0.3,1) forwards",
+            animation: closing
+              ? "srch-scale-out 0.28s cubic-bezier(0.4,0,1,1) forwards"
+              : "srch-scale-in 0.32s cubic-bezier(0.16,1,0.3,1) forwards",
             maxHeight: "65vh",
             display: "flex",
             flexDirection: "column",
+            transformOrigin: `${origin.x} ${origin.y}`,
           }}
         >
           {/* Input */}
@@ -1412,7 +1474,7 @@ export default function SearchModal({
               }}
             />
             <kbd
-              onClick={onClose}
+              onClick={handleClose}
               role="button"
               aria-label="Cerrar buscador"
               tabIndex={0}
@@ -1446,17 +1508,21 @@ export default function SearchModal({
           <div ref={listRef} style={{ overflowY: "auto", flex: 1 }}>
             {!query.trim() && (
               <div style={{ padding: "5px 0 8px" }}>
-                <SRSection label="Recientes">
-                  {RECENT.map((s) => (
-                    <SRSuggestion
-                      key={s}
-                      label={s}
-                      icon="clock"
-                      onClick={() => setQuery(s)}
-                    />
-                  ))}
-                </SRSection>
-                <SRSection label="Populares">
+                {recents.length > 0 && (
+                  <SRSection label="Recientes">
+                    {recents.map((r, i) => (
+                      <SRResult
+                        key={r.id}
+                        result={r}
+                        idx={-(i + 1)}
+                        active={false}
+                        onHover={() => {}}
+                        onClick={() => handleResultClick(r)}
+                      />
+                    ))}
+                  </SRSection>
+                )}
+                {/* <SRSection label="Populares">
                   {POPULAR.map((s) => (
                     <SRSuggestion
                       key={s}
@@ -1465,7 +1531,7 @@ export default function SearchModal({
                       onClick={() => setQuery(s)}
                     />
                   ))}
-                </SRSection>
+                </SRSection> */}
                 <div
                   style={{
                     margin: "3px 14px 5px",
@@ -1498,6 +1564,20 @@ export default function SearchModal({
                     )}
                   </span>
                 </div>
+
+                {recents.length === 0 && (
+                  <p
+                    style={{
+                      textAlign: "center",
+                      fontSize: 11,
+                      color: "var(--color-text-subtle)",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                      padding: "12px 0 4px",
+                    }}
+                  >
+                    Tus búsquedas recientes aparecerán aquí
+                  </p>
+                )}
               </div>
             )}
 
@@ -1528,7 +1608,7 @@ export default function SearchModal({
               </div>
             )}
 
-            {query.trim().length >= 2 && results.length === 0 && !loading && (
+            {query.trim().length >= 1 && results.length === 0 && !loading && (
               <div
                 style={{
                   display: "flex",
@@ -1584,7 +1664,7 @@ export default function SearchModal({
               </div>
             )}
 
-            {query.trim().length === 1 && (
+            {/* {query.trim().length === 1 && (
               <div
                 style={{
                   padding: "16px",
@@ -1596,7 +1676,7 @@ export default function SearchModal({
               >
                 Escribe al menos 2 caracteres para buscar
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Footer */}
@@ -1648,7 +1728,7 @@ export default function SearchModal({
             {useExplorarPage && !query.trim() && (
               <a
                 href={explorarBasePath}
-                onClick={onClose}
+                onClick={handleClose}
                 style={{
                   marginLeft: "auto",
                   display: "flex",
@@ -1699,11 +1779,27 @@ export default function SearchModal({
       </div>
 
       <style>{`
-        @keyframes srch-bg { from { opacity:0 } to { opacity:1 } }
-        @keyframes srch-in  { from { opacity:0; transform:scale(0.96) translateY(-12px) } to { opacity:1; transform:scale(1) translateY(0) } }
-        @keyframes spin     { to   { transform:rotate(360deg) } }
-        div::-webkit-scrollbar { display: none; }
-      `}</style>
+  @keyframes srch-bg-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes srch-bg-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+  @keyframes srch-scale-in {
+    0%   { opacity: 0; transform: scale(0.07); filter: blur(6px); }
+    55%  { opacity: 1; filter: blur(0px); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0px); }
+  }
+  @keyframes srch-scale-out {
+    0%   { opacity: 1; transform: scale(1); filter: blur(0px); }
+    30%  { opacity: 0.5; filter: blur(2px); }
+    100% { opacity: 0; transform: scale(0.07); filter: blur(6px); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  div::-webkit-scrollbar { display: none; }
+`}</style>
     </>
   );
 }

@@ -149,8 +149,8 @@ export default function LoginModal({
             className="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors"
             aria-label="Cerrar"
           >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
+            <svg width="16" height="16">
+              <use href="/icons.svg#icon-x-close" />
             </svg>
           </button>
 
@@ -178,24 +178,8 @@ export default function LoginModal({
                 className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-semibold text-xs px-3 py-2 rounded-lg border border-gray-200 transition-all duration-200 mb-3 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loadingGoogle ? (
-                  <svg
-                    className="animate-spin w-3.5 h-3.5 text-gray-500"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                  <svg className="animate-spin w-3.5 h-3.5 text-gray-500">
+                    <use href="/icons.svg#icon-spinner" />
                   </svg>
                 ) : (
                   <svg width="15" height="15">
@@ -258,28 +242,12 @@ export default function LoginModal({
                       aria-label={showPassword ? "Ocultar" : "Mostrar"}
                     >
                       {showPassword ? (
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
+                        <svg width="15" height="15">
+                          <use href="/icons.svg#icon-eye-slash" />
                         </svg>
                       ) : (
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
+                        <svg width="15" height="15">
+                          <use href="/icons.svg#icon-eye" />
                         </svg>
                       )}
                     </button>
@@ -311,25 +279,7 @@ export default function LoginModal({
                 >
                   {loading ? (
                     <>
-                      <svg
-                        className="animate-spin w-3.5 h-3.5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
+                      <svg className="animate-spin w-3.5 h-3.5"><use href="/icons.svg#icon-spinner"/></svg>
                       Iniciando sesión...
                     </>
                   ) : (
@@ -360,16 +310,7 @@ export default function LoginModal({
                 }}
                 className="flex items-center gap-1 text-gray-500 hover:text-white text-xs mb-3 transition-colors"
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M19 12H5M12 5l-7 7 7 7" />
-                </svg>
+                <svg width="13" height="13"><use href="/icons.svg#icon-arrow-left"/></svg>
                 Volver al inicio de sesión
               </button>
               <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">
@@ -433,24 +374,8 @@ export default function LoginModal({
                   >
                     {loading ? (
                       <>
-                        <svg
-                          className="animate-spin w-3.5 h-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
+                        <svg className="animate-spin w-3.5 h-3.5">
+                          <use href="/icons.svg#icon-spinner" />
                         </svg>
                         Enviando...
                       </>

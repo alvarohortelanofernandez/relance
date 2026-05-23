@@ -584,12 +584,14 @@ function Btn({
   variant = "default",
   disabled = false,
   small = false,
+  style: extraStyle,
 }: {
   onClick?: () => void;
   children: React.ReactNode;
   variant?: BtnVariant;
   disabled?: boolean;
   small?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
     <button
@@ -607,8 +609,10 @@ function Btn({
         transition: "all 0.14s",
         display: "inline-flex",
         alignItems: "center",
+        justifyContent: "center",
         gap: 6,
         whiteSpace: "nowrap",
+        ...extraStyle,
       }}
     >
       {children}
@@ -1273,7 +1277,7 @@ export default function AdministrationPanel() {
     const { data, error } = await supabase
       .from("usuario")
       .select(
-        "id, email, nombre, rol, created_at, avatar_url, is_profile_completed",
+        "id, email, nombre, rol, created_at, avatar_url, is_profile_completed, is_blocked",
       )
       .not("rol", "eq", "admin")
       .order("created_at", { ascending: false })
@@ -1305,10 +1309,26 @@ export default function AdministrationPanel() {
     if (activeTab === "admins") cargarAdmins();
   }, [activeTab, cargarOfertas, cargarUsuarios, cargarAdmins]);
 
-  const handleToggleBlock = async (userId: string, currentRol: string) => {
-    const nuevoRol = currentRol === "bloqueado" ? "estudiante" : "bloqueado";
-    await supabase.from("usuario").update({ rol: nuevoRol }).eq("id", userId);
-    cargarUsuarios();
+  const handleToggleBlock = async (
+    userId: string,
+    isBlocked: boolean,
+    email: string,
+  ) => {
+    const { error } = await supabase
+      .from("usuario")
+      .update({ is_blocked: !isBlocked })
+      .eq("email", email);
+
+    if (error) {
+      console.error("[handleToggleBlock]:", error);
+      return;
+    }
+
+    setUsuarios((prev) =>
+      prev.map((u) =>
+        u.email === email ? { ...u, is_blocked: !isBlocked } : u,
+      ),
+    );
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
@@ -2138,13 +2158,14 @@ export default function AdministrationPanel() {
                             </span>
                           </div>,
                           <Btn
-                            variant={
-                              u.rol === "bloqueado" ? "success" : "danger"
-                            }
+                            variant={u.is_blocked ? "success" : "danger"}
                             small
-                            onClick={() => handleToggleBlock(u.id, u.rol)}
+                            onClick={() =>
+                              handleToggleBlock(u.id, u.is_blocked, u.email)
+                            }
+                            style={{ minWidth: 90 }}
                           >
-                            {u.rol === "bloqueado" ? "Desbloquear" : "Bloquear"}
+                            {u.is_blocked ? "Desbloquear" : "Bloquear"}
                           </Btn>,
                         ]}
                       />

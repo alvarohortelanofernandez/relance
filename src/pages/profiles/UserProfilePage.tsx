@@ -1,6 +1,5 @@
 /**
  * UserProfilePage.tsx — Rediseño LinkedIn-style Enterprise
- * Diseño limpio, serio y profesional con colores corporativos azul marino / brand #c0ff72
  */
 
 import { useState, useEffect } from "react";
@@ -38,6 +37,7 @@ interface Estudiante {
   github_username?: string;
   formaciones?: unknown[];
   proyectos?: unknown[];
+  github_repos_vinculados?: unknown[];
   redes_sociales?: Record<string, string>;
   created_at?: string;
 }
@@ -77,6 +77,20 @@ interface CentroEducativo {
 }
 type ProfileData = Estudiante | Empresa | CentroEducativo;
 
+interface GitHubRepo {
+  repo_id: number;
+  nombre: string;
+  nombre_completo: string;
+  descripcion: string;
+  url: string;
+  url_demo?: string;
+  lenguajes: string[];
+  estrellas: number;
+  forks: number;
+  privado: boolean;
+  actualizado: string;
+}
+
 interface Candidatura {
   id_candidatura: number;
   estado: string;
@@ -110,6 +124,30 @@ function inferFromPath(): {
   return { entityType: map[segment] ?? null, entityId: id };
 }
 
+// ─── Lang colors ─────────────────────────────────────────────────────────
+
+const LANG_COLORS: Record<string, string> = {
+  JavaScript: "#f1e05a",
+  TypeScript: "#3178c6",
+  Python: "#3572A5",
+  Rust: "#dea584",
+  Go: "#00ADD8",
+  Java: "#b07219",
+  "C#": "#178600",
+  "C++": "#f34b7d",
+  PHP: "#4F5D95",
+  Ruby: "#701516",
+  Swift: "#F05138",
+  Kotlin: "#A97BFF",
+  CSS: "#563d7c",
+  HTML: "#e34c26",
+  Shell: "#89e051",
+  Vue: "#41b883",
+  Dart: "#00B4AB",
+  Scala: "#c22d40",
+  R: "#198CE7",
+};
+
 // ─── CSS ──────────────────────────────────────────────────────────────────
 
 const CSS = `
@@ -137,7 +175,6 @@ const CSS = `
   animation: fadeUp 0.3s ease forwards;
 }
 
-/* ── Back ── */
 .up-back {
   display: inline-flex; align-items: center; gap: 6px;
   background: none; border: none; cursor: pointer;
@@ -150,7 +187,6 @@ const CSS = `
 .up-back svg { transition: transform 0.15s; }
 .up-back:hover svg { transform: translateX(-2px); }
 
-/* ── Hero card ── */
 .up-hero {
   background: var(--color-surface-strong);
   border: 1px solid var(--color-border-strong);
@@ -159,43 +195,28 @@ const CSS = `
   margin-bottom: 12px;
 }
 
-.up-cover {
-  height: 140px;
-  position: relative;
-  overflow: hidden;
-}
-
-.up-hero-body {
-  padding: 0 28px 28px;
-}
+.up-cover { height: 140px; position: relative; overflow: hidden; }
+.up-hero-body { padding: 0 28px 28px; }
 
 .up-avatar-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-top: -44px;
-  margin-bottom: 16px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-top: -44px; margin-bottom: 16px;
 }
 
 .up-avatar {
-  width: 88px; height: 88px;
-  border-radius: 50%;
+  width: 88px; height: 88px; border-radius: 50%;
   border: 4px solid var(--color-surface-strong);
   overflow: hidden; background: var(--color-surface-elevated);
   flex-shrink: 0; position: relative;
 }
 .up-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .up-avatar-initials {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'DM Serif Display', serif;
-  font-size: 28px; color: var(--color-brand);
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--color-brand);
 }
 
 .up-verified-ring { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: 50%; }
-
 .up-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
-
 .up-name { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; color: var(--color-text); line-height: 1.15; margin-bottom: 4px; }
 .up-headline { font-size: 14px; color: var(--color-text-muted); line-height: 1.5; margin-bottom: 12px; }
 
@@ -203,33 +224,19 @@ const CSS = `
 .up-chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px;
-  color: var(--color-text-muted);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border-strong);
-  letter-spacing: -0.01em;
+  color: var(--color-text-muted); background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong); letter-spacing: -0.01em;
 }
 .up-chip-brand { color: var(--color-brand); background: rgba(192,255,114,0.06); border-color: rgba(192,255,114,0.2); }
 .up-chip-verified { color: #4ade80; background: rgba(74,222,128,0.06); border-color: rgba(74,222,128,0.2); }
 .up-chip-blue { color: #60a5fa; background: rgba(96,165,250,0.06); border-color: rgba(96,165,250,0.2); }
 
-/* ── Stats strip ── */
-.up-stats {
-  display: flex;
-  border-top: 1px solid var(--color-border);
-  margin-top: 20px;
-  padding-top: 18px;
-  gap: 32px;
-}
+.up-stats { display: flex; border-top: 1px solid var(--color-border); margin-top: 20px; padding-top: 18px; gap: 32px; }
 .up-stat-item { display: flex; flex-direction: column; gap: 2px; }
 .up-stat-val { font-size: 20px; font-weight: 700; letter-spacing: -0.04em; color: var(--color-text); font-family: 'DM Serif Display', serif; }
 .up-stat-lbl { font-size: 11px; color: var(--color-text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
 
-/* ── Convenio banner ── */
-.up-convenio {
-  border-radius: 12px; padding: 16px 20px;
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 12px;
-}
+.up-convenio { border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .up-convenio-none { background: var(--color-surface-strong); border: 1px dashed var(--color-border-strong); }
 .up-convenio-sent { background: rgba(250,204,21,0.04); border: 1px solid rgba(250,204,21,0.2); }
 .up-convenio-received { background: rgba(167,139,250,0.04); border: 1px solid rgba(167,139,250,0.2); }
@@ -239,78 +246,42 @@ const CSS = `
 .up-convenio-title { font-size: 13px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 2px; }
 .up-convenio-sub { font-size: 12px; color: var(--color-text-muted); }
 
-/* ── Section ── */
-.up-section {
-  background: var(--color-surface-strong);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-.up-section-head {
-  padding: 18px 24px 0;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.up-section-title {
-  font-size: 13px; font-weight: 700; color: var(--color-text);
-  letter-spacing: -0.02em; text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px;
-}
+.up-section { background: var(--color-surface-strong); border: 1px solid var(--color-border-strong); border-radius: 16px; overflow: hidden; margin-bottom: 12px; }
+.up-section-head { padding: 18px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+.up-section-title { font-size: 13px; font-weight: 700; color: var(--color-text); letter-spacing: -0.02em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
 .up-section-title svg { color: var(--color-text-muted); }
 .up-section-body { padding: 16px 24px 24px; }
 
-/* ── Prose ── */
 .up-prose { font-size: 14px; color: var(--color-text-secondary); line-height: 1.8; letter-spacing: -0.005em; }
 
-/* ── Info table ── */
 .up-info-table { display: flex; flex-direction: column; gap: 0; }
-.up-info-row {
-  display: grid; grid-template-columns: 140px 1fr;
-  gap: 16px; align-items: baseline;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--color-border);
-}
+.up-info-row { display: grid; grid-template-columns: 140px 1fr; gap: 16px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--color-border); }
 .up-info-row:last-child { border-bottom: none; }
 .up-info-label { font-size: 12px; color: var(--color-text-muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
 .up-info-val { font-size: 13px; color: var(--color-text-secondary); word-break: break-word; }
 .up-info-link { font-size: 13px; color: var(--color-brand); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
 .up-info-link:hover { text-decoration: underline; }
 
-/* ── Tags ── */
 .up-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.up-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 100px;
-  background: var(--color-surface-elevated); border: 1px solid var(--color-border-strong);
-  color: var(--color-text-secondary); letter-spacing: -0.01em; transition: all 0.13s;
-}
+.up-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 100px; background: var(--color-surface-elevated); border: 1px solid var(--color-border-strong); color: var(--color-text-secondary); letter-spacing: -0.01em; transition: all 0.13s; }
 .up-tag:hover { border-color: rgba(192,255,114,0.3); color: var(--color-brand); }
 
-/* ── Formation ── */
 .up-formations { display: flex; flex-direction: column; }
 .up-formation { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
 .up-formation:first-child { padding-top: 0; }
 .up-formation:last-child { border-bottom: none; padding-bottom: 0; }
-.up-formation-dot {
-  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-  background: var(--color-brand); margin-top: 5px;
-}
+.up-formation-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--color-brand); margin-top: 5px; }
 .up-formation-name { font-size: 14px; font-weight: 600; color: var(--color-text); letter-spacing: -0.02em; margin-bottom: 3px; }
 .up-formation-sub { font-size: 12px; color: var(--color-text-muted); margin-bottom: 4px; }
 .up-formation-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.65; }
 
-/* ── Projects ── */
 .up-projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.up-project {
-  background: var(--color-surface-elevated); border: 1px solid var(--color-border-strong);
-  border-radius: 12px; padding: 18px; transition: border-color 0.15s;
-}
+.up-project { background: var(--color-surface-elevated); border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 18px; transition: border-color 0.15s; }
 .up-project:hover { border-color: rgba(192,255,114,0.25); }
 .up-project-name { font-size: 13px; font-weight: 600; color: var(--color-text); letter-spacing: -0.02em; margin-bottom: 6px; }
 .up-project-desc { font-size: 12px; color: var(--color-text-muted); line-height: 1.65; margin-bottom: 12px; }
 .up-project-link { font-size: 12px; color: var(--color-brand); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
 
-/* ── Candidaturas ── */
 .up-cands { display: flex; flex-direction: column; }
 .up-cand { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--color-border); }
 .up-cand:first-child { padding-top: 0; }
@@ -320,16 +291,7 @@ const CSS = `
 .up-cand-comment { margin-top: 8px; padding: 8px 12px; background: var(--color-surface-elevated); border-left: 2px solid var(--color-border-strong); border-radius: 0 6px 6px 0; font-size: 12px; color: var(--color-text-muted); font-style: italic; line-height: 1.6; }
 .up-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; border: 1px solid; }
 
-/* ── Disponibilidad badge ── */
-.up-disp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; }
-
-/* ── Buttons ── */
-.up-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 8px; font-size: 13px;
-  font-weight: 600; font-family: 'DM Sans', inherit; cursor: pointer;
-  border: 1px solid; transition: all 0.15s; letter-spacing: -0.01em; white-space: nowrap;
-}
+.up-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', inherit; cursor: pointer; border: 1px solid; transition: all 0.15s; letter-spacing: -0.01em; white-space: nowrap; }
 .up-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .up-btn-primary { background: var(--color-brand); color: #020a00; border-color: transparent; }
 .up-btn-primary:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(192,255,114,0.2); }
@@ -341,14 +303,8 @@ const CSS = `
 .up-btn-convenio:not(:disabled):hover { background: rgba(167,139,250,0.06); }
 
 .up-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: spin 0.7s linear infinite; }
-
-/* ── Skeleton ── */
 .up-skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite; border-radius: 6px; }
-
-/* ── Toast ── */
 .up-toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 11px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', inherit; display: flex; align-items: center; gap: 8px; animation: toastIn 0.2s ease forwards; border: 1px solid; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-
-/* ── Empty ── */
 .up-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 20px; color: var(--color-text-muted); font-size: 13px; text-align: center; }
 
 @media (max-width: 600px) {
@@ -359,6 +315,7 @@ const CSS = `
   .up-info-row { grid-template-columns: 110px 1fr; }
   .up-stats { gap: 20px; }
   .up-actions { flex-wrap: wrap; }
+  .up-gh-grid { grid-template-columns: 1fr; }
 }
 `;
 
@@ -759,6 +716,27 @@ const Icon = {
       <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
     </svg>
   ),
+  Star: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  ),
+  Fork: () => (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <path d="M6 9v2a3 3 0 003 3h6a3 3 0 003-3V9" />
+      <line x1="12" y1="12" x2="12" y2="15" />
+    </svg>
+  ),
   Dot: ({ color }: { color: string }) => (
     <svg width="6" height="6" viewBox="0 0 6 6">
       <circle cx="3" cy="3" r="3" fill={color} />
@@ -954,8 +932,6 @@ const CAND_MAP: Record<string, { color: string; label: string }> = {
   en_proceso: { color: "#60a5fa", label: "En proceso" },
 };
 
-// ─── Cover gradient by type ───────────────────────────────────────────────
-
 const COVER: Record<string, { from: string; to: string }> = {
   empresa: { from: "rgba(192,255,114,0.14)", to: "rgba(96,165,250,0.06)" },
   centro_educativo: {
@@ -984,6 +960,7 @@ export default function UserProfilePage({
     propEntityType ?? resolved?.entityType ?? null;
   const entityId: string = propEntityId ?? resolved?.entityId ?? "";
 
+  // ── ALL hooks must be here, before any conditional returns ──
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1005,11 +982,14 @@ export default function UserProfilePage({
     centroEstudiante?: string;
   }>({});
   const [userBlocked, setUserBlocked] = useState(false);
-
-  // Convenio
   const [convenioState, setConvenioState] = useState<ConvenioState>("loading");
   const [convenioId, setConvenioId] = useState<string | null>(null);
   const [convenioLoading, setConvenioLoading] = useState(false);
+  const [ghTopics, setGhTopics] = useState<Record<number, string[]>>({});
+  const [ghDescripciones, setGhDescripciones] = useState<
+    Record<number, string>
+  >({});
+  const [ghLenguajes, setGhLenguajes] = useState<Record<number, string[]>>({});
 
   const showConvenio =
     (viewerRole === "empresa" && rawEntityType === "centro_educativo") ||
@@ -1161,6 +1141,49 @@ export default function UserProfilePage({
     load();
   }, [showConvenio, entityId, viewerId, viewerRole]);
 
+  // GitHub topics useEffect — here with all other useEffects
+  useEffect(() => {
+    if (rawEntityType !== "estudiante" || !profile) return;
+    const repos: GitHubRepo[] =
+      ((profile as Estudiante).github_repos_vinculados as GitHubRepo[]) ?? [];
+    if (!repos.length) return;
+
+    repos.forEach(async (repo) => {
+      try {
+        const res = await fetch(
+          `https://api.github.com/repos/${repo.nombre_completo}`,
+          { headers: { Accept: "application/vnd.github.v3+json" } },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setGhTopics((prev) => ({
+            ...prev,
+            [repo.repo_id]: data.topics ?? [],
+          }));
+          setGhDescripciones((prev) => ({
+            ...prev,
+            [repo.repo_id]: data.description ?? "",
+          }));
+        }
+
+        const resLangs = await fetch(
+          `https://api.github.com/repos/${repo.nombre_completo}/languages`,
+          { headers: { Accept: "application/vnd.github.v3+json" } },
+        );
+        if (resLangs.ok) {
+          const langs = await resLangs.json();
+          setGhLenguajes((prev) => ({
+            ...prev,
+            [repo.repo_id]: Object.keys(langs),
+          }));
+        }
+      } catch {
+        // silent
+      }
+    });
+  }, [profile, rawEntityType]);
+
+  // ── Actions ──
   const withAction = async (fn: () => Promise<void>, msg: string) => {
     setActionLoading(true);
     try {
@@ -1191,21 +1214,19 @@ export default function UserProfilePage({
         .single();
       if (e) throw e;
       setConvenioId(convData.id);
-      await supabase
-        .from("notificacion")
-        .insert({
-          id_usuario_destino: entityId,
-          tipo: "propuesta_convenio",
-          titulo: "Nueva propuesta de convenio",
-          mensaje: "Has recibido una propuesta de convenio de colaboración.",
-          url_destino:
-            viewerRole === "empresa"
-              ? `/empresa/${viewerId}`
-              : `/centro/${viewerId}`,
-          leido: false,
-          fecha: new Date().toISOString(),
-          metadata: JSON.stringify({ convenio_id: convData.id }),
-        });
+      await supabase.from("notificacion").insert({
+        id_usuario_destino: entityId,
+        tipo: "propuesta_convenio",
+        titulo: "Nueva propuesta de convenio",
+        mensaje: "Has recibido una propuesta de convenio de colaboración.",
+        url_destino:
+          viewerRole === "empresa"
+            ? `/empresa/${viewerId}`
+            : `/centro/${viewerId}`,
+        leido: false,
+        fecha: new Date().toISOString(),
+        metadata: JSON.stringify({ convenio_id: convData.id }),
+      });
       setConvenioState("sent");
       showToast("Propuesta enviada correctamente");
     } catch (e: unknown) {
@@ -1252,17 +1273,15 @@ export default function UserProfilePage({
         .eq("id", convenioId)
         .maybeSingle();
       if (cd?.id_solicitante)
-        await supabase
-          .from("notificacion")
-          .insert({
-            id_usuario_destino: cd.id_solicitante,
-            tipo: "convenio_aceptado",
-            titulo: "Convenio aceptado",
-            mensaje: "Tu propuesta de convenio ha sido aceptada.",
-            leido: false,
-            fecha: new Date().toISOString(),
-            metadata: JSON.stringify({ convenio_id: convenioId }),
-          });
+        await supabase.from("notificacion").insert({
+          id_usuario_destino: cd.id_solicitante,
+          tipo: "convenio_aceptado",
+          titulo: "Convenio aceptado",
+          mensaje: "Tu propuesta de convenio ha sido aceptada.",
+          leido: false,
+          fecha: new Date().toISOString(),
+          metadata: JSON.stringify({ convenio_id: convenioId }),
+        });
       setConvenioState("active");
       showToast("Convenio aceptado");
     } catch (e: unknown) {
@@ -1287,17 +1306,15 @@ export default function UserProfilePage({
         .eq("id", convenioId)
         .maybeSingle();
       if (cd?.id_solicitante)
-        await supabase
-          .from("notificacion")
-          .insert({
-            id_usuario_destino: cd.id_solicitante,
-            tipo: "convenio_rechazado",
-            titulo: "Propuesta rechazada",
-            mensaje: "Tu propuesta de convenio ha sido rechazada.",
-            leido: false,
-            fecha: new Date().toISOString(),
-            metadata: JSON.stringify({ convenio_id: convenioId }),
-          });
+        await supabase.from("notificacion").insert({
+          id_usuario_destino: cd.id_solicitante,
+          tipo: "convenio_rechazado",
+          titulo: "Propuesta rechazada",
+          mensaje: "Tu propuesta de convenio ha sido rechazada.",
+          leido: false,
+          fecha: new Date().toISOString(),
+          metadata: JSON.stringify({ convenio_id: convenioId }),
+        });
       setConvenioId(null);
       setConvenioState("none");
       showToast("Propuesta rechazada");
@@ -1335,7 +1352,7 @@ export default function UserProfilePage({
       rawEntityType === "estudiante" &&
       entityId === viewerId);
 
-  // ── Loading ──
+  // ── Conditional returns (after ALL hooks) ──
   if (loading)
     return (
       <MainLayout>
@@ -1615,65 +1632,43 @@ export default function UserProfilePage({
               loading={al}
             />
           )}
-          <Btn
-            label="Guardar perfil"
-            icon={<Icon.Bookmark />}
-            onClick={() =>
-              withAction(async () => {
-                await supabase
-                  .from("guardado")
-                  .insert({
-                    id_estudiante: entityId,
-                    fecha_guardado: new Date().toISOString(),
-                  });
-              }, "Guardado")
-            }
-            loading={al}
-          />
-          <Btn
-            label="Mensaje"
-            icon={<Icon.Message />}
-            onClick={() => alert("Abrir chat")}
-          />
         </>
       );
 
-    if (viewerRole === "empresa") {
-      if (rawEntityType === "estudiante")
-        return (
-          <>
-            <Btn
-              label="Guardar perfil"
-              variant="primary"
-              icon={<Icon.Bookmark />}
-              onClick={() =>
-                withAction(async () => {
-                  await supabase
-                    .from("guardado")
-                    .insert({
-                      id_estudiante: entityId,
-                      fecha_guardado: new Date().toISOString(),
-                    });
-                }, "Guardado")
-              }
-              loading={al}
-            />
-            <Btn
-              label="Mensaje"
-              icon={<Icon.Message />}
-              onClick={() => alert("Abrir chat")}
-            />
-          </>
-        );
-      if (rawEntityType === "centro_educativo")
-        return (
-          <Btn
-            label="Contactar"
-            icon={<Icon.Message />}
-            onClick={() => alert("Abrir chat")}
-          />
-        );
-    }
+    // if (viewerRole === "empresa") {
+    //   if (rawEntityType === "estudiante")
+    //     return (
+    //       <>
+    //         <Btn
+    //           label="Guardar perfil"
+    //           variant="primary"
+    //           icon={<Icon.Bookmark />}
+    //           onClick={() =>
+    //             withAction(async () => {
+    //               await supabase.from("guardado").insert({
+    //                 id_estudiante: entityId,
+    //                 fecha_guardado: new Date().toISOString(),
+    //               });
+    //             }, "Guardado")
+    //           }
+    //           loading={al}
+    //         />
+    //         <Btn
+    //           label="Mensaje"
+    //           icon={<Icon.Message />}
+    //           onClick={() => alert("Abrir chat")}
+    //         />
+    //       </>
+    //     );
+    //   if (rawEntityType === "centro_educativo")
+    //     return (
+    //       <Btn
+    //         label="Contactar"
+    //         icon={<Icon.Message />}
+    //         onClick={() => alert("Abrir chat")}
+    //       />
+    //     );
+    // }
 
     if (viewerRole === "estudiante") {
       if (rawEntityType === "empresa")
@@ -1709,16 +1704,18 @@ export default function UserProfilePage({
     if (rawEntityType === "estudiante") {
       const s = profile as Estudiante;
       const disp = DISP_MAP[s.disponibilidad ?? ""];
+      const ghRepos: GitHubRepo[] =
+        (s.github_repos_vinculados as GitHubRepo[]) ?? [];
+      console.log("🔍 repo[0]:", ghRepos[0]);
+
       return (
         <>
-          {/* About */}
           {s.sobre_mi && (
             <SectionCard title="Sobre mí" icon={<Icon.FileText />}>
               <p className="up-prose">{s.sobre_mi}</p>
             </SectionCard>
           )}
 
-          {/* Contact & search info */}
           <SectionCard title="Información" icon={<Icon.FileText />}>
             <div className="up-info-table">
               <InfoRow icon={<Icon.MapPin />} label="Ciudad" value={s.ciudad} />
@@ -1767,7 +1764,6 @@ export default function UserProfilePage({
             </div>
           </SectionCard>
 
-          {/* Skills */}
           {(s.habilidades ?? []).length > 0 && (
             <SectionCard title="Habilidades y tecnologías" icon={<Icon.Code />}>
               <div className="up-tags">
@@ -1780,7 +1776,6 @@ export default function UserProfilePage({
             </SectionCard>
           )}
 
-          {/* Education */}
           {Array.isArray(s.formaciones) && s.formaciones.length > 0 && (
             <SectionCard title="Formación académica" icon={<Icon.GradCap />}>
               <div className="up-formations">
@@ -1802,7 +1797,6 @@ export default function UserProfilePage({
             </SectionCard>
           )}
 
-          {/* Projects */}
           {Array.isArray(s.proyectos) && s.proyectos.length > 0 && (
             <SectionCard title="Proyectos" icon={<Icon.Code />}>
               <div className="up-projects">
@@ -1828,7 +1822,131 @@ export default function UserProfilePage({
             </SectionCard>
           )}
 
-          {/* Social */}
+          {/* ✅ GitHub repos — inside the estudiante return, before the closing </> */}
+          {ghRepos.length > 0 && (
+            <SectionCard
+              title="Repositorios de GitHub"
+              icon={<Icon.GitHub />}
+              count={ghRepos.length}
+            >
+              <div className="up-gh-grid">
+                {ghRepos.map((repo) => {
+                  const topics: string[] = ghTopics[repo.repo_id] ?? [];
+                  const fecha = repo.actualizado
+                    ? new Date(repo.actualizado).toLocaleDateString("es-ES", {
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "";
+                  const langs =
+                    ghLenguajes[repo.repo_id] ?? repo.lenguajes ?? [];
+                  const langColor = LANG_COLORS[langs[0]] ?? "#8b949e";
+                  return (
+                    <div key={repo.repo_id} className="up-gh-card">
+                      <div className="up-gh-header">
+                        <a
+                          href={repo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="up-gh-name"
+                        >
+                          <Icon.GitHub /> {repo.nombre}
+                        </a>
+                        {repo.privado && (
+                          <span className="up-gh-private">privado</span>
+                        )}
+                      </div>
+
+                      {ghDescripciones[repo.repo_id] || repo.descripcion ? (
+                        <p className="up-gh-desc">
+                          {ghDescripciones[repo.repo_id] || repo.descripcion}
+                        </p>
+                      ) : (
+                        <p
+                          className="up-gh-desc"
+                          style={{ fontStyle: "italic", opacity: 0.4 }}
+                        >
+                          Sin descripción
+                        </p>
+                      )}
+
+                      {topics.length > 0 && (
+                        <div className="up-gh-topics">
+                          {topics.slice(0, 5).map((t) => (
+                            <span key={t} className="up-gh-topic">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {langs.length > 0 && (
+                        <div
+                          className="up-gh-lang"
+                          style={{ flexWrap: "wrap", gap: "8px" }}
+                        >
+                          {langs.slice(0, 4).map((lang) => (
+                            <span
+                              key={lang}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <span
+                                className="up-gh-lang-dot"
+                                style={{
+                                  background: LANG_COLORS[lang] ?? "#8b949e",
+                                }}
+                              />
+                              {lang}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="up-gh-footer">
+                        {repo.estrellas > 0 && (
+                          <span className="up-gh-stat">
+                            <Icon.Star /> {repo.estrellas}
+                          </span>
+                        )}
+                        {repo.forks > 0 && (
+                          <span className="up-gh-stat">
+                            <Icon.Fork /> {repo.forks}
+                          </span>
+                        )}
+                        {fecha && <span className="up-gh-date">{fecha}</span>}
+                      </div>
+
+                      <div className="up-gh-links">
+                        <a
+                          href={repo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="up-gh-link"
+                        >
+                          <Icon.GitHub /> Código
+                        </a>
+                        {repo.url_demo && (
+                          <a
+                            href={repo.url_demo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="up-gh-link"
+                          >
+                            <Icon.Link /> Demo
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          )}
+
           {s.redes_sociales && Object.keys(s.redes_sociales).length > 0 && (
             <SectionCard title="Redes sociales" icon={<Icon.Link />}>
               <div className="up-info-table">
@@ -1847,7 +1965,6 @@ export default function UserProfilePage({
             </SectionCard>
           )}
 
-          {/* Candidaturas */}
           {canSeeCandidaturas && candidaturas.length > 0 && (
             <SectionCard
               title="Candidaturas"
@@ -2205,21 +2322,17 @@ export default function UserProfilePage({
       <style>{CSS}</style>
       <div className="up-root">
         <div className="up-page">
-          {/* Back */}
           <button className="up-back" onClick={handleBack}>
             <Icon.Back /> Volver
           </button>
 
-          {/* Hero */}
           <div className="up-hero">
-            {/* Cover */}
             <div
               className="up-cover"
               style={{
                 background: `linear-gradient(135deg, ${coverGrad.from} 0%, ${coverGrad.to} 100%)`,
               }}
             >
-              {/* subtle grid */}
               <div
                 style={{
                   position: "absolute",
@@ -2241,7 +2354,6 @@ export default function UserProfilePage({
               />
             </div>
 
-            {/* Body */}
             <div className="up-hero-body">
               <div className="up-avatar-row">
                 <div
@@ -2254,7 +2366,6 @@ export default function UserProfilePage({
 
               <h1 className="up-name">{profileName}</h1>
 
-              {/* Headline */}
               {rawEntityType === "estudiante" &&
                 (() => {
                   const s = profile as Estudiante;
@@ -2290,7 +2401,6 @@ export default function UserProfilePage({
                   );
                 })()}
 
-              {/* Chips */}
               <div className="up-chips">
                 {rawEntityType === "empresa" && (
                   <span className="up-chip">
@@ -2356,7 +2466,6 @@ export default function UserProfilePage({
                 )}
               </div>
 
-              {/* Stats */}
               {(stats.candidaturas > 0 ||
                 stats.ofertas > 0 ||
                 stats.estudiantes > 0) && (
@@ -2385,10 +2494,7 @@ export default function UserProfilePage({
             </div>
           </div>
 
-          {/* Convenio */}
           {renderConvenio()}
-
-          {/* Content sections */}
           {renderContent()}
         </div>
       </div>

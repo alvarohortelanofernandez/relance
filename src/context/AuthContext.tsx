@@ -9,9 +9,6 @@ import {
 import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 
-/* ============================================================
-   ROLES DEL SISTEMA
-============================================================ */
 export type UserRole =
   | "estudiante"
   | "empresa"
@@ -21,7 +18,6 @@ export type UserRole =
   | "tutor_centro"
   | "admin";
 
-/** Devuelve la ruta de perfil según el rol */
 export function getRoleRoute(role: UserRole | null): string {
   switch (role) {
     case "empresa":
@@ -40,7 +36,6 @@ export function getRoleRoute(role: UserRole | null): string {
   }
 }
 
-/** Consulta el rol del usuario en la tabla `usuario` */
 export async function fetchUserRole(userId: string): Promise<UserRole | null> {
   try {
     const timeout = new Promise<null>((resolve) =>
@@ -66,6 +61,7 @@ type AuthContextType = {
   userRole: UserRole | null;
   avatarUrl: string | null;
   loading: boolean;
+  isBlocked: boolean;
   refreshAvatar: () => Promise<void>;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -78,20 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
 
-  // Ref para rastrear el email activo sin depender del estado React
-  // Esto nos permite detectar si SIGNED_IN es un login real o un refresco
   const activeEmailRef = useRef<string | null>(null);
 
-  /**
-   * Carga rol Y avatar desde `usuario` usando email como clave.
-   * usuario.id es un UUID propio de la tabla, distinto al UUID de Auth,
-   * por eso usamos email que sí es compartido entre ambas tablas.
-   */
   const loadUserData = async (u: User | null) => {
     if (!u?.email) {
       setUserRole(null);
       setAvatarUrl(null);
+      setIsBlocked(false);
       return;
     }
     try {
@@ -100,36 +91,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       const query = supabase
         .from("usuario")
-        .select("rol, avatar_url")
+        .select("rol, avatar_url, is_blocked")
         .eq("email", u.email)
         .maybeSingle()
         .then(({ data, error }) => {
           if (error || !data) return null;
           return data;
         });
+
       const data = await Promise.race([query, timeout]);
       console.log("[loadUserData] email:", u.email, "→ data:", data);
+
+      if (data?.is_blocked) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserRole(null);
+        setAvatarUrl(null);
+        setIsBlocked(true);
+        activeEmailRef.current = null;
+        return;
+      }
+
+      setIsBlocked(false);
       setUserRole((data?.rol as UserRole) ?? null);
       setAvatarUrl(data?.avatar_url ?? null);
     } catch {
       setUserRole(null);
       setAvatarUrl(null);
+      setIsBlocked(false);
     }
   };
 
-  /**
-   * Refresca solo el avatar desde `usuario.avatar_url`.
-   * Llamar tras subir una nueva foto en cualquier perfil.
-   */
   const refreshRole = async () => {
     if (!user?.email) return;
     const { data } = await supabase
       .from("usuario")
-      .select("rol, avatar_url")
+      .select("rol, avatar_url, is_blocked")
       .eq("email", user.email)
       .maybeSingle();
+
+    if (data?.is_blocked) {
+      await supabase.auth.signOut();
+      setUser(null);
+      setUserRole(null);
+      setAvatarUrl(null);
+      setIsBlocked(true);
+      activeEmailRef.current = null;
+      return;
+    }
+
     if (data?.rol) setUserRole(data.rol as UserRole);
     if (data?.avatar_url !== undefined) setAvatarUrl(data.avatar_url);
+    setIsBlocked(false);
   };
 
   const refreshAvatar = async () => {
@@ -148,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await supabase.auth.getSession();
         const u = data.session?.user ?? null;
         setUser(u);
-        // Guardamos el email activo desde el inicio
         activeEmailRef.current = u?.email ?? null;
         await loadUserData(u);
       } catch (err) {
@@ -156,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setUserRole(null);
         setAvatarUrl(null);
+        setIsBlocked(false);
       } finally {
         setLoading(false);
       }
@@ -179,15 +192,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           activeEmailRef.current,
         );
 
-        // Siempre silenciosos: nunca bloquean la UI
         const silentEvents = [
           "TOKEN_REFRESHED",
           "USER_UPDATED",
           "MFA_CHALLENGE_VERIFIED",
         ];
 
-        // SIGNED_IN es silencioso si el usuario ya estaba activo (mismo email).
-        // Es un login real solo si no había sesión antes o cambió el usuario.
         const isSameUser =
           incomingEmail !== null && incomingEmail === activeEmailRef.current;
         const isSilent =
@@ -204,12 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(u);
 
         if (isSilent) {
-          // Refresco silencioso: actualizamos datos sin tocar loading ni la UI
           loadUserData(u);
           return;
         }
 
-        // Cambio real de sesión: login nuevo o logout
         activeEmailRef.current = incomingEmail;
         setLoading(true);
         try {
@@ -229,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setUserRole(null);
     setAvatarUrl(null);
+    setIsBlocked(false);
   };
 
   return (
@@ -238,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userRole,
         avatarUrl,
         loading,
+        isBlocked,
         refreshAvatar,
         refreshRole,
         signOut,

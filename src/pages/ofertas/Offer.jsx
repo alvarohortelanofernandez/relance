@@ -1819,7 +1819,7 @@ export default function OfertasPage() {
   return (
     <MainLayout>
       <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        <main className="max-w-6xl mx-auto px-8 md:px-28 py-10 lg:px-5">
           {/* Cabecera */}
           <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
             <div>

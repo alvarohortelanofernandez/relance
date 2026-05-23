@@ -36,25 +36,8 @@ function Spinner({
   style?: React.CSSProperties;
 }) {
   return (
-    <svg
-      className={`animate-spin ${className}`}
-      style={style}
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <circle
-        className="opacity-20"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-      />
-      <path
-        className="opacity-80"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
+    <svg className={`animate-spin ${className}`} style={style}>
+      <use href="/icons.svg#icon-spinner" />
     </svg>
   );
 }
@@ -96,18 +79,8 @@ function ErrorBlock({ msg }: { msg: string }) {
         border: "1px solid rgba(248,113,113,0.2)",
       }}
     >
-      <svg
-        className="flex-shrink-0 mt-0.5"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
+      <svg className="flex-shrink-0 mt-0.5" width="14" height="14">
+        <use href="/icons.svg#icon-warning" />
       </svg>
       {msg}
     </div>
@@ -224,18 +197,8 @@ function AdminForm({
           border: "1px solid rgba(251,191,36,0.15)",
         }}
       >
-        <svg
-          className="flex-shrink-0 mt-0.5"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--color-warning)"
-          strokeWidth="2"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
+        <svg className="flex-shrink-0 mt-0.5" width="14" height="14">
+          <use href="/icons.svg#icon-info" />
         </svg>
         <p
           className="text-xs leading-relaxed"
@@ -361,17 +324,8 @@ function TutorEmpresaForm({
             border: "1px solid rgba(96,165,250,0.15)",
           }}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-info)"
-            strokeWidth="2"
-          >
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
+          <svg width="14" height="14">
+            <use href="/icons.svg#icon-company" />
           </svg>
         </div>
         <div className="flex-1 min-w-0">
@@ -512,16 +466,8 @@ function TutorCentroForm({
             border: "1px solid rgba(96,165,250,0.15)",
           }}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-info)"
-            strokeWidth="2"
-          >
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
+          <svg width="14" height="14">
+            <use href="/icons.svg#icon-educativeCenter" />
           </svg>
         </div>
         <div className="flex-1 min-w-0">
@@ -570,17 +516,8 @@ function InvalidTokenScreen({ onClose }: { onClose: () => void }) {
           border: "1px solid rgba(251,191,36,0.2)",
         }}
       >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--color-warning)"
-          strokeWidth="2"
-        >
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
+        <svg width="22" height="22">
+          <use href="/icons.svg#icon-warning" />
         </svg>
       </div>
       <h3
@@ -637,15 +574,8 @@ function SuccessScreen({
           border: "1px solid rgba(192,255,114,0.2)",
         }}
       >
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--color-brand)"
-          strokeWidth="2"
-        >
-          <polyline points="20 6 9 17 4 12" />
+        <svg width="26" height="26">
+          <use href="/icons.svg#icon-check" />
         </svg>
       </div>
       <h3
@@ -873,42 +803,18 @@ export default function OnboardingInviteModal({ user, onClose }: Props) {
 
   const roleBadgeIcon = {
     admin: (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-      >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <svg width="12" height="12">
+        <use href="/icons.svg#icon-shield" />
       </svg>
     ),
     tutor_empresa: (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-      >
-        <rect x="2" y="3" width="20" height="14" rx="2" />
-        <line x1="8" y1="21" x2="16" y2="21" />
-        <line x1="12" y1="17" x2="12" y2="21" />
+      <svg width="12" height="12">
+        <use href="/icons.svg#icon-company" />
       </svg>
     ),
     tutor_centro: (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-      >
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
+      <svg width="12" height="12">
+        <use href="/icons.svg#icon-educativeCenter" />
       </svg>
     ),
   };

@@ -47,20 +47,8 @@ function Icon({
 
 function Spinner() {
   return (
-    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-      <circle
-        className="opacity-20"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-      />
-      <path
-        className="opacity-80"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
+    <svg className={`animate-spin size-4`}>
+      <use href="/icons.svg#icon-spinner" />
     </svg>
   );
 }
@@ -102,18 +90,8 @@ function ErrorBlock({ msg }: { msg: string }) {
         border: "1px solid rgba(248,113,113,0.2)",
       }}
     >
-      <svg
-        className="flex-shrink-0 mt-0.5"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
+      <svg className="flex-shrink-0 mt-0.5" width="14" height="14">
+        <use href="/icons.svg#icon-warning" />
       </svg>
       {msg}
     </p>
@@ -702,12 +680,9 @@ export default function OnboardingModal({
                       className="flex-shrink-0"
                       width="16"
                       height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--color-brand)"
-                      strokeWidth="2.5"
+                      stroke="#c0ff72"
                     >
-                      <polyline points="20 6 9 17 4 12" />
+                      <use href="/icons.svg#icon-check" />
                     </svg>
                   )}
                 </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import UserMenu from "../auth/UserMenu";
 import logoUrl from "../../assets/logotipo_relance.svg";
@@ -19,6 +19,7 @@ export default function Header({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
 
   const roleMap: Record<string, Role> = {
     admin: "administrador",
@@ -68,6 +69,7 @@ export default function Header({
   // ── Botón de búsqueda (reutilizado en header y bajo el header) ────────────
   const SearchTrigger = ({ fullWidth = false }: { fullWidth?: boolean }) => (
     <button
+      ref={!fullWidth ? searchTriggerRef : undefined}
       onClick={() => setSearchOpen(true)}
       aria-label="Abrir buscador (Ctrl+K)"
       style={{
@@ -365,6 +367,7 @@ export default function Header({
         onClose={() => setSearchOpen(false)}
         role={role}
         userId={userId}
+        triggerRef={searchTriggerRef}
       />
     </>
   );
