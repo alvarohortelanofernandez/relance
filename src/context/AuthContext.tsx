@@ -192,27 +192,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         //   activeEmailRef.current,
         // );
 
-        // Guardar provider_token de GitHub si acaba de llegar
+        // Guardar token de GitHub en BD solo si es un token real de GitHub
         if (session?.provider_token && u) {
-          const githubIdentity = u.identities?.find(
-            (i) => i.provider === "github",
-          );
-          if (githubIdentity) {
-            supabase
-              .from("estudiante")
-              .upsert({
-                id: u.id,
-                github_access_token: session.provider_token,
-                updated_at: new Date().toISOString(),
-              })
-              .then(() => {});
-          }
-        }
-
-        // Capturar token de GitHub si acaba de completar linkIdentity
-        if (_event === "SIGNED_IN" && session?.provider_token && u) {
           const token = session.provider_token;
-          // Los tokens de GitHub empiezan por gho_ o ghp_, nunca por ya29.
           const isGitHubToken = !token.startsWith("ya29.");
           if (isGitHubToken) {
             const githubIdentity = u.identities?.find(
