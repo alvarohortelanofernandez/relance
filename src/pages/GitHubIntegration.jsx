@@ -220,20 +220,14 @@ export function useGitHubSession() {
   }, []);
 
   const connectGitHub = async () => {
-    const { data, error } = await supabase.auth.linkIdentity({
+    await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
         scopes: "read:user public_repo",
         redirectTo: `${window.location.origin}/perfil/estudiante`,
+        skipBrowserRedirect: false,
       },
     });
-
-    if (error) {
-      console.error("Error linking GitHub:", error);
-      return;
-    }
-
-    if (data?.url) window.location.href = data.url;
   };
 
   return { githubSession, loading, connectGitHub };
