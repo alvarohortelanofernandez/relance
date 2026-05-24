@@ -20,6 +20,24 @@ function IconStar({ size = 12 }) {
     </svg>
   );
 }
+function IconFork({ size = 12 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <path d="M6 9v2a3 3 0 003 3h6a3 3 0 003-3V9" />
+      <line x1="12" y1="12" x2="12" y2="15" />
+    </svg>
+  );
+}
 function IconLink({ size = 12 }) {
   return (
     <svg
@@ -67,6 +85,22 @@ function IconRefresh({ size = 14 }) {
     </svg>
   );
 }
+function IconExternalLink({ size = 11 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
 function Spinner({ className = "w-4 h-4" }) {
   return (
     <svg
@@ -91,36 +125,83 @@ function Spinner({ className = "w-4 h-4" }) {
   );
 }
 
-// ========== Colores por lenguaje (GitHub style) ==========
+// ========== Colores por lenguaje — ampliado ==========
 const LANG_COLORS = {
+  // Web
   JavaScript: "#f1e05a",
   TypeScript: "#3178c6",
+  HTML: "#e34c26",
+  CSS: "#563d7c",
+  SCSS: "#c6538c",
+  Sass: "#a53b70",
+  Vue: "#41b883",
+  Svelte: "#ff3e00",
+  Astro: "#ff5a03",
+  // Backend
   Python: "#3572A5",
-  Rust: "#dea584",
-  Go: "#00ADD8",
+  Ruby: "#701516",
+  PHP: "#4F5D95",
   Java: "#b07219",
   "C#": "#178600",
   "C++": "#f34b7d",
-  PHP: "#4F5D95",
-  Ruby: "#701516",
-  Swift: "#F05138",
+  C: "#555555",
+  Go: "#00ADD8",
+  Rust: "#dea584",
   Kotlin: "#A97BFF",
-  CSS: "#563d7c",
-  HTML: "#e34c26",
-  Shell: "#89e051",
-  Vue: "#41b883",
+  Swift: "#F05138",
   Dart: "#00B4AB",
   Scala: "#c22d40",
+  Elixir: "#6e4a7e",
+  Erlang: "#B83998",
+  Haskell: "#5e5086",
+  Clojure: "#db5855",
+  Lua: "#000080",
+  Perl: "#0298c3",
   R: "#198CE7",
+  Julia: "#a270ba",
+  Nim: "#ffc200",
+  Zig: "#ec915c",
+  // Shell / Scripts
+  Shell: "#89e051",
+  Bash: "#89e051",
+  PowerShell: "#012456",
+  // Data / Config
+  Jupyter: "#DA5B0B",
+  "Jupyter Notebook": "#DA5B0B",
+  MATLAB: "#e16737",
+  // Mobile
+  "Objective-C": "#438eff",
+  // Infra / Config
+  Dockerfile: "#384d54",
+  HCL: "#844FBA",
+  Nix: "#7e7eff",
+  // Markup / Other
+  Markdown: "#083fa1",
+  TeX: "#3D6117",
 };
 
+// ========== Punto de color de lenguaje ==========
 function LangDot({ lang }) {
   const color = LANG_COLORS[lang] || "#8b949e";
   return (
-    <span className="flex items-center gap-1 text-xs text-gray-400">
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 12,
+        color: "var(--color-text-muted)",
+      }}
+    >
       <span
-        style={{ backgroundColor: color }}
-        className="w-2.5 h-2.5 rounded-full inline-block"
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: "50%",
+          background: color,
+          display: "inline-block",
+          flexShrink: 0,
+        }}
       />
       {lang}
     </span>
@@ -233,7 +314,7 @@ export function useGitHubSession() {
   return { githubSession, loading, connectGitHub };
 }
 
-// ========== Hook: obtener repos del usuario autenticado ==========
+// ========== Hook: obtener repos ==========
 export function useGitHubRepos(token) {
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -292,55 +373,193 @@ function RepoCard({ repo, isVinculado, onToggle }) {
         year: "numeric",
       })
     : "";
+  const langColor = LANG_COLORS[repo.lenguajes?.[0]] || "#8b949e";
 
   return (
     <div
-      className={`group relative p-4 rounded-xl border transition-all duration-200 ${
-        isVinculado
-          ? "border-brand/40 bg-brand/5"
-          : "border-white/8 bg-dark hover:border-white/15"
-      }`}
+      style={{
+        background: isVinculado
+          ? "rgba(192,255,114,0.04)"
+          : "var(--color-surface-elevated)",
+        border: `1px solid ${isVinculado ? "rgba(192,255,114,0.3)" : "var(--color-border-strong)"}`,
+        borderRadius: 12,
+        padding: "14px 16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        transition: "border-color 0.2s",
+      }}
+      onMouseEnter={(e) => {
+        if (!isVinculado)
+          e.currentTarget.style.borderColor = "var(--color-border-strong)";
+      }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 4,
+            }}
+          >
             <a
               href={repo.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-display font-semibold text-sm text-white hover:text-brand transition-colors truncate"
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--color-brand)",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                letterSpacing: "-0.02em",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
             >
+              <IconGitHub size={12} />
               {repo.nombre}
             </a>
             {repo.privado && (
-              <span className="text-xs border border-white/20 text-gray-500 px-1.5 py-0.5 rounded-full flex-shrink-0">
+              <span
+                style={{
+                  fontSize: 10,
+                  border: "1px solid var(--color-border-strong)",
+                  color: "var(--color-text-muted)",
+                  padding: "1px 7px",
+                  borderRadius: 20,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
                 privado
               </span>
             )}
           </div>
+
           {repo.descripcion && (
-            <p className="text-gray-500 text-xs line-clamp-2 mb-2">
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.6,
+                margin: "0 0 8px",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
               {repo.descripcion}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-3">
-            {repo.lenguajes[0] && <LangDot lang={repo.lenguajes[0]} />}
+
+          {/* Lang + stats */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            {repo.lenguajes?.[0] && <LangDot lang={repo.lenguajes[0]} />}
             {repo.estrellas > 0 && (
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                  fontSize: 12,
+                  color: "var(--color-text-muted)",
+                }}
+              >
                 <IconStar /> {repo.estrellas}
               </span>
             )}
-            {fecha && <span className="text-xs text-gray-600">{fecha}</span>}
+            {repo.forks > 0 && (
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                  fontSize: 12,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <IconFork /> {repo.forks}
+              </span>
+            )}
+            {fecha && (
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--color-text-subtle)",
+                  marginLeft: "auto",
+                }}
+              >
+                {fecha}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Botón vincular/desvincular */}
         <button
           onClick={() => onToggle(repo)}
-          className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all duration-200 ${
-            isVinculado
-              ? "border-brand/40 text-brand bg-brand/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
-              : "border-white/15 text-gray-400 hover:border-brand/40 hover:text-brand hover:bg-brand/5"
-          }`}
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "5px 10px",
+            borderRadius: 8,
+            border: isVinculado
+              ? "1px solid rgba(192,255,114,0.3)"
+              : "1px solid var(--color-border-strong)",
+            background: isVinculado ? "rgba(192,255,114,0.08)" : "transparent",
+            color: isVinculado
+              ? "var(--color-brand)"
+              : "var(--color-text-muted)",
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            if (isVinculado) {
+              e.currentTarget.style.background = "rgba(248,113,113,0.08)";
+              e.currentTarget.style.color = "#f87171";
+              e.currentTarget.style.borderColor = "rgba(248,113,113,0.3)";
+            } else {
+              e.currentTarget.style.borderColor = "rgba(192,255,114,0.3)";
+              e.currentTarget.style.color = "var(--color-brand)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isVinculado
+              ? "rgba(192,255,114,0.08)"
+              : "transparent";
+            e.currentTarget.style.color = isVinculado
+              ? "var(--color-brand)"
+              : "var(--color-text-muted)";
+            e.currentTarget.style.borderColor = isVinculado
+              ? "rgba(192,255,114,0.3)"
+              : "var(--color-border-strong)";
+          }}
           title={isVinculado ? "Quitar del perfil" : "Añadir al perfil"}
         >
           {isVinculado ? (
@@ -400,51 +619,128 @@ export default function GitHubReposSection({
       r.descripcion.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
-  // ========== Cargando sesión ==========
+  // ── Cargando sesión ──
   if (sessionLoading) {
     return (
-      <div className="flex items-center justify-center py-8 text-gray-600 gap-2">
-        <Spinner /> Comprobando sesión...
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "32px 0",
+          gap: 8,
+          color: "var(--color-text-muted)",
+        }}
+      >
+        <Spinner className="w-4 h-4" /> Comprobando sesión...
       </div>
     );
   }
 
-  // ========== No conectado ==========
+  // ── No conectado ──
   if (!githubSession) {
     return (
-      <div className="text-center py-10 border border-dashed border-white/10 rounded-xl">
-        <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 text-gray-500">
-          <IconGitHub size={28} />
+      <div
+        style={{
+          textAlign: "center",
+          padding: "32px 20px",
+          border: "1px dashed var(--color-border-strong)",
+          borderRadius: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: "var(--color-surface-elevated)",
+            border: "1px solid var(--color-border-strong)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 14px",
+            color: "var(--color-text-muted)",
+          }}
+        >
+          <IconGitHub size={26} />
         </div>
-        <h3 className="font-display text-white font-semibold mb-1">
+        <h3
+          style={{
+            fontFamily: "Syne, sans-serif",
+            fontSize: 15,
+            fontWeight: 700,
+            color: "var(--color-text)",
+            marginBottom: 6,
+          }}
+        >
           Conecta tu GitHub
         </h3>
-        <p className="text-gray-600 text-sm mb-5 max-w-xs mx-auto">
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--color-text-muted)",
+            marginBottom: 16,
+            maxWidth: 280,
+            margin: "0 auto 16px",
+          }}
+        >
           Vincula tu cuenta para mostrar tus repositorios directamente en tu
           perfil.
         </p>
         <button
           onClick={connectGitHub}
-          className="btn-primary flex items-center gap-2 mx-auto"
+          className="btn-primary"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
         >
-          <IconGitHub size={14} />
-          Conectar con GitHub
+          <IconGitHub size={13} /> Conectar con GitHub
         </button>
 
         {reposVinculados.length > 0 && (
-          <div className="mt-6 text-left border-t border-white/8 pt-5">
-            <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">
+          <div
+            style={{
+              marginTop: 20,
+              textAlign: "left",
+              borderTop: "1px solid var(--color-border)",
+              paddingTop: 16,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                color: "var(--color-text-subtle)",
+                marginBottom: 10,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontWeight: 700,
+              }}
+            >
               Repositorios en tu perfil ({reposVinculados.length})
             </p>
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {reposVinculados.map((r) => (
                 <div
                   key={r.repo_id}
-                  className="flex items-center justify-between p-3 bg-dark border border-white/8 rounded-xl"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "9px 12px",
+                    background: "var(--color-surface-elevated)",
+                    border: "1px solid var(--color-border-strong)",
+                    borderRadius: 10,
+                  }}
                 >
-                  <div className="flex items-center gap-2">
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 7 }}
+                  >
                     <IconGitHub size={12} />
-                    <span className="text-sm text-white font-medium">
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--color-text)",
+                      }}
+                    >
                       {r.nombre}
                     </span>
                     {r.lenguajes?.[0] && <LangDot lang={r.lenguajes[0]} />}
@@ -453,9 +749,16 @@ export default function GitHubReposSection({
                     href={r.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-gray-500 hover:text-brand transition-colors"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--color-text-muted)",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 3,
+                    }}
                   >
-                    Ver →
+                    Ver <IconExternalLink size={10} />
                   </a>
                 </div>
               ))}
@@ -466,32 +769,72 @@ export default function GitHubReposSection({
     );
   }
 
-  // ========== Conectado ==========
+  // ── Conectado ──
   return (
     <div>
       {/* Header de sesión */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-green-500/5 border border-green-500/20 rounded-xl">
-        <div className="flex items-center gap-2.5">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+          padding: "10px 14px",
+          background: "rgba(74,222,128,0.04)",
+          border: "1px solid rgba(74,222,128,0.18)",
+          borderRadius: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {githubSession.avatarUrl && (
             <img
               src={githubSession.avatarUrl}
               alt={githubSession.username}
-              className="w-7 h-7 rounded-full border border-white/10"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                border: "1px solid var(--color-border-strong)",
+              }}
             />
           )}
           <div>
-            <p className="text-xs text-green-400 font-semibold">
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-success)",
+                margin: 0,
+              }}
+            >
               GitHub conectado
             </p>
-            <p className="text-xs text-gray-500">@{githubSession.username}</p>
+            <p
+              style={{
+                fontSize: 11,
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
+              @{githubSession.username}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Botón reconectar: visible cuando el token viene de BD (puede estar caducado) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Botón reconectar: visible cuando el token viene de BD */}
           {!githubSession.fromOAuth && (
             <button
               onClick={connectGitHub}
-              className="text-xs text-yellow-400 border border-yellow-500/30 px-2.5 py-1 rounded-lg hover:bg-yellow-500/10 transition-all"
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--color-warning)",
+                border: "1px solid rgba(251,191,36,0.25)",
+                background: "transparent",
+                padding: "4px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
               title="Reconecta para refrescar el token de GitHub"
             >
               Reconectar
@@ -500,7 +843,16 @@ export default function GitHubReposSection({
           <button
             onClick={refetch}
             disabled={reposLoading}
-            className="p-2 text-gray-500 hover:text-white hover:bg-white/8 rounded-lg transition-all"
+            style={{
+              padding: "6px 8px",
+              color: "var(--color-text-muted)",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+            }}
             title="Actualizar repositorios"
           >
             {reposLoading ? (
@@ -514,21 +866,49 @@ export default function GitHubReposSection({
 
       {/* Repos vinculados al perfil */}
       {reposVinculados.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+        <div style={{ marginBottom: 12 }}>
+          <p
+            style={{
+              fontSize: 10,
+              color: "var(--color-text-subtle)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              fontWeight: 700,
+              marginBottom: 8,
+            }}
+          >
             En tu perfil ({reposVinculados.length})
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {reposVinculados.map((r) => (
               <span
                 key={r.repo_id}
-                className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 text-brand text-xs px-2.5 py-1 rounded-full"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: "rgba(192,255,114,0.08)",
+                  border: "1px solid rgba(192,255,114,0.2)",
+                  color: "var(--color-brand)",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                }}
               >
                 <IconGitHub size={10} />
                 {r.nombre}
                 <button
                   onClick={() => handleToggle(r)}
-                  className="text-brand/60 hover:text-brand leading-none ml-0.5"
+                  style={{
+                    color: "inherit",
+                    opacity: 0.6,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    lineHeight: 1,
+                    padding: 0,
+                  }}
                 >
                   ×
                 </button>
@@ -539,16 +919,25 @@ export default function GitHubReposSection({
       )}
 
       {/* Buscador */}
-      <div className="relative mb-3">
+      <div style={{ position: "relative", marginBottom: 10 }}>
         <input
           type="text"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar repositorios..."
-          className="input-field text-sm pl-8"
+          className="input-field"
+          style={{ fontSize: 12, padding: "8px 11px 8px 32px" }}
         />
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 w-3.5 h-3.5"
+          style={{
+            position: "absolute",
+            left: 11,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "var(--color-text-subtle)",
+            width: 13,
+            height: 13,
+          }}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -561,9 +950,29 @@ export default function GitHubReposSection({
 
       {/* Error */}
       {error && (
-        <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
+        <div
+          style={{
+            marginBottom: 10,
+            padding: "10px 14px",
+            background: "var(--color-error-bg)",
+            border: "1px solid rgba(248,113,113,0.25)",
+            borderRadius: 10,
+            color: "var(--color-error)",
+            fontSize: 12,
+          }}
+        >
           {error}.{" "}
-          <button onClick={refetch} className="underline">
+          <button
+            onClick={refetch}
+            style={{
+              color: "inherit",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+              fontSize: 12,
+            }}
+          >
             Reintentar
           </button>
         </div>
@@ -571,13 +980,38 @@ export default function GitHubReposSection({
 
       {/* Lista de repos */}
       {reposLoading && repos.length === 0 ? (
-        <div className="flex items-center justify-center py-10 text-gray-600 gap-2">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "32px 0",
+            gap: 8,
+            color: "var(--color-text-muted)",
+          }}
+        >
           <Spinner /> Cargando repositorios...
         </div>
       ) : (
-        <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            maxHeight: 420,
+            overflowY: "auto",
+            paddingRight: 2,
+          }}
+        >
           {reposFiltrados.length === 0 ? (
-            <p className="text-center text-gray-600 text-sm py-6">
+            <p
+              style={{
+                textAlign: "center",
+                color: "var(--color-text-muted)",
+                fontSize: 12,
+                padding: "24px 0",
+              }}
+            >
               {busqueda
                 ? "No se encontraron repositorios"
                 : "No tienes repositorios públicos"}
@@ -595,7 +1029,14 @@ export default function GitHubReposSection({
         </div>
       )}
 
-      <p className="text-xs text-gray-700 mt-3 text-center">
+      <p
+        style={{
+          fontSize: 11,
+          color: "var(--color-text-subtle)",
+          marginTop: 10,
+          textAlign: "center",
+        }}
+      >
         {reposFiltrados.length} repositorios · Solo se muestran los públicos
       </p>
     </div>
