@@ -176,48 +176,29 @@ export function useGitHubSession() {
 
   // Si la sesión tiene token úsalo; si no, intenta leerlo de la BD
   const resolveSession = async (session) => {
-    console.log("=== resolveSession ===");
-    console.log("session:", session);
-    console.log("provider_token:", session?.provider_token);
-    console.log("user:", session?.user);
-    console.log("identities:", session?.user?.identities);
-
     const base = extractGitHubSession(session);
-    console.log("base extraído:", base);
 
-    if (base?.token) {
-      console.log("✅ Token desde sesión OAuth");
+    // Token en sesión: solo válido si es de GitHub (no de Google)
+    if (base?.token && !base.token.startsWith("ya29.")) {
       return base;
     }
 
+    // Sin token GitHub en sesión: buscar en BD
     const user = session?.user;
-    if (!user) {
-      console.log("❌ Sin user");
-      return null;
-    }
+    if (!user) return null;
 
     const githubIdentity = user.identities?.find(
       (i) => i.provider === "github",
     );
-    console.log("githubIdentity:", githubIdentity);
-    if (!githubIdentity) {
-      console.log("❌ Sin identidad GitHub");
-      return null;
-    }
+    if (!githubIdentity) return null;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("estudiante")
       .select("github_access_token, github_username")
       .eq("id", user.id)
       .maybeSingle();
 
-    console.log("BD github_access_token:", data?.github_access_token);
-    console.log("BD error:", error);
-
-    if (!data?.github_access_token) {
-      console.log("❌ Sin token en BD");
-      return null;
-    }
+    if (!data?.github_access_token) return null;
 
     return {
       token: data.github_access_token,
@@ -247,7 +228,6 @@ export function useGitHubSession() {
   }, []);
 
   const connectGitHub = async () => {
-    console.log("CLICK GITHUB");
     const { data, error } = await supabase.auth.linkIdentity({
       provider: "github",
       options: {
@@ -261,12 +241,7 @@ export function useGitHubSession() {
       return;
     }
 
-    // Fuerza redirect
-    if (data?.url) {
-      window.location.href = data.url;
-    } else {
-      console.warn("No redirect URL returned from Supabase");
-    }
+    if (data?.url) window.location.href = data.url;
   };
 
   return { githubSession, loading, connectGitHub };

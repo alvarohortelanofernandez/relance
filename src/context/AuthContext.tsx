@@ -209,6 +209,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Capturar token de GitHub si acaba de completar linkIdentity
+        if (_event === "SIGNED_IN" && session?.provider_token && u) {
+          const token = session.provider_token;
+          // Los tokens de GitHub empiezan por gho_ o ghp_, nunca por ya29.
+          const isGitHubToken = !token.startsWith("ya29.");
+          if (isGitHubToken) {
+            const githubIdentity = u.identities?.find(
+              (i) => i.provider === "github",
+            );
+            if (githubIdentity) {
+              supabase
+                .from("estudiante")
+                .upsert({
+                  id: u.id,
+                  github_access_token: token,
+                  github_username:
+                    githubIdentity.identity_data?.user_name ||
+                    githubIdentity.identity_data?.preferred_username,
+                  updated_at: new Date().toISOString(),
+                })
+                .then(({ error }) => {
+                  if (error)
+                    console.error("Error guardando token GitHub:", error);
+                  else console.log("✅ Token GitHub guardado en BD");
+                });
+            }
+          }
+        }
+
         const silentEvents = [
           "TOKEN_REFRESHED",
           "USER_UPDATED",
