@@ -180,6 +180,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event, session: Session | null) => {
+        console.log("🔔 evento:", _event);
+        console.log(
+          "🔑 provider_token:",
+          session?.provider_token?.substring(0, 15),
+        );
+        console.log("👤 provider:", session?.user?.app_metadata?.provider);
         const u = session?.user ?? null;
         const incomingEmail = u?.email ?? null;
 
