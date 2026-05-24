@@ -183,14 +183,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const u = session?.user ?? null;
         const incomingEmail = u?.email ?? null;
 
-        console.log(
-          "[onAuthStateChange] evento:",
-          _event,
-          "| email entrante:",
-          incomingEmail,
-          "| email activo:",
-          activeEmailRef.current,
-        );
+        // console.log(
+        //   "[onAuthStateChange] evento:",
+        //   _event,
+        //   "| email entrante:",
+        //   incomingEmail,
+        //   "| email activo:",
+        //   activeEmailRef.current,
+        // );
+
+        // Guardar provider_token de GitHub si acaba de llegar
+        if (session?.provider_token && u) {
+          const githubIdentity = u.identities?.find(
+            (i) => i.provider === "github",
+          );
+          if (githubIdentity) {
+            supabase
+              .from("estudiante")
+              .upsert({
+                id: u.id,
+                github_access_token: session.provider_token,
+                updated_at: new Date().toISOString(),
+              })
+              .then(() => {});
+          }
+        }
 
         const silentEvents = [
           "TOKEN_REFRESHED",

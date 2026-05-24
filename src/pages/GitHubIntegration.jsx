@@ -174,18 +174,72 @@ export function useGitHubSession() {
   const [githubSession, setGithubSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Si la sesión tiene token úsalo; si no, intenta leerlo de la BD
+  const resolveSession = async (session) => {
+    console.log("=== resolveSession ===");
+    console.log("session:", session);
+    console.log("provider_token:", session?.provider_token);
+    console.log("user:", session?.user);
+    console.log("identities:", session?.user?.identities);
+
+    const base = extractGitHubSession(session);
+    console.log("base extraído:", base);
+
+    if (base?.token) {
+      console.log("✅ Token desde sesión OAuth");
+      return base;
+    }
+
+    const user = session?.user;
+    if (!user) {
+      console.log("❌ Sin user");
+      return null;
+    }
+
+    const githubIdentity = user.identities?.find(
+      (i) => i.provider === "github",
+    );
+    console.log("githubIdentity:", githubIdentity);
+    if (!githubIdentity) {
+      console.log("❌ Sin identidad GitHub");
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("estudiante")
+      .select("github_access_token, github_username")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    console.log("BD github_access_token:", data?.github_access_token);
+    console.log("BD error:", error);
+
+    if (!data?.github_access_token) {
+      console.log("❌ Sin token en BD");
+      return null;
+    }
+
+    return {
+      token: data.github_access_token,
+      username: data.github_username || githubIdentity.identity_data?.user_name,
+      avatarUrl: githubIdentity.identity_data?.avatar_url,
+    };
+  };
+
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getSession();
-      setGithubSession(extractGitHubSession(data?.session));
+      const resolved = await resolveSession(data?.session);
+      setGithubSession(resolved);
       setLoading(false);
     };
 
     check();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setGithubSession(extractGitHubSession(session));
+      async (_event, session) => {
+        const resolved = await resolveSession(session);
+        setGithubSession(resolved);
       },
     );
 
