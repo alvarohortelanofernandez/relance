@@ -127,12 +127,7 @@ function LangDot({ lang }) {
   );
 }
 
-// ========== Hook: sesión de GitHub vía Supabase OAuth ==========
-
-// Extrae la sesión de GitHub del objeto de sesión de Supabase.
-// Funciona tanto para usuarios que se autenticaron directamente con GitHub
-// como para usuarios de Google/email que vincularon GitHub después:
-// en ambos casos Supabase guarda el provider_token de GitHub en la sesión.
+// ========== Extrae datos de GitHub de la sesión de Supabase ==========
 function extractGitHubSession(session) {
   const user = session?.user;
   if (!user) return null;
@@ -140,7 +135,6 @@ function extractGitHubSession(session) {
   const provider = user?.app_metadata?.provider;
   const metadata = user?.user_metadata ?? {};
 
-  // Caso 1: el usuario se autenticó con GitHub directamente
   if (provider === "github") {
     return {
       token: session.provider_token,
@@ -150,9 +144,6 @@ function extractGitHubSession(session) {
     };
   }
 
-  // Caso 2: usuario de otro provider (Google, email) que vinculó GitHub.
-  // Supabase guarda el provider_token de GitHub pero el provider sigue siendo el original.
-  // Detectamos que el token es de GitHub comprobando identities o user_name en metadata.
   const githubIdentity = user?.identities?.find((i) => i.provider === "github");
   if (githubIdentity) {
     const ghData = githubIdentity.identity_data ?? {};
@@ -170,20 +161,20 @@ function extractGitHubSession(session) {
   return null;
 }
 
+// ========== Hook: sesión de GitHub ==========
 export function useGitHubSession() {
   const [githubSession, setGithubSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Si la sesión tiene token úsalo; si no, intenta leerlo de la BD
   const resolveSession = async (session) => {
     const base = extractGitHubSession(session);
 
-    // Token en sesión: solo válido si es de GitHub (no de Google)
+    // Token en sesión válido: solo si es de GitHub (no de Google, que empieza por ya29.)
     if (base?.token && !base.token.startsWith("ya29.")) {
-      return base;
+      return { ...base, fromOAuth: true };
     }
 
-    // Sin token GitHub en sesión: buscar en BD
+    // Sin token GitHub en sesión: buscar en BD (caso recarga de página)
     const user = session?.user;
     if (!user) return null;
 
@@ -204,6 +195,7 @@ export function useGitHubSession() {
       token: data.github_access_token,
       username: data.github_username || githubIdentity.identity_data?.user_name,
       avatarUrl: githubIdentity.identity_data?.avatar_url,
+      fromOAuth: false,
     };
   };
 
@@ -315,7 +307,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
           : "border-white/8 bg-dark hover:border-white/15"
       }`}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -349,7 +340,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
           </div>
         </div>
 
-        {/* Botón vincular/desvincular */}
         <button
           onClick={() => onToggle(repo)}
           className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all duration-200 ${
@@ -374,9 +364,7 @@ function RepoCard({ repo, isVinculado, onToggle }) {
   );
 }
 
-// ========== COMPONENTE PRINCIPAL que se integra en StudentProfile ==========
-/**
- * GitHubReposSection */
+// ========== COMPONENTE PRINCIPAL ==========
 export default function GitHubReposSection({
   reposVinculados = [],
   onReposChange,
@@ -396,7 +384,6 @@ export default function GitHubReposSection({
   } = useGitHubRepos(githubSession?.token);
   const [busqueda, setBusqueda] = useState("");
 
-  // Sincronizar username cuando conectamos
   useEffect(() => {
     if (githubSession?.username && githubSession.username !== githubUsername) {
       onUsernameChange?.(githubSession.username);
@@ -419,7 +406,7 @@ export default function GitHubReposSection({
       r.descripcion.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
-  // ========== Estado: cargando sesión ==========
+  // ========== Cargando sesión ==========
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center py-8 text-gray-600 gap-2">
@@ -428,7 +415,7 @@ export default function GitHubReposSection({
     );
   }
 
-  // ========== Estado: no conectado ==========
+  // ========== No conectado ==========
   if (!githubSession) {
     return (
       <div className="text-center py-10 border border-dashed border-white/10 rounded-xl">
@@ -450,7 +437,6 @@ export default function GitHubReposSection({
           Conectar con GitHub
         </button>
 
-        {/* Repos vinculados previamente (sin sesión activa) */}
         {reposVinculados.length > 0 && (
           <div className="mt-6 text-left border-t border-white/8 pt-5">
             <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">
@@ -486,7 +472,7 @@ export default function GitHubReposSection({
     );
   }
 
-  // ========== Estado: conectado ==========
+  // ========== Conectado ==========
   return (
     <div>
       {/* Header de sesión */}
@@ -506,18 +492,30 @@ export default function GitHubReposSection({
             <p className="text-xs text-gray-500">@{githubSession.username}</p>
           </div>
         </div>
-        <button
-          onClick={refetch}
-          disabled={reposLoading}
-          className="p-2 text-gray-500 hover:text-white hover:bg-white/8 rounded-lg transition-all"
-          title="Actualizar repositorios"
-        >
-          {reposLoading ? (
-            <Spinner className="w-3.5 h-3.5" />
-          ) : (
-            <IconRefresh size={14} />
+        <div className="flex items-center gap-2">
+          {/* Botón reconectar: visible cuando el token viene de BD (puede estar caducado) */}
+          {!githubSession.fromOAuth && (
+            <button
+              onClick={connectGitHub}
+              className="text-xs text-yellow-400 border border-yellow-500/30 px-2.5 py-1 rounded-lg hover:bg-yellow-500/10 transition-all"
+              title="Reconecta para refrescar el token de GitHub"
+            >
+              Reconectar
+            </button>
           )}
-        </button>
+          <button
+            onClick={refetch}
+            disabled={reposLoading}
+            className="p-2 text-gray-500 hover:text-white hover:bg-white/8 rounded-lg transition-all"
+            title="Actualizar repositorios"
+          >
+            {reposLoading ? (
+              <Spinner className="w-3.5 h-3.5" />
+            ) : (
+              <IconRefresh size={14} />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Repos vinculados al perfil */}
