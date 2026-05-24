@@ -317,6 +317,7 @@ const CSS = `
   .up-actions { flex-wrap: wrap; }
   .up-gh-grid { grid-template-columns: 1fr; }
 }
+  .up-hero .up-convenio { border-radius: 10px; }
 `;
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────
@@ -949,10 +950,19 @@ export default function UserProfilePage({
   onBack,
 }: UserProfilePageProps) {
   const { user } = useAuth();
-  const viewerRole: ViewerRole = (user?.user_metadata?.rol ??
-    user?.user_metadata?.role ??
-    user?.user_metadata?.tipo ??
-    "estudiante") as ViewerRole;
+  const [viewerRole, setViewerRole] = useState<ViewerRole>("estudiante");
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("usuario")
+      .select("rol")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.rol) setViewerRole(data.rol as ViewerRole);
+      });
+  }, [user]);
   const viewerId = user?.id ?? "";
 
   const resolved = !propEntityType || !propEntityId ? inferFromPath() : null;
@@ -994,6 +1004,14 @@ export default function UserProfilePage({
   const showConvenio =
     (viewerRole === "empresa" && rawEntityType === "centro_educativo") ||
     (viewerRole === "centro_educativo" && rawEntityType === "empresa");
+  console.log("[convenio debug]", {
+    viewerRole,
+    rawEntityType,
+    entityId,
+    viewerId,
+    showConvenio,
+    convenioState,
+  });
 
   const showToast = (msg: string, type: "success" | "error" = "success") =>
     setToast({ msg, type });
@@ -1240,11 +1258,46 @@ export default function UserProfilePage({
     if (!convenioId) return;
     setConvenioLoading(true);
     try {
+      // Obtener datos antes de borrar
+      const { data: cd } = await supabase
+        .from("convenio")
+        .select("id_empresa, id_centro, id_solicitante")
+        .eq("id", convenioId)
+        .maybeSingle();
+
       const { error: e } = await supabase
         .from("convenio")
         .delete()
         .eq("id", convenioId);
       if (e) throw e;
+
+      // Eliminar de centro_empresa_acuerdo si existe
+      if (cd) {
+        await supabase
+          .from("centro_empresa_acuerdo")
+          .delete()
+          .eq("id_centro", cd.id_centro)
+          .eq("id_empresa", cd.id_empresa);
+
+        // Notificar a la otra parte si el convenio era activo o pendiente
+        const otraParteId =
+          cd.id_solicitante === viewerId
+            ? viewerRole === "empresa"
+              ? cd.id_centro
+              : cd.id_empresa
+            : cd.id_solicitante;
+
+        await supabase.from("notificacion").insert({
+          id_usuario_destino: otraParteId,
+          tipo: "convenio_rechazado",
+          titulo: "Convenio retirado",
+          mensaje: "La otra parte ha retirado el convenio de colaboración.",
+          leido: false,
+          fecha: new Date().toISOString(),
+          metadata: JSON.stringify({ convenio_id: convenioId }),
+        });
+      }
+
       setConvenioId(null);
       setConvenioState("none");
       showToast("Convenio retirado");
@@ -1267,12 +1320,15 @@ export default function UserProfilePage({
         })
         .eq("id", convenioId);
       if (e) throw e;
+
       const { data: cd } = await supabase
         .from("convenio")
-        .select("id_solicitante")
+        .select("id_solicitante, id_empresa, id_centro")
         .eq("id", convenioId)
         .maybeSingle();
-      if (cd?.id_solicitante)
+
+      if (cd) {
+        // Notificar al solicitante
         await supabase.from("notificacion").insert({
           id_usuario_destino: cd.id_solicitante,
           tipo: "convenio_aceptado",
@@ -1282,6 +1338,21 @@ export default function UserProfilePage({
           fecha: new Date().toISOString(),
           metadata: JSON.stringify({ convenio_id: convenioId }),
         });
+
+        // Crear acuerdo formal
+        await supabase.from("centro_empresa_acuerdo").upsert(
+          {
+            id_centro: cd.id_centro,
+            id_empresa: cd.id_empresa,
+            estado: "activo",
+            fecha_inicio: new Date().toISOString().split("T")[0],
+            updated_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          },
+          { onConflict: "id_centro,id_empresa" },
+        );
+      }
+
       setConvenioState("active");
       showToast("Convenio aceptado");
     } catch (e: unknown) {
@@ -1295,17 +1366,27 @@ export default function UserProfilePage({
     if (!convenioId) return;
     setConvenioLoading(true);
     try {
+      const { data: cd } = await supabase
+        .from("convenio")
+        .select("id_solicitante, id_empresa, id_centro")
+        .eq("id", convenioId)
+        .maybeSingle();
+
       const { error: e } = await supabase
         .from("convenio")
         .update({ estado: "rechazado" })
         .eq("id", convenioId);
       if (e) throw e;
-      const { data: cd } = await supabase
-        .from("convenio")
-        .select("id_solicitante")
-        .eq("id", convenioId)
-        .maybeSingle();
-      if (cd?.id_solicitante)
+
+      if (cd) {
+        // Actualizar acuerdo si existía
+        await supabase
+          .from("centro_empresa_acuerdo")
+          .update({ estado: "rechazado", updated_at: new Date().toISOString() })
+          .eq("id_centro", cd.id_centro)
+          .eq("id_empresa", cd.id_empresa);
+
+        // Notificar al solicitante
         await supabase.from("notificacion").insert({
           id_usuario_destino: cd.id_solicitante,
           tipo: "convenio_rechazado",
@@ -1315,6 +1396,8 @@ export default function UserProfilePage({
           fecha: new Date().toISOString(),
           metadata: JSON.stringify({ convenio_id: convenioId }),
         });
+      }
+
       setConvenioId(null);
       setConvenioState("none");
       showToast("Propuesta rechazada");
@@ -1524,11 +1607,11 @@ export default function UserProfilePage({
               loading={al}
             />
           )}
-          <Btn
+          {/* <Btn
             label="Mensaje"
             icon={<Icon.Message />}
             onClick={() => alert("Abrir chat")}
-          />
+          /> */}
         </>
       );
 
@@ -1581,11 +1664,11 @@ export default function UserProfilePage({
               Fuera de tu centro
             </span>
           )}
-          <Btn
+          {/* <Btn
             label="Mensaje"
             icon={<Icon.Message />}
             onClick={() => alert("Abrir chat")}
-          />
+          /> */}
         </>
       );
 
@@ -1635,40 +1718,48 @@ export default function UserProfilePage({
         </>
       );
 
-    // if (viewerRole === "empresa") {
-    //   if (rawEntityType === "estudiante")
-    //     return (
-    //       <>
-    //         <Btn
-    //           label="Guardar perfil"
-    //           variant="primary"
-    //           icon={<Icon.Bookmark />}
-    //           onClick={() =>
-    //             withAction(async () => {
-    //               await supabase.from("guardado").insert({
-    //                 id_estudiante: entityId,
-    //                 fecha_guardado: new Date().toISOString(),
-    //               });
-    //             }, "Guardado")
-    //           }
-    //           loading={al}
-    //         />
-    //         <Btn
-    //           label="Mensaje"
-    //           icon={<Icon.Message />}
-    //           onClick={() => alert("Abrir chat")}
-    //         />
-    //       </>
-    //     );
-    //   if (rawEntityType === "centro_educativo")
-    //     return (
-    //       <Btn
-    //         label="Contactar"
-    //         icon={<Icon.Message />}
-    //         onClick={() => alert("Abrir chat")}
-    //       />
-    //     );
-    // }
+    if (viewerRole === "empresa") {
+      if (rawEntityType === "estudiante")
+        return (
+          <>
+            <Btn
+              label="Ver perfil completo"
+              variant="primary"
+              icon={<Icon.FileText />}
+              onClick={() => {}} // o lo que necesites
+            />
+
+            {/* <Btn
+              label="Guardar perfil"
+              variant="primary"
+              icon={<Icon.Bookmark />}
+              onClick={() =>
+                withAction(async () => {
+                  await supabase.from("guardado").insert({
+                    id_estudiante: entityId,
+                    fecha_guardado: new Date().toISOString(),
+                  });
+                }, "Guardado")
+              }
+              loading={al}
+            /> */}
+            {/* <Btn
+              label="Mensaje"
+              icon={<Icon.Message />}
+              onClick={() => alert("Abrir chat")}
+            /> */}
+          </>
+        );
+      return null;
+      // if (rawEntityType === "centro_educativo")
+      //   return (
+      //     <Btn
+      //       label="Contactar"
+      //       icon={<Icon.Message />}
+      //       onClick={() => alert("Abrir chat")}
+      //     />
+      //   );
+    }
 
     if (viewerRole === "estudiante") {
       if (rawEntityType === "empresa")
@@ -1680,21 +1771,21 @@ export default function UserProfilePage({
               icon={<Icon.Layers />}
               onClick={() => (window.location.href = `/ofertas`)}
             />
-            <Btn
+            {/* <Btn
               label="Mensaje"
               icon={<Icon.Message />}
               onClick={() => alert("Abrir chat")}
-            />
+            /> */}
           </>
         );
-      if (rawEntityType === "centro_educativo")
-        return (
-          <Btn
-            label="Contactar"
-            icon={<Icon.Message />}
-            onClick={() => alert("Abrir chat")}
-          />
-        );
+      // if (rawEntityType === "centro_educativo")
+      //   return (
+      //     <Btn
+      //       label="Contactar"
+      //       icon={<Icon.Message />}
+      //       onClick={() => alert("Abrir chat")}
+      //     />
+      //   );
     }
     return null;
   };
@@ -2139,7 +2230,11 @@ export default function UserProfilePage({
       return (
         <div
           className="up-convenio up-convenio-none"
-          style={{ marginBottom: 12 }}
+          style={{
+            marginTop: 20,
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 20,
+          }}
         >
           <div
             className="up-skeleton"
@@ -2159,7 +2254,11 @@ export default function UserProfilePage({
       return (
         <div
           className="up-convenio up-convenio-none"
-          style={{ marginBottom: 12 }}
+          style={{
+            marginTop: 20,
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 20,
+          }}
         >
           <div
             className="up-convenio-icon"
@@ -2202,7 +2301,11 @@ export default function UserProfilePage({
       return (
         <div
           className="up-convenio up-convenio-sent"
-          style={{ marginBottom: 12 }}
+          style={{
+            marginTop: 20,
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 20,
+          }}
         >
           <div
             style={{
@@ -2237,7 +2340,11 @@ export default function UserProfilePage({
       return (
         <div
           className="up-convenio up-convenio-received"
-          style={{ marginBottom: 12 }}
+          style={{
+            marginTop: 20,
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 20,
+          }}
         >
           <div
             className="up-convenio-icon"
@@ -2280,7 +2387,11 @@ export default function UserProfilePage({
       return (
         <div
           className="up-convenio up-convenio-active"
-          style={{ marginBottom: 12 }}
+          style={{
+            marginTop: 20,
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 20,
+          }}
         >
           <div
             className="up-convenio-icon"
@@ -2491,10 +2602,10 @@ export default function UserProfilePage({
                     )}
                 </div>
               )}
+              {renderConvenio()}
             </div>
           </div>
 
-          {renderConvenio()}
           {renderContent()}
         </div>
       </div>

@@ -456,7 +456,11 @@ export default function NotificacionesPage() {
       // Si es recomendación de oferta, cargar los detalles
       if (notif.tipo === "recomendacion_oferta" && notif.url_destino) {
         // url_destino tiene el formato /ofertas?id=UUID
-        const match = notif.url_destino.match(/id=([a-f0-9-]+)/i);
+        const match = notif.url_destino.match(
+          /[?&](?:id|oferta)=([a-f0-9-]+)/i,
+        );
+        console.log("url_destino:", notif.url_destino);
+        console.log("idOferta extraído:", match?.[1]);
         if (match) {
           const idOferta = match[1];
           setLoadingOferta(true);
@@ -511,46 +515,61 @@ export default function NotificacionesPage() {
     if (!convenioId) return;
     setConvenioLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("convenio")
         .update({
           estado: "activo",
           fecha_aceptacion: new Date().toISOString(),
         })
         .eq("id", convenioId);
+      if (error) throw error;
 
-      const tabla = notif.url_destino?.startsWith("/empresa/")
-        ? "empresa"
-        : "centro_educativo";
-      const entityId = notif.url_destino?.split("/").pop();
-      const { data: myData } = await supabase
-        .from(tabla === "empresa" ? "centro_educativo" : "empresa")
-        .select("nombre")
-        .eq("id", user.id)
+      // Obtener datos del convenio para saber a quién notificar
+      const { data: cd } = await supabase
+        .from("convenio")
+        .select("id_solicitante, id_empresa, id_centro")
+        .eq("id", convenioId)
         .maybeSingle();
 
-      await supabase.from("notificacion").insert({
-        id_usuario_destino: meta.solicitante_id,
-        tipo: "convenio_aceptado",
-        titulo: "Convenio aceptado",
-        mensaje: `${myData?.nombre ?? "La otra parte"} ha aceptado tu propuesta de convenio.`,
-        url_destino: notif.url_destino?.startsWith("/empresa/")
-          ? `/centro/${user.id}`
-          : `/empresa/${user.id}`,
-        leido: false,
-        fecha: new Date().toISOString(),
-      });
+      if (cd) {
+        // Notificar al solicitante (la otra parte que propuso)
+        await supabase.from("notificacion").insert({
+          id_usuario_destino: cd.id_solicitante,
+          tipo: "convenio_aceptado",
+          titulo: "Convenio aceptado",
+          mensaje: "Tu propuesta de convenio ha sido aceptada.",
+          leido: false,
+          fecha: new Date().toISOString(),
+          metadata: JSON.stringify({ convenio_id: convenioId }),
+        });
 
+        // Insertar también en centro_empresa_acuerdo
+        await supabase.from("centro_empresa_acuerdo").insert(
+          {
+            id_centro: cd.id_centro,
+            id_empresa: cd.id_empresa,
+            estado: "activo",
+            fecha_inicio: new Date().toISOString().split("T")[0],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "id_centro,id_empresa" },
+        );
+      }
+
+      // Actualizar tipo de la notificación en BD
+      await supabase
+        .from("notificacion")
+        .update({ tipo: "convenio_aceptado" })
+        .eq("id_notificacion", notif.id_notificacion);
+
+      const updated = { ...notif, tipo: "convenio_aceptado" };
       setNotificaciones((prev) =>
         prev.map((n) =>
-          n.id_notificacion === notif.id_notificacion
-            ? { ...n, tipo: "convenio_aceptado" }
-            : n,
+          n.id_notificacion === notif.id_notificacion ? updated : n,
         ),
       );
-      setSelected((prev) =>
-        prev ? { ...prev, tipo: "convenio_aceptado" } : prev,
-      );
+      setSelected(updated);
     } finally {
       setConvenioLoading(false);
     }
@@ -562,20 +581,52 @@ export default function NotificacionesPage() {
     if (!convenioId) return;
     setConvenioLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("convenio")
         .update({ estado: "rechazado" })
         .eq("id", convenioId);
+      if (error) throw error;
+
+      // Obtener datos del convenio
+      const { data: cd } = await supabase
+        .from("convenio")
+        .select("id_solicitante, id_empresa, id_centro")
+        .eq("id", convenioId)
+        .maybeSingle();
+
+      if (cd) {
+        // Actualizar centro_empresa_acuerdo si existe
+        await supabase
+          .from("centro_empresa_acuerdo")
+          .update({ estado: "rechazado", updated_at: new Date().toISOString() })
+          .eq("id_centro", cd.id_centro)
+          .eq("id_empresa", cd.id_empresa);
+
+        // Notificar al solicitante
+        await supabase.from("notificacion").insert({
+          id_usuario_destino: cd.id_solicitante,
+          tipo: "convenio_rechazado",
+          titulo: "Propuesta rechazada",
+          mensaje: "Tu propuesta de convenio ha sido rechazada.",
+          leido: false,
+          fecha: new Date().toISOString(),
+          metadata: JSON.stringify({ convenio_id: convenioId }),
+        });
+      }
+
+      // Actualizar tipo de la notificación en BD
+      await supabase
+        .from("notificacion")
+        .update({ tipo: "convenio_rechazado" })
+        .eq("id_notificacion", notif.id_notificacion);
+
+      const updated = { ...notif, tipo: "convenio_rechazado" };
       setNotificaciones((prev) =>
         prev.map((n) =>
-          n.id_notificacion === notif.id_notificacion
-            ? { ...n, tipo: "convenio_rechazado" }
-            : n,
+          n.id_notificacion === notif.id_notificacion ? updated : n,
         ),
       );
-      setSelected((prev) =>
-        prev ? { ...prev, tipo: "convenio_rechazado" } : prev,
-      );
+      setSelected(updated);
     } finally {
       setConvenioLoading(false);
     }
@@ -829,28 +880,6 @@ export default function NotificacionesPage() {
                           </div>
                         ))}
 
-                      {/* Botón genérico si hay url_destino y no es oferta */}
-                      {selected.url_destino &&
-                        selected.tipo !== "recomendacion_oferta" && (
-                          <button
-                            onClick={() => navigate(selected.url_destino)}
-                            className="mt-5 btn-primary flex items-center gap-2"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                              <polyline points="15 3 21 3 21 9" />
-                              <line x1="10" y1="14" x2="21" y2="3" />
-                            </svg>
-                            Ver más
-                          </button>
-                        )}
-
                       {/* Detalle convenio */}
                       {[
                         "propuesta_convenio",
@@ -859,6 +888,7 @@ export default function NotificacionesPage() {
                       ].includes(selected.tipo) && (
                         <ConvenioDetailInline
                           notif={selected}
+                          tipo={selected.tipo}
                           loading={convenioLoading}
                           onAccept={() => handleAcceptConvenio(selected)}
                           onReject={() => handleRejectConvenio(selected)}

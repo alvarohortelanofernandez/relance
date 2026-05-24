@@ -195,10 +195,18 @@ export default function UserMenu({ onClose }) {
 
     // CENTRO
     {
-      icon: "icon-educativeCenter",
+      icon: "icon-dashboard",
       label: "Panel del centro",
       href: "/panel-centro",
       roles: ["centro_educativo"],
+    },
+
+    // EMPRESA
+    {
+      icon: "icon-dashboard",
+      label: "Panel de la empresa",
+      href: "/panel-empresa",
+      roles: ["empresa"],
     },
 
     // TUTORES

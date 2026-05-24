@@ -21,9 +21,17 @@ function SendInviteEmailModal({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: fnError } = await supabase.functions.invoke("resend-email", {
-      body: { to: email, inviterName, inviterType, inviteUrl },
-    });
+    const { data, error: fnError } = await supabase.functions.invoke(
+      "resend-email",
+      {
+        body: { to: email, inviterName, inviterType, inviteUrl },
+      },
+    );
+    if (fnError) {
+      // Leer el mensaje real del cuerpo
+      const errorBody = await fnError.context.json();
+      console.log("Error real:", errorBody);
+    }
     setLoading(false);
     if (fnError) setError("No se pudo enviar el correo. Inténtalo de nuevo.");
     else setSent(true);
@@ -267,9 +275,9 @@ export default function InviteModal({
       setGenerating(false);
       return;
     }
-    // const BASE_URL = "https://relance-platform.vercel.app";
+    const BASE_URL = "https://relance-platform.vercel.app";
     //const BASE_URL = "http://192.168.1.227:5173";// la IP que te muestre Vite
-    const BASE_URL = "http://10.15.101.138:5173"; // la IP que te muestre Vite
+    // const BASE_URL = "http://10.15.101.138:5173"; // la IP que te muestre Vite
     // const BASE_URL = "https://abc123.ngrok.io"; // la que te dé ngrok
 
     const url = `${BASE_URL}${inviteRoute}?token=${token}&entity=${user.id}&type=${entityType}`;

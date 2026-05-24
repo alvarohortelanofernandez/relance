@@ -58,6 +58,9 @@ export default function LoginModal({
       email,
       password,
     });
+
+    console.log("Auth error:", error); // aquí verás el mensaje exacto
+
     if (error) {
       setError(
         error.message === "Invalid login credentials"
@@ -279,7 +282,9 @@ export default function LoginModal({
                 >
                   {loading ? (
                     <>
-                      <svg className="animate-spin w-3.5 h-3.5"><use href="/icons.svg#icon-spinner"/></svg>
+                      <svg className="animate-spin w-3.5 h-3.5">
+                        <use href="/icons.svg#icon-spinner" />
+                      </svg>
                       Iniciando sesión...
                     </>
                   ) : (
@@ -310,7 +315,9 @@ export default function LoginModal({
                 }}
                 className="flex items-center gap-1 text-gray-500 hover:text-white text-xs mb-3 transition-colors"
               >
-                <svg width="13" height="13"><use href="/icons.svg#icon-arrow-left"/></svg>
+                <svg width="13" height="13">
+                  <use href="/icons.svg#icon-arrow-left" />
+                </svg>
                 Volver al inicio de sesión
               </button>
               <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">

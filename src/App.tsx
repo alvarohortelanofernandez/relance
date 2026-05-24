@@ -55,6 +55,7 @@ import HelpAndAbout from "./pages/help/HelpAndAbout";
 
 import { useEffect, useState, useRef } from "react";
 import AdminRegisterPage from "./pages/register/AdminRegisterPage";
+import ComapnyPanel from "./pages/panel/CompanyPanel";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -370,6 +371,7 @@ function AppContent() {
 
         <Route element={<ProtectedRoute requiredRole="empresa" />}>
           <Route path="/perfil/empresa" element={<CompanyProfile />} />
+          <Route path="/panel-empresa" element={<ComapnyPanel />} />
         </Route>
 
         <Route element={<ProtectedRoute requiredRole="centro_educativo" />}>

@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 export default function ConvenioDetailInline({
   notif,
+  tipo,
   onAccept,
   onReject,
   loading,
 }) {
+  const isPending = tipo === "propuesta_convenio";
   const meta = notif.metadata ? JSON.parse(notif.metadata) : {};
   const solicitanteNombre = meta.solicitante_nombre ?? "Entidad desconocida";
   const isEmpresa = notif.url_destino?.startsWith("/empresa/");
@@ -40,8 +42,6 @@ export default function ConvenioDetailInline({
     : [entityData?.tipo_centro, entityData?.ciudad, entityData?.provincia]
         .filter(Boolean)
         .join(" · ");
-
-  const isPending = notif.tipo === "propuesta_convenio";
 
   return (
     <div className="mt-6 border border-[var(--color-border)] rounded-2xl overflow-hidden">
@@ -172,7 +172,7 @@ export default function ConvenioDetailInline({
           </div>
         )}
 
-        {notif.tipo === "convenio_aceptado" && (
+        {tipo === "convenio_aceptado" && (
           <div className="flex items-center gap-2 py-3 px-4 bg-green-500/8 border border-green-500/20 rounded-xl">
             <svg
               className="w-4 h-4 text-green-400 flex-shrink-0"
@@ -190,7 +190,7 @@ export default function ConvenioDetailInline({
           </div>
         )}
 
-        {notif.tipo === "convenio_rechazado" && (
+        {tipo === "convenio_rechazado" && (
           <div className="flex items-center gap-2 py-3 px-4 bg-red-500/8 border border-red-500/20 rounded-xl">
             <svg
               className="w-4 h-4 text-red-400 flex-shrink-0"
