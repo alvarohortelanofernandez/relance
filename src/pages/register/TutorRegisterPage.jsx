@@ -419,8 +419,8 @@ export default function AdminRegisterPage() {
         const { error: linkError } = await supabase
           .from("empresa_tutor")
           .insert({
-            empresa_id: entityId,
-            tutor_id: signUpData.user.id,
+            id_empresa: entityId,
+            id_tutor: signUpData.user.id,
           });
 
         if (linkError)
