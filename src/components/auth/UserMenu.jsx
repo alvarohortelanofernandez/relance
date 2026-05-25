@@ -186,12 +186,12 @@ export default function UserMenu({ onClose }) {
     },
 
     // CANDIDATURAS
-    {
-      icon: "icon-candidacy",
-      label: "Mis candidaturas",
-      href: "/candidaturas",
-      roles: ["estudiante"],
-    },
+    // {
+    //   icon: "icon-candidacy",
+    //   label: "Mis candidaturas",
+    //   href: "/candidaturas",
+    //   roles: ["estudiante"],
+    // },
 
     // CENTRO
     {

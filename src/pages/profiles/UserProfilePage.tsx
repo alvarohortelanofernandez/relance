@@ -818,7 +818,12 @@ export default function UserProfilePage({
   } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [candidaturas, setCandidaturas] = useState<Candidatura[]>([]);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    candidaturas: number;
+    ofertas: number;
+    estudiantes: number;
+    _entidadNombre?: string;
+  }>({
     candidaturas: 0,
     ofertas: 0,
     estudiantes: 0,
@@ -2007,15 +2012,25 @@ export default function UserProfilePage({
 
     if (rawEntityType === "tutor_empresa" || rawEntityType === "tutor_centro") {
       const t = profile as any;
+      const entidadNombre = stats._entidadNombre;
+      const tieneInfo =
+        t.telefono || t.cargo || t.departamento || entidadNombre;
+
       return (
         <>
           <SectionCard title="Información" icon={<Icon.FileText />}>
             <div className="up-info-table">
-              <InfoRow
-                icon={<Icon.Phone />}
-                label="Teléfono"
-                value={t.telefono}
-              />
+              {entidadNombre && (
+                <InfoRow
+                  icon={<Icon.Building />}
+                  label={
+                    rawEntityType === "tutor_empresa"
+                      ? "Empresa"
+                      : "Centro educativo"
+                  }
+                  value={entidadNombre}
+                />
+              )}
               <InfoRow
                 icon={<Icon.Briefcase />}
                 label={
@@ -2025,7 +2040,23 @@ export default function UserProfilePage({
                   rawEntityType === "tutor_empresa" ? t.cargo : t.departamento
                 }
               />
+              <InfoRow
+                icon={<Icon.Phone />}
+                label="Teléfono"
+                value={t.telefono}
+              />
             </div>
+            {!tieneInfo && (
+              <p
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontSize: 12,
+                  margin: 0,
+                }}
+              >
+                Este tutor aún no ha completado su perfil.
+              </p>
+            )}
           </SectionCard>
         </>
       );
