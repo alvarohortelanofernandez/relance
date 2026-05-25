@@ -1509,9 +1509,9 @@ export default function StudentProfile() {
         .from("centro_estudiante")
         .select("centro_id, centro_educativo(id, nombre)")
         .eq("estudiante_id", user.id)
-        .single<{
+        .maybeSingle<{
           centro_id: string;
-          centro_educativo: { id: string; nombre: string };
+          centro_educativo: { id: string; nombre: string } | null;
         }>();
 
       if (centroData?.centro_educativo) {
