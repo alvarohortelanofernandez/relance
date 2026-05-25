@@ -288,6 +288,53 @@ export default function Home() {
             }}
           />
         )}
+        {/* Botón flotante de ayuda */}
+        <a
+          href="/ayuda"
+          title="Ayuda"
+          style={{
+            position: "fixed",
+            bottom: 28,
+            right: 28,
+            zIndex: 50,
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "var(--color-brand)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#02050d",
+            boxShadow:
+              "0 4px 20px rgba(192,255,114,0.3), 0 2px 8px rgba(0,0,0,0.4)",
+            textDecoration: "none",
+            transition: "transform 0.18s, box-shadow 0.18s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.1)";
+            e.currentTarget.style.boxShadow =
+              "0 6px 28px rgba(192,255,114,0.45), 0 2px 8px rgba(0,0,0,0.4)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.boxShadow =
+              "0 4px 20px rgba(192,255,114,0.3), 0 2px 8px rgba(0,0,0,0.4)";
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </a>
       </div>
     </MainLayout>
   );

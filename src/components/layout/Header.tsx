@@ -269,55 +269,6 @@ export default function Header({
                   </div>
                 ) : (
                   <>
-                    {/* Icono de ayuda para usuarios no registrados */}
-                    <a
-                      href="/ayuda"
-                      title="Ayuda"
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: "50%",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        background: "rgba(255,255,255,0.03)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--color-text-subtle)",
-                        transition: "all 0.18s",
-                        flexShrink: 0,
-                        textDecoration: "none",
-                      }}
-                      onMouseEnter={(e: any) => {
-                        e.currentTarget.style.borderColor =
-                          "rgba(192,255,114,0.4)";
-                        e.currentTarget.style.color = "var(--color-brand)";
-                        e.currentTarget.style.background =
-                          "rgba(192,255,114,0.06)";
-                      }}
-                      onMouseLeave={(e: any) => {
-                        e.currentTarget.style.borderColor =
-                          "rgba(255,255,255,0.1)";
-                        e.currentTarget.style.color =
-                          "var(--color-text-subtle)";
-                        e.currentTarget.style.background =
-                          "rgba(255,255,255,0.03)";
-                      }}
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
-                    </a>
-
                     {/* Iniciar sesión */}
                     <button
                       onClick={onLoginClick}
