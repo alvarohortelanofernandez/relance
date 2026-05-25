@@ -174,6 +174,20 @@
     <path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
   </symbol>
 
+<symbol
+  id="icon-check-2"
+  viewBox="0 0 24 24"
+  fill="none"
+>
+  <path
+    d="M5 12l5 5l10 -10"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</symbol>
+
   <!-- Exito / celebration -->
   <symbol id="icon-circle-check" viewBox="0 0 640 640">
     <path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337l-48-48c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l64 64c9.4 9.4 24.6 9.4 33.9 0L402.7 242.9c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0z"/>

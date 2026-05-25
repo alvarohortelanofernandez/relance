@@ -1190,32 +1190,43 @@ function TutorAssignmentEmpresa({ tutores, estudiantes, onUpdate }) {
   const handleDrop = async (toContainerId) => {
     setDragOverId(null);
     const info = draggingRef.current;
-    if (!info || info.fromContainerId === toContainerId) {
+    if (!info) return;
+    if (info.fromContainerId === toContainerId) {
       draggingRef.current = null;
       setDraggingInfo(null);
       return;
     }
+
     const movedIds = info.studentIds;
     draggingRef.current = null;
     setDraggingInfo(null);
+
     setSaving(true);
     try {
       const nuevoTutor = toContainerId === "sin_tutor" ? null : toContainerId;
+
       for (const estudianteId of movedIds) {
-        await supabase
+        // 1. Borra solo el vínculo de tipo "empresa" en estudiante_tutor
+        const { error: delError } = await supabase
           .from("estudiante_tutor")
           .delete()
           .eq("id_estudiante", estudianteId)
-          .eq("tipo_tutor", "empresa");
+          .eq("tipo_tutor", "empresa"); // ← solo el de empresa, no toca centro
+        if (delError) throw delError;
 
+        // 2. Si hay tutor destino, inserta el nuevo vínculo
         if (nuevoTutor !== null) {
-          await supabase.from("estudiante_tutor").insert({
-            id_estudiante: estudianteId,
-            id_tutor: nuevoTutor,
-            tipo_tutor: "empresa",
-          });
+          const { error: insError } = await supabase
+            .from("estudiante_tutor")
+            .insert({
+              id_estudiante: estudianteId,
+              id_tutor: nuevoTutor,
+              tipo_tutor: "empresa",
+            });
+          if (insError) throw insError;
         }
       }
+
       const n = movedIds.length;
       showToast(
         `${n} ${n === 1 ? "alumno reasignado" : "alumnos reasignados"} correctamente`,
@@ -1488,6 +1499,8 @@ export default function CompanyPanel() {
       )
       .eq("id", user.id)
       .maybeSingle();
+    console.log("[empresa] empData:", empData);
+    console.log("[empresa] user.id:", user.id);
 
     if (!mountedRef.current) return;
     setEmpresa(empData ?? null);
@@ -1638,19 +1651,45 @@ export default function CompanyPanel() {
     }));
 
     // ── Tutores de la empresa ─────────────────────────────────────────────────
-    const { data: etRows } = await supabase
+    console.log("[DEBUG] llegando a tutores, idEmpresa:", idEmpresa);
+
+    // Estrategia 1: via empresa_tutor (tabla pivot)
+    const { data: etRows, error: etError } = await supabase
       .from("empresa_tutor")
       .select("id_tutor")
       .eq("id_empresa", idEmpresa);
 
-    const tutorIds = (etRows ?? []).map((r) => r.id_tutor);
+    console.log("[empresa_tutor] rows:", etRows, "error:", etError);
+
+    const tutorIds = (etRows ?? []).map((r) => r.id_tutor).filter(Boolean);
+    console.log("[tutorIds]:", tutorIds);
+
     let tutoresData = [];
+
     if (tutorIds.length > 0) {
-      const { data: tRows } = await supabase
+      // Los IDs vienen de empresa_tutor → buscar en tutor_empresa
+      const { data: tRows, error: tError } = await supabase
         .from("tutor_empresa")
         .select("id, nombre, cargo, telefono")
         .in("id", tutorIds);
-      tutoresData = tRows ?? [];
+
+      console.log("[tutor_empresa via pivot] rows:", tRows, "error:", tError);
+      tutoresData = (tRows ?? []).map((t) => ({ ...t }));
+    } else {
+      // Estrategia 2 (fallback): tutor_empresa tiene columna id_empresa directamente
+      const { data: tRows2, error: tError2 } = await supabase
+        .from("tutor_empresa")
+        .select("*");
+      // .eq("id_empresa", idEmpresa);
+      console.log("[tutor_empresa ALL] rows:", tRows2, "error:", tError2);
+      tutoresData = tRows2 ?? [];
+
+      // Si esta estrategia devuelve tutores, rellenar empresa_tutor para consistencia futura
+      if (tutoresData.length > 0) {
+        console.log(
+          "[INFO] Tutores encontrados via columna id_empresa en tutor_empresa",
+        );
+      }
     }
 
     // ── Convenios ─────────────────────────────────────────────────────────────

@@ -1499,8 +1499,9 @@ function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
     setSaving(true);
     try {
       const nuevoTutor = toContainerId === "sin_tutor" ? null : toContainerId;
+
       for (const estudianteId of movedIds) {
-        // 1. Actualiza centro_estudiante
+        // 1. Actualiza centro_estudiante.id_tutor
         const { error: ceError } = await supabase
           .from("centro_estudiante")
           .update({ id_tutor: nuevoTutor })
@@ -1508,15 +1509,15 @@ function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
           .eq("id_centro", idCentro);
         if (ceError) throw ceError;
 
-        // 2. Sincroniza estudiante_tutor
-        // Siempre borra la fila anterior (si existe) para evitar duplicados
+        // 2. Borra solo el vínculo de tipo "centro" en estudiante_tutor
         const { error: delError } = await supabase
           .from("estudiante_tutor")
           .delete()
-          .eq("id_estudiante", estudianteId);
+          .eq("id_estudiante", estudianteId)
+          .eq("tipo_tutor", "centro"); // ← solo el de centro, no toca empresa
         if (delError) throw delError;
 
-        // Solo inserta si hay tutor destino
+        // 3. Si hay tutor destino, inserta el nuevo vínculo
         if (nuevoTutor !== null) {
           const { error: insError } = await supabase
             .from("estudiante_tutor")
@@ -1527,7 +1528,9 @@ function TutorAssignment({ tutores, estudiantes, idCentro, onUpdate }) {
             });
           if (insError) throw insError;
         }
+        // Si nuevoTutor === null, solo se hizo el delete → queda sin tutor de centro
       }
+
       const n = movedIds.length;
       showToast(
         `${n} ${n === 1 ? "alumno reasignado" : "alumnos reasignados"} correctamente`,

@@ -1169,6 +1169,14 @@ export default function AdministrationPanel() {
   const [inviteModal, setInviteModal] = useState(false);
   const [validarOferta, setValidarOferta] = useState<any>(null);
 
+  // Para la pestaña de verificación de empresas y centros educativos
+  const [empresasPendientes, setEmpresasPendientes] = useState<any[]>([]);
+  const [centrosPendientes, setCentrosPendientes] = useState<any[]>([]);
+  const [loadingVerif, setLoadingVerif] = useState(false);
+  const [filtroVerif, setFiltroVerif] = useState<"empresas" | "centros">(
+    "empresas",
+  );
+
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -1300,6 +1308,53 @@ export default function AdministrationPanel() {
     setLoadingAdmins(false);
   }, []);
 
+  const cargarVerificacion = useCallback(async () => {
+    setLoadingVerif(true);
+    const [empRes, cenRes] = await Promise.all([
+      supabase
+        .from("empresa")
+        .select(
+          "id, nombre, cif, sector, ciudad, email_contacto, logo_url, verificado, created_at, descripcion, tamano",
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("centro_educativo")
+        .select(
+          "id, nombre, codigo_institucional, tipo_centro, ciudad, provincia, email_contacto, avatar_url, verificado, created_at, descripcion, num_alumnos",
+        )
+        .order("created_at", { ascending: false }),
+    ]);
+    if (!mountedRef.current) return;
+    setEmpresasPendientes(empRes.data ?? []);
+    setCentrosPendientes(cenRes.data ?? []);
+    setLoadingVerif(false);
+  }, []);
+
+  const handleToggleVerificado = async (
+    id: string,
+    tipo: "empresa" | "centro_educativo",
+    actual: boolean,
+  ) => {
+    const tabla = tipo === "empresa" ? "empresa" : "centro_educativo";
+    const { error } = await supabase
+      .from(tabla)
+      .update({ verificado: !actual })
+      .eq("id", id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    if (tipo === "empresa") {
+      setEmpresasPendientes((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, verificado: !actual } : e)),
+      );
+    } else {
+      setCentrosPendientes((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, verificado: !actual } : c)),
+      );
+    }
+  };
+
   useEffect(() => {
     cargarStats();
   }, [cargarStats]);
@@ -1307,6 +1362,7 @@ export default function AdministrationPanel() {
     if (activeTab === "ofertas") cargarOfertas();
     if (activeTab === "usuarios") cargarUsuarios();
     if (activeTab === "admins") cargarAdmins();
+    if (activeTab === "verificacion") cargarVerificacion();
   }, [activeTab, cargarOfertas, cargarUsuarios, cargarAdmins]);
 
   const handleToggleBlock = async (
@@ -1356,6 +1412,7 @@ export default function AdministrationPanel() {
       badge: stats.ofertas_pendientes || null,
     },
     { id: "usuarios", label: "Usuarios" },
+    { id: "verificacion", label: "Verificación" },
     { id: "admins", label: "Administradores" },
   ];
 
@@ -2172,6 +2229,285 @@ export default function AdministrationPanel() {
                       />
                     ))}
                   </Table>
+                )}
+              </div>
+            )}
+
+            {/* ══ VERIFICACIÓN ══ */}
+            {activeTab === "verificacion" && (
+              <div style={{ animation: "fadeUp 0.22s ease" }}>
+                <SectionHeader
+                  title="Verificación de perfiles"
+                  subtitle="Aprueba o revoca la verificación de empresas y centros educativos."
+                  action={
+                    <Btn variant="ghost" onClick={cargarVerificacion} small>
+                      <IconRefresh /> Actualizar
+                    </Btn>
+                  }
+                />
+
+                {/* Subtabs empresas / centros */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                  {(["empresas", "centros"] as const).map((t) => {
+                    const pendientes =
+                      t === "empresas"
+                        ? empresasPendientes.filter((e) => !e.verificado).length
+                        : centrosPendientes.filter((c) => !c.verificado).length;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setFiltroVerif(t)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          border: `1px solid ${filtroVerif === t ? "rgba(192,255,114,0.4)" : "var(--color-border)"}`,
+                          background:
+                            filtroVerif === t
+                              ? "rgba(192,255,114,0.1)"
+                              : "transparent",
+                          color:
+                            filtroVerif === t
+                              ? "var(--color-brand)"
+                              : "var(--color-text-muted)",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                        }}
+                      >
+                        {t === "empresas" ? "Empresas" : "Centros educativos"}
+                        {pendientes > 0 && (
+                          <span
+                            style={{
+                              background: "var(--color-warning)",
+                              color: "var(--color-bg)",
+                              fontSize: 9,
+                              fontWeight: 800,
+                              borderRadius: 20,
+                              padding: "1px 6px",
+                            }}
+                          >
+                            {pendientes}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {loadingVerif ? (
+                  <Spinner />
+                ) : (
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  >
+                    {(filtroVerif === "empresas"
+                      ? empresasPendientes
+                      : centrosPendientes
+                    ).map((item) => {
+                      const isEmpresa = filtroVerif === "empresas";
+                      const verificado = item.verificado;
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            background: "var(--color-surface-strong)",
+                            border: `1px solid ${verificado ? "rgba(74,222,128,0.2)" : "rgba(251,191,36,0.2)"}`,
+                            borderRadius: 12,
+                            padding: "14px 16px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          {/* Avatar */}
+                          <div
+                            style={{
+                              width: 42,
+                              height: 42,
+                              borderRadius: 10,
+                              background: verificado
+                                ? "rgba(74,222,128,0.08)"
+                                : "rgba(251,191,36,0.08)",
+                              border: `1px solid ${verificado ? "rgba(74,222,128,0.2)" : "rgba(251,191,36,0.2)"}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.logo_url || item.avatar_url ? (
+                              <img
+                                src={item.logo_url || item.avatar_url}
+                                alt=""
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <Avatar name={item.nombre} size={42} />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: "var(--color-text)",
+                                }}
+                              >
+                                {item.nombre}
+                              </p>
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  borderRadius: 20,
+                                  padding: "1px 7px",
+                                  color: verificado
+                                    ? "var(--color-success)"
+                                    : "var(--color-warning)",
+                                  background: verificado
+                                    ? "rgba(74,222,128,0.1)"
+                                    : "rgba(251,191,36,0.1)",
+                                  border: `1px solid ${verificado ? "rgba(74,222,128,0.25)" : "rgba(251,191,36,0.25)"}`,
+                                }}
+                              >
+                                {verificado ? "✓ Verificado" : "Pendiente"}
+                              </span>
+                            </div>
+                            <p
+                              style={{
+                                margin: "2px 0 0",
+                                fontSize: 10,
+                                color: "var(--color-text-muted)",
+                              }}
+                            >
+                              {isEmpresa
+                                ? [item.cif, item.sector, item.ciudad]
+                                    .filter(Boolean)
+                                    .join(" · ")
+                                : [
+                                    item.codigo_institucional,
+                                    item.tipo_centro,
+                                    item.ciudad,
+                                    item.provincia,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                            </p>
+                            {item.email_contacto && (
+                              <p
+                                style={{
+                                  margin: "1px 0 0",
+                                  fontSize: 10,
+                                  color: "var(--color-text-subtle)",
+                                }}
+                              >
+                                {item.email_contacto}
+                              </p>
+                            )}
+                            {item.descripcion && (
+                              <p
+                                style={{
+                                  margin: "4px 0 0",
+                                  fontSize: 10,
+                                  color: "var(--color-text-muted)",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  maxWidth: 420,
+                                }}
+                              >
+                                {item.descripcion}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Fecha */}
+                          <p
+                            style={{
+                              fontSize: 10,
+                              color: "var(--color-text-subtle)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {item.created_at
+                              ? new Date(item.created_at).toLocaleDateString(
+                                  "es-ES",
+                                )
+                              : "—"}
+                          </p>
+
+                          {/* Acción */}
+                          <Btn
+                            variant={verificado ? "danger" : "success"}
+                            small
+                            onClick={() =>
+                              handleToggleVerificado(
+                                item.id,
+                                isEmpresa ? "empresa" : "centro_educativo",
+                                verificado,
+                              )
+                            }
+                          >
+                            {verificado ? (
+                              <>
+                                <IconX /> Revocar
+                              </>
+                            ) : (
+                              <>
+                                <IconCheck /> Verificar
+                              </>
+                            )}
+                          </Btn>
+                        </div>
+                      );
+                    })}
+
+                    {(filtroVerif === "empresas"
+                      ? empresasPendientes
+                      : centrosPendientes
+                    ).length === 0 && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "44px 0",
+                          border: "1px dashed var(--color-border)",
+                          borderRadius: 12,
+                        }}
+                      >
+                        <p
+                          style={{
+                            color: "var(--color-text-subtle)",
+                            fontSize: 12,
+                            margin: 0,
+                          }}
+                        >
+                          No hay{" "}
+                          {filtroVerif === "empresas" ? "empresas" : "centros"}{" "}
+                          registrados.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

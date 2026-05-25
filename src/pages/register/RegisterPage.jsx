@@ -1166,8 +1166,18 @@ export default function RegisterPage() {
                   justifyContent: "center",
                 }}
               >
-                <svg className="w-16 h-16 text-brand" viewBox="0 0 640 640">
-                  <use href="/icons.svg#icon-party" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="60"
+                  height="60"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--color-brand)"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12l5 5l10 -10" />
                 </svg>
               </div>
             </div>
