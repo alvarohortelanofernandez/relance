@@ -1507,8 +1507,8 @@ export default function StudentProfile() {
       // Cargar centro vinculado desde centro_estudiante
       const { data: centroData } = await supabase
         .from("centro_estudiante")
-        .select("centro_id, centro_educativo(id, nombre)")
-        .eq("estudiante_id", user.id)
+        .select("id_centro, centro_educativo(id, nombre)")
+        .eq("id_estudiante", user.id)
         .maybeSingle<{
           centro_id: string;
           centro_educativo: { id: string; nombre: string } | null;
