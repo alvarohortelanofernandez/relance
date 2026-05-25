@@ -400,12 +400,32 @@ export default function AdminRegisterPage() {
     try {
       console.log("entityType:", entityType);
 
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { full_name: form.fullName, role: entityType, entity_id: entityId} },
-      });
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              full_name: form.fullName,
+              role: entityType,
+              entity_id: entityId,
+            },
+          },
+        });
       if (signUpError) throw signUpError;
+
+      // Vincular tutor con la empresa
+      if (entityType === "tutor_empresa" && signUpData?.user) {
+        const { error: linkError } = await supabase
+          .from("empresa_tutor")
+          .insert({
+            empresa_id: entityId,
+            tutor_id: signUpData.user.id,
+          });
+
+        if (linkError)
+          console.error("No se pudo vincular el tutor:", linkError.message);
+      }
 
       const { error: tokenError } = await supabase
         .from("invite_tokens")
