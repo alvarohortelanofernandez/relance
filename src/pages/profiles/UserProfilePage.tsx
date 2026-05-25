@@ -929,6 +929,40 @@ export default function UserProfilePage({
           .eq("id_centro", entityId);
         setStats((s) => ({ ...s, estudiantes: count ?? 0 }));
       }
+
+      if (rawEntityType === "tutor_empresa") {
+        const { data: enlace } = await supabase
+          .from("empresa_tutor")
+          .select("id_empresa")
+          .eq("id_tutor", entityId)
+          .maybeSingle();
+        if (enlace?.id_empresa) {
+          const { data: emp } = await supabase
+            .from("empresa")
+            .select("nombre")
+            .eq("id", enlace.id_empresa)
+            .maybeSingle();
+          if (emp?.nombre)
+            setStats((s) => ({ ...s, _entidadNombre: emp.nombre }) as any);
+        }
+      }
+
+      if (rawEntityType === "tutor_centro") {
+        const { data: enlace } = await supabase
+          .from("centro_tutor")
+          .select("id_centro")
+          .eq("id_tutor", entityId)
+          .maybeSingle();
+        if (enlace?.id_centro) {
+          const { data: cen } = await supabase
+            .from("centro_educativo")
+            .select("nombre")
+            .eq("id", enlace.id_centro)
+            .maybeSingle();
+          if (cen?.nombre)
+            setStats((s) => ({ ...s, _entidadNombre: cen.nombre }) as any);
+        }
+      }
     };
     load();
   }, [profile, rawEntityType, entityId]);
@@ -1265,9 +1299,21 @@ export default function UserProfilePage({
   const getAvatar = () =>
     rawEntityType === "empresa"
       ? (profile as Empresa).logo_url
-      : (profile as Estudiante | CentroEducativo).avatar_url;
+      : rawEntityType === "tutor_empresa" || rawEntityType === "tutor_centro"
+        ? ((profile as any).avatar_url ?? undefined)
+        : (profile as Estudiante | CentroEducativo).avatar_url;
   const isVerified =
     "verificado" in (profile ?? {}) && (profile as any).verificado;
+  const COVER: Record<string, { from: string; to: string }> = {
+    empresa: { from: "rgba(192,255,114,0.14)", to: "rgba(96,165,250,0.06)" },
+    centro_educativo: {
+      from: "rgba(96,165,250,0.14)",
+      to: "rgba(52,211,153,0.06)",
+    },
+    estudiante: { from: "rgba(192,255,114,0.10)", to: "rgba(3,6,15,0)" },
+    tutor_empresa: { from: "rgba(252,129,129,0.12)", to: "rgba(3,6,15,0)" },
+    tutor_centro: { from: "rgba(154,230,180,0.12)", to: "rgba(3,6,15,0)" },
+  };
   const coverGrad = COVER[rawEntityType ?? "estudiante"] ?? COVER.estudiante;
   const profileName = profile ? getName() : "";
   const canSeeCandidaturas =
@@ -1959,6 +2005,32 @@ export default function UserProfilePage({
       );
     }
 
+    if (rawEntityType === "tutor_empresa" || rawEntityType === "tutor_centro") {
+      const t = profile as any;
+      return (
+        <>
+          <SectionCard title="Información" icon={<Icon.FileText />}>
+            <div className="up-info-table">
+              <InfoRow
+                icon={<Icon.Phone />}
+                label="Teléfono"
+                value={t.telefono}
+              />
+              <InfoRow
+                icon={<Icon.Briefcase />}
+                label={
+                  rawEntityType === "tutor_empresa" ? "Cargo" : "Departamento"
+                }
+                value={
+                  rawEntityType === "tutor_empresa" ? t.cargo : t.departamento
+                }
+              />
+            </div>
+          </SectionCard>
+        </>
+      );
+    }
+
     return null;
   };
 
@@ -2269,6 +2341,18 @@ export default function UserProfilePage({
                   <span className="up-chip">
                     <Icon.GradCap />
                     &nbsp;Estudiante
+                  </span>
+                )}
+                {rawEntityType === "tutor_empresa" && (
+                  <span className="up-chip">
+                    <Icon.Briefcase />
+                    &nbsp;Tutor de empresa
+                  </span>
+                )}
+                {rawEntityType === "tutor_centro" && (
+                  <span className="up-chip up-chip-blue">
+                    <Icon.GradCap />
+                    &nbsp;Tutor de centro
                   </span>
                 )}
                 {isVerified && (
