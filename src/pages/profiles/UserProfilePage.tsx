@@ -18,7 +18,13 @@ type ViewerRole =
   | "centro_educativo"
   | "tutor_centro"
   | "tutor_empresa";
-type EntityType = "empresa" | "centro_educativo" | "estudiante" | "oferta";
+type EntityType =
+  | "empresa"
+  | "centro_educativo"
+  | "estudiante"
+  | "oferta"
+  | "tutor_empresa"
+  | "tutor_centro";
 type ConvenioState = "none" | "sent" | "received" | "active" | "loading";
 
 interface Estudiante {
@@ -122,6 +128,8 @@ function inferFromPath(): {
     empresa: "empresa",
     centro: "centro_educativo",
     estudiante: "estudiante",
+    "tutor-empresa": "tutor_empresa",
+    "tutor-centro": "tutor_centro",
   };
   return { entityType: map[segment] ?? null, entityId: id };
 }
@@ -856,7 +864,11 @@ export default function UserProfilePage({
           ? "empresa"
           : rawEntityType === "centro_educativo"
             ? "centro_educativo"
-            : "estudiante";
+            : rawEntityType === "tutor_empresa"
+              ? "tutor_empresa"
+              : rawEntityType === "tutor_centro"
+                ? "tutor_centro"
+                : "estudiante";
       const { data, error: e } = await supabase
         .from(table)
         .select("*")
@@ -1245,9 +1257,11 @@ export default function UserProfilePage({
 
   // ── Derived ──
   const getName = () =>
-    rawEntityType === "estudiante"
-      ? `${(profile as Estudiante).nombre ?? ""} ${(profile as Estudiante).apellidos ?? ""}`.trim()
-      : ((profile as Empresa | CentroEducativo).nombre ?? "");
+    rawEntityType === "tutor_empresa" || rawEntityType === "tutor_centro"
+      ? ((profile as any).nombre ?? "")
+      : rawEntityType === "estudiante"
+        ? `${(profile as Estudiante).nombre ?? ""} ${(profile as Estudiante).apellidos ?? ""}`.trim()
+        : ((profile as Empresa | CentroEducativo).nombre ?? "");
   const getAvatar = () =>
     rawEntityType === "empresa"
       ? (profile as Empresa).logo_url
@@ -1671,14 +1685,6 @@ export default function UserProfilePage({
                 viewerRole === "tutor_centro" ||
                 viewerRole === "tutor_empresa") && (
                 <InfoRow icon={<Icon.Mail />} label="Email" value={s.email} />
-              )}
-              {s.github_username && (
-                <InfoRow
-                  icon={<Icon.GitHub />}
-                  label="GitHub"
-                  value={`github.com/${s.github_username}`}
-                  href={`https://github.com/${s.github_username}`}
-                />
               )}
             </div>
           </SectionCard>
