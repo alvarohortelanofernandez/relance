@@ -108,6 +108,15 @@ interface Candidatura {
   titulo_oferta?: string;
 }
 
+interface ProyectoData {
+  id: number;
+  titulo: string;
+  descripcion?: string;
+  tecnologias?: string[];
+  url_repo?: string;
+  url_demo?: string;
+}
+
 export interface UserProfilePageProps {
   entityType?: EntityType;
   entityId?: string;
@@ -832,6 +841,7 @@ export default function UserProfilePage({
     isMiEstudiante?: boolean;
     isEnrolledEstudiante?: boolean;
     isMyPracticasStudent?: boolean;
+    isVinculadoEmpresa?: boolean;
     centroEstudiante?: string;
   }>({});
   const [userBlocked, setUserBlocked] = useState(false);
@@ -1003,6 +1013,16 @@ export default function UserProfilePage({
           .eq("id_estudiante", entityId)
           .maybeSingle();
         ctx.isEnrolledEstudiante = !!data;
+      }
+
+      if (viewerRole === "empresa" && rawEntityType === "estudiante") {
+        const { data } = await supabase
+          .from("empresa_estudiante")
+          .select("id")
+          .eq("id_empresa", viewerId)
+          .eq("id_estudiante", entityId)
+          .maybeSingle();
+        ctx.isVinculadoEmpresa = !!data;
       }
       setViewerCtx(ctx);
     };
@@ -1469,7 +1489,7 @@ export default function UserProfilePage({
         <>
           {viewerCtx.isEnrolledEstudiante ? (
             <Btn
-              label="Desvincular"
+              label="Desvincular del centro"
               danger
               onClick={() =>
                 withAction(async () => {
@@ -1479,9 +1499,9 @@ export default function UserProfilePage({
                     .eq("id_estudiante", entityId);
                   if (e) throw e;
                   setViewerCtx((c) => ({ ...c, isEnrolledEstudiante: false }));
-                }, "Desvinculado")
+                }, "Estudiante desvinculado")
               }
-              loading={al}
+              loading={actionLoading}
             />
           ) : (
             <Btn
@@ -1495,16 +1515,11 @@ export default function UserProfilePage({
                     .insert({ id_centro: viewerId, id_estudiante: entityId });
                   if (e) throw e;
                   setViewerCtx((c) => ({ ...c, isEnrolledEstudiante: true }));
-                }, "Vinculado")
+                }, "Estudiante vinculado al centro")
               }
-              loading={al}
+              loading={actionLoading}
             />
           )}
-          {/* <Btn
-            label="Mensaje"
-            icon={<Icon.Message />}
-            onClick={() => alert("Abrir chat")}
-          /> */}
         </>
       );
 
@@ -1615,43 +1630,46 @@ export default function UserProfilePage({
       if (rawEntityType === "estudiante")
         return (
           <>
-            <Btn
-              label="Ver perfil completo"
-              variant="primary"
-              icon={<Icon.FileText />}
-              onClick={() => {}} // o lo que necesites
-            />
-
-            {/* <Btn
-              label="Guardar perfil"
-              variant="primary"
-              icon={<Icon.Bookmark />}
-              onClick={() =>
-                withAction(async () => {
-                  await supabase.from("guardado").insert({
-                    id_estudiante: entityId,
-                    fecha_guardado: new Date().toISOString(),
-                  });
-                }, "Guardado")
-              }
-              loading={al}
-            /> */}
-            {/* <Btn
-              label="Mensaje"
-              icon={<Icon.Message />}
-              onClick={() => alert("Abrir chat")}
-            /> */}
+            {viewerCtx.isVinculadoEmpresa ? (
+              <Btn
+                label="Desvincular"
+                danger
+                onClick={() =>
+                  withAction(async () => {
+                    const { error: e } = await supabase
+                      .from("empresa_estudiante")
+                      .delete()
+                      .eq("id_empresa", viewerId)
+                      .eq("id_estudiante", entityId);
+                    if (e) throw e;
+                    setViewerCtx((c) => ({ ...c, isVinculadoEmpresa: false }));
+                  }, "Estudiante desvinculado")
+                }
+                loading={actionLoading}
+              />
+            ) : (
+              <Btn
+                label="Vincular a empresa"
+                variant="primary"
+                icon={<Icon.Briefcase />}
+                onClick={() =>
+                  withAction(async () => {
+                    const { error: e } = await supabase
+                      .from("empresa_estudiante")
+                      .insert({
+                        id_empresa: viewerId,
+                        id_estudiante: entityId,
+                      });
+                    if (e) throw e;
+                    setViewerCtx((c) => ({ ...c, isVinculadoEmpresa: true }));
+                  }, "Estudiante vinculado a la empresa")
+                }
+                loading={actionLoading}
+              />
+            )}
           </>
         );
       return null;
-      // if (rawEntityType === "centro_educativo")
-      //   return (
-      //     <Btn
-      //       label="Contactar"
-      //       icon={<Icon.Message />}
-      //       onClick={() => alert("Abrir chat")}
-      //     />
-      //   );
     }
 
     if (viewerRole === "estudiante") {
@@ -1774,23 +1792,211 @@ export default function UserProfilePage({
           )}
 
           {Array.isArray(s.proyectos) && s.proyectos.length > 0 && (
-            <SectionCard title="Proyectos" icon={<Icon.Code />}>
-              <div className="up-projects">
-                {(s.proyectos as Record<string, string>[]).map((p, i) => (
-                  <div key={i} className="up-project">
-                    <div className="up-project-name">{p.titulo}</div>
-                    {p.descripcion && (
-                      <div className="up-project-desc">{p.descripcion}</div>
-                    )}
-                    {p.enlace && (
-                      <a
-                        href={p.enlace}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="up-project-link"
+            <SectionCard
+              title="Proyectos"
+              icon={<Icon.Code />}
+              count={(s.proyectos as ProyectoData[]).length}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {(s.proyectos as ProyectoData[]).map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: 12,
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      transition: "border-color 0.2s",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.borderColor =
+                        "var(--color-border-strong)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.borderColor =
+                        "var(--color-border)")
+                    }
+                  >
+                    {/* Header */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: "rgba(192,255,114,0.08)",
+                          border: "1px solid rgba(192,255,114,0.18)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--color-brand)",
+                          flexShrink: 0,
+                        }}
                       >
-                        Ver proyecto <Icon.ExternalLink />
-                      </a>
+                        <Icon.Code />
+                      </div>
+                      <div
+                        style={{ display: "flex", gap: 6, marginLeft: "auto" }}
+                      >
+                        {p.url_repo && (
+                          <a
+                            href={p.url_repo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                              fontSize: 11,
+                              color: "var(--color-text-muted)",
+                              textDecoration: "none",
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              border: "1px solid var(--color-border)",
+                              background: "transparent",
+                              transition: "all 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color =
+                                "var(--color-brand)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(192,255,114,0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color =
+                                "var(--color-text-muted)";
+                              e.currentTarget.style.borderColor =
+                                "var(--color-border)";
+                            }}
+                          >
+                            <Icon.GitHub />
+                            Repo
+                          </a>
+                        )}
+                        {p.url_demo && (
+                          <a
+                            href={p.url_demo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                              fontSize: 11,
+                              color: "var(--color-text-muted)",
+                              textDecoration: "none",
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              border: "1px solid var(--color-border)",
+                              background: "transparent",
+                              transition: "all 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color =
+                                "var(--color-brand)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(192,255,114,0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color =
+                                "var(--color-text-muted)";
+                              e.currentTarget.style.borderColor =
+                                "var(--color-border)";
+                            }}
+                          >
+                            <Icon.Globe />
+                            Demo
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Title + desc */}
+                    <div>
+                      <h3
+                        style={{
+                          fontFamily: "Syne, sans-serif",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "var(--color-text)",
+                          margin: "0 0 4px",
+                        }}
+                      >
+                        {p.titulo}
+                      </h3>
+                      {p.descripcion && (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "var(--color-text-muted)",
+                            margin: 0,
+                            lineHeight: 1.5,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {p.descripcion}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Tecnologías */}
+                    {p.tecnologias && p.tecnologias.length > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 5,
+                          marginTop: "auto",
+                          paddingTop: 4,
+                        }}
+                      >
+                        {p.tecnologias.slice(0, 5).map((t) => (
+                          <span
+                            key={t}
+                            style={{
+                              fontSize: 10,
+                              padding: "2px 8px",
+                              borderRadius: 20,
+                              background: "rgba(192,255,114,0.07)",
+                              border: "1px solid rgba(192,255,114,0.15)",
+                              color: "var(--color-brand)",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                        {p.tecnologias.length > 5 && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              padding: "2px 6px",
+                              color: "var(--color-text-subtle)",
+                            }}
+                          >
+                            +{p.tecnologias.length - 5}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
