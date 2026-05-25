@@ -1363,7 +1363,13 @@ export default function AdministrationPanel() {
     if (activeTab === "usuarios") cargarUsuarios();
     if (activeTab === "admins") cargarAdmins();
     if (activeTab === "verificacion") cargarVerificacion();
-  }, [activeTab, cargarOfertas, cargarUsuarios, cargarAdmins]);
+  }, [
+    activeTab,
+    cargarOfertas,
+    cargarUsuarios,
+    cargarAdmins,
+    cargarVerificacion,
+  ]);
 
   const handleToggleBlock = async (
     userId: string,

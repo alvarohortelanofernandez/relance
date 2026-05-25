@@ -1075,12 +1075,32 @@ export default function RegisterPage() {
           data: {
             full_name: fullName,
             role,
+            // Estudiante
             ...(role === "estudiante" && {
               titulacion: extra.degree ?? "",
+              ciudad: extra.ciudad ?? "",
+              graduation_year: extra.graduationYear ?? "",
+              center_id: extra.centerId ?? "",
             }),
-            ...(role === "empresa" && { cif: extra.cif ?? "" }),
+            // Empresa
+            ...(role === "empresa" && {
+              companyName: extra.companyName ?? "",
+              cif: extra.cif ?? "",
+              sector: extra.sector ?? "",
+              tamano: extra.tamanio ?? "",
+              ciudad: extra.ciudad ?? "",
+              telefono: extra.telefono ?? "",
+              web: extra.web ?? "",
+              descripcion: extra.descripcion ?? "",
+            }),
+            // Centro educativo
             ...(role === "centro_educativo" && {
-              institutional_code: extra.institutionalCode ?? "",
+              centerName: extra.centerName ?? "",
+              institutionalCode: extra.institutionalCode ?? "",
+              centerType: extra.centerType ?? "",
+              city: extra.city ?? "",
+              province: extra.province ?? "",
+              website: extra.website ?? "",
             }),
           },
         },
@@ -1094,27 +1114,6 @@ export default function RegisterPage() {
           : signUpError.message,
       );
       return;
-    }
-    if (role === "estudiante" && signUpData?.user?.id) {
-      const nameParts = fullName.trim().split(" ");
-      const nombre = nameParts[0] ?? "";
-      const apellidos = nameParts.slice(1).join(" ") || null;
-
-      await supabase.from("estudiante").upsert({
-        id: signUpData.user.id,
-        nombre,
-        apellidos,
-        titulacion: extra.degree || null,
-        ciudad: extra.ciudad || null,
-      });
-
-      if (centerId) {
-        await supabase.from("centro_estudiante").insert({
-          id_estudiante: signUpData.user.id,
-          id_centro: centerId,
-          estado: "pendiente",
-        });
-      }
     }
 
     setLoading(false);
