@@ -920,7 +920,7 @@ function CenterForm({ onSubmit, loading, error }) {
           <Input
             value={form.fullName}
             onChange={s("fullName")}
-            placeholder="Nombre del responsable"
+            placeholder="Nombre y apellidos"
             hasError={!!errs.fullName}
           />
           <FieldError msg={errs.fullName} />

@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from "react";
 import { supabase } from "../lib/supabase";
-import logoUrl from "../assets/logo_relance.jpg";
+import logoUrl from "../assets/logotipo_relance.svg";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState<string>("");
@@ -12,10 +12,21 @@ export default function ResetPassword() {
   const [hasSession, setHasSession] = useState<boolean>(false);
 
   useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setHasSession(true);
+      } else if (session) {
+        setHasSession(true);
+      }
+    });
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // session estará definido si el usuario llegó desde el enlace de recuperación
       setHasSession(!!session);
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleReset = async (e: FormEvent<HTMLFormElement>) => {
@@ -46,40 +57,118 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
-      <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md p-8">
+    <div
+      style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)" }}
+      className="flex items-center justify-center p-4"
+    >
+      <div
+        style={{
+          backgroundColor: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+          boxShadow:
+            "0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+        className="rounded-2xl w-full max-w-md p-8"
+      >
+        {/* Logo */}
         <div className="flex justify-center mb-6">
-          <img src={logoUrl} alt="Relance" className="h-8 rounded-md" />
+          <img src={logoUrl} alt="Relance" className="h-8" />
         </div>
 
+        {/* ── ÉXITO ── */}
         {success ? (
           <div className="text-center">
-            <div className="text-5xl mb-4 flex justify-center">
-              <svg className="size-12">
-                <use href="icons.svg#icon-success" />
-              </svg>
+            <div className="flex justify-center mb-4">
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  backgroundColor: "var(--color-success-bg)",
+                  border: "1px solid var(--color-success)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--color-success)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
             </div>
-            <h2 className="font-display text-2xl font-bold text-white mb-2">
+            <h2
+              style={{
+                color: "var(--color-text)",
+                fontFamily: "Syne, sans-serif",
+              }}
+              className="text-2xl font-bold mb-2"
+            >
               Contraseña actualizada
             </h2>
-            <p className="text-gray-400 text-sm mb-6">
+            <p
+              style={{ color: "var(--color-text-muted)" }}
+              className="text-sm mb-6"
+            >
               Tu contraseña se ha cambiado correctamente.
             </p>
             <a href="/" className="btn-primary block w-full text-center">
               Ir al inicio
             </a>
           </div>
-        ) : !hasSession ? (
+        ) : /* ── ENLACE INVÁLIDO ── */
+        !hasSession ? (
           <div className="text-center">
-            <div className="text-5xl mb-4 flex justify-center text-yellow-400">
-              <svg className="size-12">
-                <use href="icons.svg#icon-warning" />
-              </svg>
+            <div className="flex justify-center mb-4">
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  backgroundColor: "var(--color-warning-bg)",
+                  border: "1px solid var(--color-warning)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--color-warning)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
             </div>
-            <h2 className="font-display text-xl font-bold text-white mb-2">
+            <h2
+              style={{
+                color: "var(--color-text)",
+                fontFamily: "Syne, sans-serif",
+              }}
+              className="text-xl font-bold mb-2"
+            >
               Enlace inválido o expirado
             </h2>
-            <p className="text-gray-400 text-sm mb-6">
+            <p
+              style={{ color: "var(--color-text-muted)" }}
+              className="text-sm mb-6"
+            >
               Solicita un nuevo enlace de recuperación desde la pantalla de
               inicio de sesión.
             </p>
@@ -88,17 +177,31 @@ export default function ResetPassword() {
             </a>
           </div>
         ) : (
+          /* ── FORMULARIO ── */
           <>
-            <h2 className="font-display text-2xl font-bold text-white text-center mb-1">
+            <h2
+              style={{
+                color: "var(--color-text)",
+                fontFamily: "Syne, sans-serif",
+              }}
+              className="text-2xl font-bold text-center mb-1"
+            >
               Nueva contraseña
             </h2>
-            <p className="text-gray-500 text-sm text-center mb-6">
+            <p
+              style={{ color: "var(--color-text-muted)" }}
+              className="text-sm text-center mb-6"
+            >
               Elige una contraseña segura para tu cuenta
             </p>
 
             <form onSubmit={handleReset} className="space-y-4">
+              {/* Campo nueva contraseña */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
+                <label
+                  style={{ color: "var(--color-text-secondary)" }}
+                  className="block text-sm mb-1.5"
+                >
                   Nueva contraseña
                 </label>
                 <div className="relative">
@@ -113,7 +216,8 @@ export default function ResetPassword() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    style={{ color: "var(--color-text-subtle)" }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-80 transition-opacity"
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" viewBox="0 0 640 640">
@@ -128,8 +232,12 @@ export default function ResetPassword() {
                 </div>
               </div>
 
+              {/* Campo confirmar contraseña */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">
+                <label
+                  style={{ color: "var(--color-text-secondary)" }}
+                  className="block text-sm mb-1.5"
+                >
                   Confirmar contraseña
                 </label>
                 <input
@@ -141,22 +249,51 @@ export default function ResetPassword() {
                   className="input-field"
                 />
                 {confirm && confirm !== password && (
-                  <p className="text-xs text-red-400 mt-1">No coinciden</p>
+                  <p
+                    style={{ color: "var(--color-error)" }}
+                    className="text-xs mt-1"
+                  >
+                    No coinciden
+                  </p>
                 )}
               </div>
 
+              {/* Error */}
               {error && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
+                <div
+                  style={{
+                    backgroundColor: "var(--color-error-bg)",
+                    border: "1px solid rgba(248,113,113,0.3)",
+                    color: "var(--color-error)",
+                  }}
+                  className="rounded-lg px-4 py-3 text-sm"
+                >
                   {error}
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
                 className="btn-primary w-full flex justify-center items-center gap-2 disabled:opacity-60"
               >
-                {loading ? "Actualizando..." : "Actualizar contraseña"}
+                {loading ? (
+                  <>
+                    <svg
+                      className="animate-spin w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Actualizando...
+                  </>
+                ) : (
+                  "Actualizar contraseña"
+                )}
               </button>
             </form>
           </>
