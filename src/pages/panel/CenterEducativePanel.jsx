@@ -2393,7 +2393,6 @@ export default function CenterEducativePanel() {
   const TABS = [
     { id: "resumen", label: "Resumen", icon: <IconGrid /> },
     { id: "estudiantes", label: "Estudiantes", icon: <IconUsers /> },
-    { id: "empresas", label: "Empresas", icon: <IconBuilding /> },
     { id: "acuerdos", label: "Acuerdos", icon: <IconHandshake /> },
     { id: "candidaturas", label: "Candidaturas", icon: <IconChevron /> },
     { id: "tutores", label: "Tutores", icon: <IconUsers /> },

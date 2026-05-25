@@ -114,7 +114,7 @@ function AppContent() {
     const fallback = setTimeout(() => {
       console.warn("Loading timeout: desbloqueando UI");
       setSafeLoading(false);
-    }, 8000);
+    }, 4000);
 
     return () => clearTimeout(fallback);
   }, [loading, hasLoadedOnce]);
