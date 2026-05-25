@@ -997,9 +997,6 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
     },
   );
   const [techInput, setTechInput] = useState<string>("");
-  const [githubUrl, setGithubUrl] = useState<string>(proyecto?.url_repo ?? "");
-  const [analizando, setAnalizando] = useState<boolean>(false);
-  const [errorAnalisis, setErrorAnalisis] = useState<string | null>(null);
 
   const handleTechKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && techInput.trim()) {
@@ -1011,76 +1008,6 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
         }));
       setTechInput("");
     }
-  };
-
-  const analizarConIA = async (): Promise<void> => {
-    if (!githubUrl.trim()) return;
-    setAnalizando(true);
-    setErrorAnalisis(null);
-    const match = githubUrl.match(/github\.com\/([^/]+)\/([^/?\s]+)/);
-    if (!match) {
-      setErrorAnalisis(
-        "URL de GitHub no válida. Usa el formato: https://github.com/usuario/repositorio",
-      );
-      setAnalizando(false);
-      return;
-    }
-    const [, owner, repo] = match;
-    try {
-      const [repoRes, readmeRes, langsRes] = await Promise.allSettled([
-        fetch(`https://api.github.com/repos/${owner}/${repo}`),
-        fetch(`https://api.github.com/repos/${owner}/${repo}/readme`),
-        fetch(`https://api.github.com/repos/${owner}/${repo}/languages`),
-      ]);
-      const repoData: GitHubRepoData =
-        repoRes.status === "fulfilled" && repoRes.value.ok
-          ? await repoRes.value.json()
-          : {};
-      const langsData: Record<string, number> =
-        langsRes.status === "fulfilled" && langsRes.value.ok
-          ? await langsRes.value.json()
-          : {};
-      let readmeText = "";
-      if (readmeRes.status === "fulfilled" && readmeRes.value.ok) {
-        const rd = await readmeRes.value.json();
-        readmeText = atob(
-          (rd.content as string)?.replace(/\n/g, "") ?? "",
-        ).slice(0, 2000);
-      }
-      const tecnologiasDetectadas: string[] = Object.keys(langsData).slice(
-        0,
-        8,
-      );
-      const prompt = `Eres un asistente que genera descripciones profesionales y concisas de proyectos de GitHub para un currículum digital de desarrollador.\n\nDatos del repositorio:\n- Nombre: ${repoData.name ?? repo}\n- Descripción oficial: ${repoData.description ?? "No disponible"}\n- Lenguajes detectados: ${tecnologiasDetectadas.join(", ") || "No disponible"}\n- Estrellas: ${repoData.stargazers_count ?? 0}\n- README (fragmento): ${readmeText || "No disponible"}\n\nGenera UNA descripción en español de máximo 200 caracteres, directa, sin adornos, que explique qué hace este proyecto y para qué sirve. Solo devuelve la descripción, sin comillas ni explicaciones adicionales.`;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const aiData: AnthropicResponse = await response.json();
-      const descripcionIA: string =
-        aiData.content?.[0]?.text?.trim() ?? repoData.description ?? "";
-      setForm((f) => ({
-        ...f,
-        titulo: repoData.name ?? repo,
-        descripcion: descripcionIA,
-        tecnologias:
-          tecnologiasDetectadas.length > 0
-            ? tecnologiasDetectadas
-            : f.tecnologias,
-        url_repo: githubUrl,
-        url_demo: repoData.homepage ?? f.url_demo,
-      }));
-    } catch {
-      setErrorAnalisis(
-        "No se pudo analizar el repositorio. Comprueba la URL e inténtalo de nuevo.",
-      );
-    }
-    setAnalizando(false);
   };
 
   const isValid: boolean = Boolean(form.titulo.trim());
@@ -1124,82 +1051,6 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
         >
           {proyecto ? "Editar proyecto" : "Añadir proyecto"}
         </h2>
-        {/* IA Banner */}
-        <div
-          style={{
-            marginBottom: 14,
-            padding: "12px 14px",
-            background: "rgba(192,255,114,0.04)",
-            border: "1px solid rgba(192,255,114,0.18)",
-            borderRadius: 10,
-          }}
-        >
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--color-brand)",
-              margin: "0 0 4px",
-            }}
-          >
-            ✦ Rellena automáticamente con IA
-          </p>
-          <p
-            style={{
-              fontSize: 11,
-              color: "var(--color-text-muted)",
-              margin: "0 0 10px",
-            }}
-          >
-            Pega la URL de un repositorio de GitHub y la IA generará título,
-            descripción y tecnologías.
-          </p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              type="url"
-              value={githubUrl}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setGithubUrl(e.target.value)
-              }
-              placeholder="https://github.com/usuario/repositorio"
-              className="input-field"
-              style={{ ...inputSmall, flex: 1 }}
-            />
-            <button
-              onClick={analizarConIA}
-              disabled={analizando || !githubUrl.trim()}
-              className="btn-primary"
-              style={{
-                fontSize: 11,
-                padding: "6px 12px",
-                flexShrink: 0,
-                opacity: analizando || !githubUrl.trim() ? 0.4 : 1,
-              }}
-            >
-              {analizando ? (
-                <>
-                  <Spinner /> Analizando...
-                </>
-              ) : (
-                "Analizar"
-              )}
-            </button>
-          </div>
-          {errorAnalisis && (
-            <p
-              style={{
-                color: "#f87171",
-                fontSize: 11,
-                marginTop: 6,
-                marginBottom: 0,
-              }}
-            >
-              {errorAnalisis}
-            </p>
-          )}
-        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={labelStyle}>
@@ -1300,10 +1151,9 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <input
               type="url"
               value={form.url_repo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                setForm((f) => ({ ...f, url_repo: e.target.value }));
-                setGithubUrl(e.target.value);
-              }}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setForm((f) => ({ ...f, url_repo: e.target.value }))
+              }
               placeholder="https://github.com/usuario/repo"
               className="input-field"
               style={inputSmall}
