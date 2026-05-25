@@ -2048,8 +2048,9 @@ export default function AdministrationPanel() {
                 {loadingUsuarios ? (
                   <Spinner />
                 ) : (
+                  // Implementar Acción para bloquear o desbloquear usuarios
                   <Table
-                    headers={["Usuario", "Rol", "Registro", "Acción"]}
+                    headers={["Usuario", "Rol", "Registro"]}
                     empty={
                       usuariosFiltrados.length === 0
                         ? "No se encontraron usuarios."
@@ -2157,16 +2158,16 @@ export default function AdministrationPanel() {
                                 : "⚠ Pendiente"}
                             </span>
                           </div>,
-                          <Btn
-                            variant={u.is_blocked ? "success" : "danger"}
-                            small
-                            onClick={() =>
-                              handleToggleBlock(u.id, u.is_blocked, u.email)
-                            }
-                            style={{ minWidth: 90 }}
-                          >
-                            {u.is_blocked ? "Desbloquear" : "Bloquear"}
-                          </Btn>,
+                          // <Btn
+                          //   variant={u.is_blocked ? "success" : "danger"}
+                          //   small
+                          //   onClick={() =>
+                          //     handleToggleBlock(u.id, u.is_blocked, u.email)
+                          //   }
+                          //   style={{ minWidth: 90 }}
+                          // >
+                          //   {u.is_blocked ? "Desbloquear" : "Bloquear"}
+                          // </Btn>,
                         ]}
                       />
                     ))}

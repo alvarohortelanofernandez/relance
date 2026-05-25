@@ -264,7 +264,7 @@ export default function HeroSection({ onRegisterClick }) {
           )}
 
           {/* Botón secundario: Ver ofertas */}
-          <a
+          {/* <a
             href="/ofertas"
             style={{
               display: "flex",
@@ -306,7 +306,7 @@ export default function HeroSection({ onRegisterClick }) {
             >
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-          </a>
+          </a> */}
         </div>
 
         {/* Stats */}

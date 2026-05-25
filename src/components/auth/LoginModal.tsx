@@ -144,8 +144,8 @@ export default function LoginModal({
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <div
-          className="modal-card w-full max-w-sm lg:max-w-xs"
-          style={{ padding: "clamp(16px, 3vw, 28px)" }}
+          className="modal-card w-full max-w-sm lg:max-w-md"
+          style={{ padding: "clamp(16px, 3vw, 32px)" }}
         >
           <button
             onClick={onClose}
@@ -157,20 +157,16 @@ export default function LoginModal({
             </svg>
           </button>
 
-          <div className="flex justify-center mb-4 lg:mb-3">
-            <img
-              src={logoUrl}
-              alt="Relance"
-              className="h-6 lg:h-5 rounded-md"
-            />
+          <div className="flex justify-center mb-4">
+            <img src={logoUrl} alt="Relance" className="h-7 rounded-md" />
           </div>
 
           {view === "login" && (
             <>
-              <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">
+              <h2 className="font-display text-xl font-bold text-white text-center mb-0.5">
                 Bienvenido de vuelta
               </h2>
-              <p className="text-gray-500 text-xs text-center mb-4 lg:mb-3">
+              <p className="text-gray-500 text-xs text-center mb-4">
                 Inicia sesión en tu cuenta
               </p>
 
@@ -320,7 +316,7 @@ export default function LoginModal({
                 </svg>
                 Volver al inicio de sesión
               </button>
-              <h2 className="font-display text-xl lg:text-lg font-bold text-white text-center mb-0.5">
+              <h2 className="font-display text-xl font-bold text-white text-center mb-0.5">
                 Recuperar contraseña
               </h2>
               <p className="text-gray-500 text-xs text-center mb-4 lg:mb-3">

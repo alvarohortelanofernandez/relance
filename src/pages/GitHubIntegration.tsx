@@ -1,26 +1,60 @@
-// ==========================
-// GitHubIntegration.jsx
-// ==========================
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
-// ============= Iconos =============
-function IconGitHub({ size = 16 }) {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface GitHubRepo {
+  repo_id: number;
+  nombre: string;
+  nombre_completo: string;
+  descripcion: string;
+  url: string;
+  url_demo?: string;
+  lenguajes: string[];
+  estrellas: number;
+  forks: number;
+  privado: boolean;
+  actualizado: string;
+  vinculado_proyecto_id?: null;
+}
+
+interface GitHubSessionData {
+  token: string | null;
+  username: string;
+  avatarUrl?: string;
+  fromOAuth: boolean;
+}
+
+interface SupabaseSession {
+  user?: {
+    id?: string;
+    app_metadata?: { provider?: string };
+    user_metadata?: Record<string, string>;
+    identities?: Array<{
+      provider: string;
+      identity_data?: Record<string, string>;
+    }>;
+  };
+  provider_token?: string | null;
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function IconGitHub({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
     </svg>
   );
 }
-function IconStar({ size = 12 }) {
+function IconStar({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
     </svg>
   );
 }
-function IconFork({ size = 12 }) {
+function IconFork({ size = 12 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -38,7 +72,7 @@ function IconFork({ size = 12 }) {
     </svg>
   );
 }
-function IconLink({ size = 12 }) {
+function IconLink({ size = 12 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -53,7 +87,7 @@ function IconLink({ size = 12 }) {
     </svg>
   );
 }
-function IconUnlink({ size = 12 }) {
+function IconUnlink({ size = 12 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -69,7 +103,7 @@ function IconUnlink({ size = 12 }) {
     </svg>
   );
 }
-function IconRefresh({ size = 14 }) {
+function IconRefresh({ size = 14 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -85,7 +119,7 @@ function IconRefresh({ size = 14 }) {
     </svg>
   );
 }
-function IconExternalLink({ size = 11 }) {
+function IconExternalLink({ size = 11 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -101,7 +135,7 @@ function IconExternalLink({ size = 11 }) {
     </svg>
   );
 }
-function Spinner({ className = "w-4 h-4" }) {
+function Spinner({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg
       className={`animate-spin ${className}`}
@@ -125,9 +159,9 @@ function Spinner({ className = "w-4 h-4" }) {
   );
 }
 
-// ========== Colores por lenguaje — ampliado ==========
-const LANG_COLORS = {
-  // Web
+// ─── Lang colors ──────────────────────────────────────────────────────────────
+
+const LANG_COLORS: Record<string, string> = {
   JavaScript: "#f1e05a",
   TypeScript: "#3178c6",
   HTML: "#e34c26",
@@ -137,7 +171,6 @@ const LANG_COLORS = {
   Vue: "#41b883",
   Svelte: "#ff3e00",
   Astro: "#ff5a03",
-  // Backend
   Python: "#3572A5",
   Ruby: "#701516",
   PHP: "#4F5D95",
@@ -161,28 +194,24 @@ const LANG_COLORS = {
   Julia: "#a270ba",
   Nim: "#ffc200",
   Zig: "#ec915c",
-  // Shell / Scripts
   Shell: "#89e051",
   Bash: "#89e051",
   PowerShell: "#012456",
-  // Data / Config
   Jupyter: "#DA5B0B",
   "Jupyter Notebook": "#DA5B0B",
   MATLAB: "#e16737",
-  // Mobile
   "Objective-C": "#438eff",
-  // Infra / Config
   Dockerfile: "#384d54",
   HCL: "#844FBA",
   Nix: "#7e7eff",
-  // Markup / Other
   Markdown: "#083fa1",
   TeX: "#3D6117",
 };
 
-// ========== Punto de color de lenguaje ==========
-function LangDot({ lang }) {
-  const color = LANG_COLORS[lang] || "#8b949e";
+// ─── LangDot ──────────────────────────────────────────────────────────────────
+
+function LangDot({ lang }: { lang: string }) {
+  const color = LANG_COLORS[lang] ?? "#8b949e";
   return (
     <span
       style={{
@@ -208,28 +237,31 @@ function LangDot({ lang }) {
   );
 }
 
-// ========== Extrae datos de GitHub de la sesión de Supabase ==========
-function extractGitHubSession(session) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function extractGitHubSession(
+  session: SupabaseSession | null,
+): Omit<GitHubSessionData, "fromOAuth"> | null {
   const user = session?.user;
   if (!user) return null;
 
-  const provider = user?.app_metadata?.provider;
-  const metadata = user?.user_metadata ?? {};
+  const provider = user.app_metadata?.provider;
+  const metadata = user.user_metadata ?? {};
 
   if (provider === "github") {
     return {
-      token: session.provider_token,
+      token: session!.provider_token ?? null,
       username:
         metadata.user_name || metadata.preferred_username || metadata.login,
       avatarUrl: metadata.avatar_url,
     };
   }
 
-  const githubIdentity = user?.identities?.find((i) => i.provider === "github");
+  const githubIdentity = user.identities?.find((i) => i.provider === "github");
   if (githubIdentity) {
     const ghData = githubIdentity.identity_data ?? {};
     return {
-      token: session.provider_token || null,
+      token: session!.provider_token ?? null,
       username:
         ghData.user_name ||
         ghData.preferred_username ||
@@ -242,22 +274,25 @@ function extractGitHubSession(session) {
   return null;
 }
 
-// ========== Hook: sesión de GitHub ==========
+// ─── Hook: sesión de GitHub ───────────────────────────────────────────────────
+
 export function useGitHubSession() {
-  const [githubSession, setGithubSession] = useState(null);
+  const [githubSession, setGithubSession] = useState<GitHubSessionData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
-  const resolveSession = async (session) => {
+  const resolveSession = async (
+    session: SupabaseSession | null,
+  ): Promise<GitHubSessionData | null> => {
     const base = extractGitHubSession(session);
 
-    // Token en sesión válido: solo si es de GitHub (no de Google, que empieza por ya29.)
     if (base?.token && !base.token.startsWith("ya29.")) {
       return { ...base, fromOAuth: true };
     }
 
-    // Sin token GitHub en sesión: buscar en BD (caso recarga de página)
     const user = session?.user;
-    if (!user) return null;
+    if (!user?.id) return null;
 
     const githubIdentity = user.identities?.find(
       (i) => i.provider === "github",
@@ -274,7 +309,8 @@ export function useGitHubSession() {
 
     return {
       token: data.github_access_token,
-      username: data.github_username || githubIdentity.identity_data?.user_name,
+      username:
+        (data.github_username || githubIdentity.identity_data?.user_name) ?? "",
       avatarUrl: githubIdentity.identity_data?.avatar_url,
       fromOAuth: false,
     };
@@ -283,7 +319,9 @@ export function useGitHubSession() {
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getSession();
-      const resolved = await resolveSession(data?.session);
+      const resolved = await resolveSession(
+        data?.session as SupabaseSession | null,
+      );
       setGithubSession(resolved);
       setLoading(false);
     };
@@ -292,7 +330,9 @@ export function useGitHubSession() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        const resolved = await resolveSession(session);
+        const resolved = await resolveSession(
+          session as SupabaseSession | null,
+        );
         setGithubSession(resolved);
       },
     );
@@ -314,11 +354,12 @@ export function useGitHubSession() {
   return { githubSession, loading, connectGitHub };
 }
 
-// ========== Hook: obtener repos ==========
-export function useGitHubRepos(token) {
-  const [repos, setRepos] = useState([]);
+// ─── Hook: obtener repos ──────────────────────────────────────────────────────
+
+export function useGitHubRepos(token: string | null | undefined) {
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchRepos = useCallback(async () => {
     if (!token) return;
@@ -337,7 +378,8 @@ export function useGitHubRepos(token) {
       if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
       const data = await res.json();
       setRepos(
-        data.map((r) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data.map((r: any) => ({
           repo_id: r.id,
           nombre: r.name,
           nombre_completo: r.full_name,
@@ -353,7 +395,7 @@ export function useGitHubRepos(token) {
         })),
       );
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : "Error desconocido");
     }
     setLoading(false);
   }, [token]);
@@ -365,15 +407,21 @@ export function useGitHubRepos(token) {
   return { repos, loading, error, refetch: fetchRepos };
 }
 
-// ========== Tarjeta de repositorio ==========
-function RepoCard({ repo, isVinculado, onToggle }) {
+// ─── RepoCard ─────────────────────────────────────────────────────────────────
+
+interface RepoCardProps {
+  repo: GitHubRepo;
+  isVinculado: boolean;
+  onToggle: (repo: GitHubRepo) => void;
+}
+
+function RepoCard({ repo, isVinculado, onToggle }: RepoCardProps) {
   const fecha = repo.actualizado
     ? new Date(repo.actualizado).toLocaleDateString("es-ES", {
         month: "short",
         year: "numeric",
       })
     : "";
-  const langColor = LANG_COLORS[repo.lenguajes?.[0]] || "#8b949e";
 
   return (
     <div
@@ -394,7 +442,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
           e.currentTarget.style.borderColor = "var(--color-border-strong)";
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -430,8 +477,7 @@ function RepoCard({ repo, isVinculado, onToggle }) {
                 whiteSpace: "nowrap",
               }}
             >
-              <IconGitHub size={12} />
-              {repo.nombre}
+              <IconGitHub size={12} /> {repo.nombre}
             </a>
             {repo.privado && (
               <span
@@ -449,7 +495,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
               </span>
             )}
           </div>
-
           {repo.descripcion && (
             <p
               style={{
@@ -466,8 +511,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
               {repo.descripcion}
             </p>
           )}
-
-          {/* Lang + stats */}
           <div
             style={{
               display: "flex",
@@ -517,7 +560,6 @@ function RepoCard({ repo, isVinculado, onToggle }) {
           </div>
         </div>
 
-        {/* Botón vincular/desvincular */}
         <button
           onClick={() => onToggle(repo)}
           style={{
@@ -540,23 +582,25 @@ function RepoCard({ repo, isVinculado, onToggle }) {
             transition: "all 0.15s",
           }}
           onMouseEnter={(e) => {
+            const el = e.currentTarget;
             if (isVinculado) {
-              e.currentTarget.style.background = "rgba(248,113,113,0.08)";
-              e.currentTarget.style.color = "#f87171";
-              e.currentTarget.style.borderColor = "rgba(248,113,113,0.3)";
+              el.style.background = "rgba(248,113,113,0.08)";
+              el.style.color = "#f87171";
+              el.style.borderColor = "rgba(248,113,113,0.3)";
             } else {
-              e.currentTarget.style.borderColor = "rgba(192,255,114,0.3)";
-              e.currentTarget.style.color = "var(--color-brand)";
+              el.style.borderColor = "rgba(192,255,114,0.3)";
+              el.style.color = "var(--color-brand)";
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = isVinculado
+            const el = e.currentTarget;
+            el.style.background = isVinculado
               ? "rgba(192,255,114,0.08)"
               : "transparent";
-            e.currentTarget.style.color = isVinculado
+            el.style.color = isVinculado
               ? "var(--color-brand)"
               : "var(--color-text-muted)";
-            e.currentTarget.style.borderColor = isVinculado
+            el.style.borderColor = isVinculado
               ? "rgba(192,255,114,0.3)"
               : "var(--color-border-strong)";
           }}
@@ -577,13 +621,21 @@ function RepoCard({ repo, isVinculado, onToggle }) {
   );
 }
 
-// ========== COMPONENTE PRINCIPAL ==========
+// ─── Componente principal ─────────────────────────────────────────────────────
+
+interface GitHubReposSectionProps {
+  reposVinculados: GitHubRepo[];
+  onReposChange: (repos: GitHubRepo[]) => void;
+  githubUsername: string | null;
+  onUsernameChange: (username: string) => void;
+}
+
 export default function GitHubReposSection({
   reposVinculados = [],
   onReposChange,
   githubUsername,
   onUsernameChange,
-}) {
+}: GitHubReposSectionProps) {
   const {
     githubSession,
     loading: sessionLoading,
@@ -599,13 +651,13 @@ export default function GitHubReposSection({
 
   useEffect(() => {
     if (githubSession?.username && githubSession.username !== githubUsername) {
-      onUsernameChange?.(githubSession.username);
+      onUsernameChange(githubSession.username);
     }
   }, [githubSession?.username]);
 
   const vinculadosIds = new Set(reposVinculados.map((r) => r.repo_id));
 
-  const handleToggle = (repo) => {
+  const handleToggle = (repo: GitHubRepo) => {
     if (vinculadosIds.has(repo.repo_id)) {
       onReposChange(reposVinculados.filter((r) => r.repo_id !== repo.repo_id));
     } else {
@@ -619,7 +671,6 @@ export default function GitHubReposSection({
       r.descripcion.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
-  // ── Cargando sesión ──
   if (sessionLoading) {
     return (
       <div
@@ -637,7 +688,6 @@ export default function GitHubReposSection({
     );
   }
 
-  // ── No conectado ──
   if (!githubSession) {
     return (
       <div
@@ -679,7 +729,6 @@ export default function GitHubReposSection({
           style={{
             fontSize: 12,
             color: "var(--color-text-muted)",
-            marginBottom: 16,
             maxWidth: 280,
             margin: "0 auto 16px",
           }}
@@ -769,10 +818,9 @@ export default function GitHubReposSection({
     );
   }
 
-  // ── Conectado ──
   return (
     <div>
-      {/* Header de sesión */}
+      {/* Header sesión */}
       <div
         style={{
           display: "flex",
@@ -821,7 +869,6 @@ export default function GitHubReposSection({
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Botón reconectar: visible cuando el token viene de BD */}
           {!githubSession.fromOAuth && (
             <button
               onClick={connectGitHub}
@@ -864,7 +911,7 @@ export default function GitHubReposSection({
         </div>
       </div>
 
-      {/* Repos vinculados al perfil */}
+      {/* Repos vinculados */}
       {reposVinculados.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <p
@@ -978,7 +1025,7 @@ export default function GitHubReposSection({
         </div>
       )}
 
-      {/* Lista de repos */}
+      {/* Lista */}
       {reposLoading && repos.length === 0 ? (
         <div
           style={{

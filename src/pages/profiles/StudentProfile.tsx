@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
-import GitHubReposSection from "../GitHubIntegration";
 import MainLayout from "../../components/layout/MainLayout";
+import GitHubReposSection, { GitHubRepo } from "../GitHubIntegration";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
+
 interface TipoBusquedaOption {
   id: string;
   label: string;
@@ -73,7 +74,7 @@ interface EstudianteRow {
   proyectos?: Proyecto[];
   redes_sociales?: RedesSociales | null;
   github_username?: string | null;
-  github_repos_vinculados?: string[];
+  github_repos_vinculados?: GitHubRepo[];
   ciudad?: string | null;
   telefono?: string | null;
 }
@@ -1604,9 +1605,10 @@ export default function StudentProfile() {
     dribbble: "",
   });
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
-  const [githubReposVinculados, setGithubReposVinculados] = useState<string[]>(
-    [],
-  );
+  const [githubReposVinculados, setGithubReposVinculados] = useState<
+    GitHubRepo[]
+  >([]);
+
   const [ciudad, setCiudad] = useState<string>("");
   const [telefono, setTelefono] = useState<string>("");
 
@@ -1648,7 +1650,9 @@ export default function StudentProfile() {
           },
         );
         setGithubUsername(data.github_username ?? null);
-        setGithubReposVinculados(data.github_repos_vinculados ?? []);
+        setGithubReposVinculados(
+          (data.github_repos_vinculados as GitHubRepo[]) ?? [],
+        );
         setCiudad(data.ciudad ?? "");
         setTelefono(data.telefono ?? "");
       }
@@ -2480,9 +2484,13 @@ export default function StudentProfile() {
             >
               <GitHubReposSection
                 reposVinculados={githubReposVinculados}
-                onReposChange={setGithubReposVinculados}
+                onReposChange={(repos: GitHubRepo[]) =>
+                  setGithubReposVinculados(repos)
+                }
                 githubUsername={githubUsername}
-                onUsernameChange={setGithubUsername}
+                onUsernameChange={(username: string) =>
+                  setGithubUsername(username)
+                }
               />
             </SectionCard>
 

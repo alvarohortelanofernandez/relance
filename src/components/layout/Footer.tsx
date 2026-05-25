@@ -43,7 +43,7 @@ export default function Footer() {
         </div>
 
         {/* Links */}
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+        {/* <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {[
             { label: "Inicio", href: "/" },
             { label: "Ayuda", href: "/ayuda" },
@@ -68,7 +68,7 @@ export default function Footer() {
               {link.label}
             </a>
           ))}
-        </div>
+        </div> */}
 
         {/* Copyright */}
         <div
