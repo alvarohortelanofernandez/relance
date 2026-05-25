@@ -1723,31 +1723,44 @@ export default function StudentProfile() {
     if (!user) return;
     setSaving(true);
     setSaveError(null);
-    const payload = {
-      id: user.id,
-      nombre: nombre.trim() || null,
-      apellidos: apellidos.trim() || null,
-      avatar_url: avatarUrl,
-      sobre_mi: sobreMi.trim() || null,
-      formaciones,
-      habilidades,
-      tipo_busqueda: tipoBusqueda,
-      disponibilidad,
-      modalidad,
-      proyectos,
-      redes_sociales: redesSociales,
-      github_username: githubUsername,
-      github_repos_vinculados: githubReposVinculados,
-      ciudad: ciudad.trim() || null,
-      telefono: telefono.trim() || null,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from("estudiante").upsert(payload);
-    setSaving(false);
-    if (error) setSaveError("Error al guardar: " + error.message);
-    else {
+
+    try {
+      // Limpia redes_sociales: no envíes claves con string vacío
+      const redesLimpias = Object.fromEntries(
+        Object.entries(redesSociales).filter(([, v]) => v.trim() !== ""),
+      ) as Partial<RedesSociales>;
+
+      const payload = {
+        id: user.id,
+        nombre: nombre.trim() || null,
+        apellidos: apellidos.trim() || null,
+        avatar_url: avatarUrl,
+        sobre_mi: sobreMi.trim() || null,
+        formaciones,
+        habilidades,
+        tipo_busqueda: tipoBusqueda,
+        disponibilidad,
+        modalidad,
+        proyectos,
+        redes_sociales: Object.keys(redesLimpias).length ? redesLimpias : null,
+        github_username: githubUsername,
+        github_repos_vinculados: githubReposVinculados,
+        ciudad: ciudad.trim() || null,
+        telefono: telefono.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from("estudiante").upsert(payload);
+      if (error) throw error;
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+    } catch (e: unknown) {
+      setSaveError(
+        "Error al guardar: " + (e instanceof Error ? e.message : String(e)),
+      );
+    } finally {
+      setSaving(false); // ← siempre se ejecuta, pase lo que pase
     }
   };
 
