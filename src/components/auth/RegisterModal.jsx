@@ -1,49 +1,161 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { useNavigate } from "react-router-dom";
-import MainLayout from "../../components/layout/MainLayout";
 
-// === Constantes ================================
+// ── Constantes ────────────────────────────────────────────────────────────────
 const ROLES = [
   {
     id: "estudiante",
     icon: "icon-student",
     label: "Estudiante",
     desc: "Busca prácticas o tu primer empleo",
-    color: "from-blue-500/20 to-blue-600/5",
-    border: "border-blue-500/30",
-    accent: "#60a5fa",
   },
   {
     id: "empresa",
     icon: "icon-company",
     label: "Empresa",
     desc: "Publica ofertas y encuentra talento",
-    color: "from-purple-500/20 to-purple-600/5",
-    border: "border-purple-500/30",
-    accent: "#a78bfa",
   },
   {
     id: "centro_educativo",
     icon: "icon-educativeCenter",
     label: "Centro educativo",
     desc: "Gestiona las prácticas de tus alumnos",
-    color: "from-orange-500/20 to-orange-600/5",
-    border: "border-orange-500/30",
-    accent: "#fb923c",
   },
 ];
 
-// === Componentes auxiliares ================================
+// ── Validaciones ──────────────────────────────────────────────────────────────
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const isValidUrl = (v) => {
+  try {
+    new URL(v);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const isValidCif = (v) => /^[A-Z0-9]{8,9}$/i.test(v.trim());
+const isValidPhone = (v) => /^[+\d\s\-().]{7,20}$/.test(v.trim());
+
+function validateCommon(form) {
+  const e = {};
+  if (!form.fullName?.trim()) e.fullName = "El nombre es obligatorio.";
+  if (!form.email.trim()) e.email = "El correo es obligatorio.";
+  else if (!isValidEmail(form.email)) e.email = "Introduce un correo válido.";
+  if (!form.password) e.password = "La contraseña es obligatoria.";
+  else if (form.password.length < 8) e.password = "Mínimo 8 caracteres.";
+  else if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
+    e.password = "Debe tener al menos una mayúscula y un número.";
+  if (!form.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
+  else if (form.password !== form.confirmPassword)
+    e.confirmPassword = "Las contraseñas no coinciden.";
+  return e;
+}
+
+// ── Estilos compartidos ───────────────────────────────────────────────────────
+const labelStyle = {
+  display: "block",
+  fontSize: 12,
+  color: "var(--color-text-muted)",
+  marginBottom: 6,
+  fontWeight: 500,
+};
+const formGrid = { display: "flex", flexDirection: "column", gap: 12 };
+const twoCol = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
+
+const inputStyle = (hasError = false, focused = false) => ({
+  width: "100%",
+  boxSizing: "border-box",
+  background: "var(--color-surface)",
+  border: `1px solid ${hasError ? "rgba(248,113,113,0.5)" : focused ? "rgba(192,255,114,0.45)" : "var(--color-border-strong)"}`,
+  borderRadius: 10,
+  padding: "9px 12px",
+  fontSize: 12,
+  color: "var(--color-text)",
+  fontFamily: "inherit",
+  outline: "none",
+  transition: "all 0.18s",
+  boxShadow: focused ? "0 0 0 3px rgba(192,255,114,0.10)" : "none",
+});
+
+// ── Atoms ─────────────────────────────────────────────────────────────────────
+function FieldError({ msg }) {
+  return msg ? (
+    <p style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>{msg}</p>
+  ) : null;
+}
+
+function Input({
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  hasError = false,
+  min,
+  max,
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={inputStyle(hasError, focused)}
+    />
+  );
+}
+
+function SelectField({ value, onChange, children }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        ...inputStyle(false, focused),
+        cursor: "pointer",
+        appearance: "none",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a9ab8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 10px center",
+        paddingRight: 32,
+      }}
+    >
+      {children}
+    </select>
+  );
+}
+
+function Textarea({ value, onChange, rows = 3, placeholder }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <textarea
+      value={value}
+      onChange={onChange}
+      rows={rows}
+      placeholder={placeholder}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{ ...inputStyle(false, focused), resize: "none", lineHeight: 1.6 }}
+    />
+  );
+}
+
 function PasswordField({
   value,
   onChange,
   placeholder = "Mínimo 8 caracteres",
-  required = true,
-  minLength = 8,
   showStrength = true,
+  hasError = false,
 }) {
   const [show, setShow] = useState(false);
+  const [focused, setFocused] = useState(false);
   const score = !value
     ? 0
     : value.length < 6
@@ -53,52 +165,93 @@ function PasswordField({
         : /[A-Z]/.test(value) && /[0-9]/.test(value)
           ? 4
           : 3;
-  const colors = [
-    "",
-    "bg-red-500",
-    "bg-orange-500",
-    "bg-yellow-500",
-    "bg-brand",
-  ];
+  const colors = ["", "#f87171", "#fb923c", "#facc15", "#c0ff72"];
   const labels = ["", "Muy débil", "Débil", "Media", "Fuerte"];
-
   return (
     <div>
-      <div className="relative">
+      <div style={{ position: "relative" }}>
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          required={required}
-          minLength={minLength}
-          className="input-field pr-10"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{ ...inputStyle(hasError, focused), paddingRight: 40 }}
         />
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          style={{
+            position: "absolute",
+            right: 10,
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-muted)",
+            display: "flex",
+            padding: 4,
+          }}
         >
           {show ? (
-            <svg width="18" height="18">
-              <use href="/icons.svg#icon-eye-slash" />
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+              <line x1="1" y1="1" x2="23" y2="23" />
             </svg>
           ) : (
-            <svg width="18" height="18">
-              <use href="/icons.svg#icon-eye" />
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
             </svg>
           )}
         </button>
       </div>
       {showStrength && value && (
-        <div className="mt-2 flex items-center gap-2">
+        <div
+          style={{
+            marginTop: 6,
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
           {[1, 2, 3, 4].map((lvl) => (
             <div
               key={lvl}
-              className={`h-1 flex-1 rounded-full transition-all duration-300 ${score >= lvl ? colors[score] : "bg-white/10"}`}
+              style={{
+                height: 3,
+                flex: 1,
+                borderRadius: 3,
+                background:
+                  score >= lvl ? colors[score] : "rgba(255,255,255,0.06)",
+                transition: "background 0.3s",
+              }}
             />
           ))}
-          <span className="text-xs text-gray-500 w-16 text-right">
+          <span
+            style={{
+              fontSize: 10,
+              color: "var(--color-text-muted)",
+              width: 55,
+              textAlign: "right",
+            }}
+          >
             {labels[score]}
           </span>
         </div>
@@ -107,146 +260,366 @@ function PasswordField({
   );
 }
 
-// Formulario para ESTUDIANTE
+function SectionLabel({ children }) {
+  return (
+    <p
+      style={{
+        fontSize: 10,
+        color: "var(--color-text-muted)",
+        marginBottom: 10,
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+        fontWeight: 700,
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function InfoNote({ children }) {
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        background: "rgba(192,255,114,0.04)",
+        border: "1px solid rgba(192,255,114,0.12)",
+        borderRadius: 10,
+        padding: "10px 12px",
+      }}
+    >
+      <p
+        style={{
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 7,
+          lineHeight: 1.6,
+        }}
+      >
+        <svg
+          width="13"
+          height="13"
+          style={{ flexShrink: 0, marginTop: 2, color: "var(--color-brand)" }}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function ErrorBox({ msg }) {
+  if (!msg) return null;
+  return (
+    <div
+      style={{
+        background: "rgba(248,113,113,0.08)",
+        border: "1px solid rgba(248,113,113,0.25)",
+        borderRadius: 10,
+        padding: "10px 12px",
+        color: "#f87171",
+        fontSize: 12,
+      }}
+    >
+      {msg}
+    </div>
+  );
+}
+
+function SubmitButton({ loading, label }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 8,
+        padding: "11px 20px",
+        background: loading ? "rgba(192,255,114,0.5)" : "var(--color-brand)",
+        color: "#010a00",
+        border: "none",
+        borderRadius: 10,
+        fontSize: 13,
+        fontWeight: 700,
+        fontFamily: "inherit",
+        cursor: loading ? "not-allowed" : "pointer",
+        letterSpacing: "-0.02em",
+      }}
+    >
+      {loading ? (
+        <>
+          <svg
+            style={{
+              width: 15,
+              height: 15,
+              animation: "spin 0.8s linear infinite",
+            }}
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              style={{ opacity: 0.25 }}
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              style={{ opacity: 0.75 }}
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          Creando cuenta...
+        </>
+      ) : (
+        label
+      )}
+      <style>{`@keyframes spin { to { transform:rotate(360deg) } }`}</style>
+    </button>
+  );
+}
+
+// ── STUDENT FORM ──────────────────────────────────────────────────────────────
 function StudentForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    centerName: "",
-    degree: "",
-    graduationYear: "",
+    centerId: "",
+    telefono: "",
+    ciudad: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const [centers, setCenters] = useState([]);
+  const [centerQuery, setCenterQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "estudiante" });
+  const filteredCenters = centers.filter((c) =>
+    c.nombre?.toLowerCase().includes(centerQuery.toLowerCase()),
+  );
+
+  useEffect(() => {
+    supabase
+      .from("centro_educativo")
+      .select("id, nombre, ciudad")
+      .order("nombre")
+      .then(({ data }) => {
+        if (data) setCenters(data);
+      });
+  }, []);
+
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
+
+  const validate = () => {
+    const e = validateCommon(form);
+    if (!form.centerId) e.centerId = "El instituto es obligatorio.";
+    if (!form.telefono.trim()) e.telefono = "El teléfono es obligatorio.";
+    else if (!isValidPhone(form.telefono)) e.telefono = "Teléfono no válido.";
+    if (!form.ciudad.trim()) e.ciudad = "La ciudad es obligatoria.";
+    setErrs(e);
+    return Object.keys(e).length === 0;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Nombre completo *
-          </label>
-          <input
-            type="text"
-            required
-            value={form.fullName}
-            onChange={s("fullName")}
-            placeholder="Tu nombre y apellidos"
-            className="input-field"
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (validate()) onSubmit({ ...form, role: "estudiante" });
+      }}
+      style={formGrid}
+      noValidate
+    >
+      <div>
+        <label style={labelStyle}>Nombre completo *</label>
+        <Input
+          value={form.fullName}
+          onChange={s("fullName")}
+          placeholder="Tu nombre y apellidos"
+          hasError={!!errs.fullName}
+        />
+        <FieldError msg={errs.fullName} />
+      </div>
+      <div>
+        <label style={labelStyle}>Correo electrónico *</label>
+        <Input
+          type="email"
+          value={form.email}
+          onChange={s("email")}
+          placeholder="tu@correo.com"
+          hasError={!!errs.email}
+        />
+        <FieldError msg={errs.email} />
+      </div>
+      <div style={twoCol}>
+        <div>
+          <label style={labelStyle}>Contraseña *</label>
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
           />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Correo electrónico *
-          </label>
-          <input
-            type="email"
-            required
-            value={form.email}
-            onChange={s("email")}
-            placeholder="tu@correo.com"
-            className="input-field"
-          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Contraseña *
-          </label>
-          <PasswordField value={form.password} onChange={s("password")} />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Confirmar contraseña *
-          </label>
-          {/* <input
-            type="password"
-            required
-            value={form.confirmPassword}
-            onChange={s("confirmPassword")}
-            placeholder="Repite la contraseña"
-            className="input-field"
-          /> */}
+          <label style={labelStyle}>Confirmar contraseña *</label>
           <PasswordField
             value={form.confirmPassword}
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
+          <FieldError msg={errs.confirmPassword} />
+        </div>
+      </div>
+
+      {/* Instituto */}
+      <div style={{ position: "relative" }}>
+        <label style={labelStyle}>Instituto *</label>
+        <Input
+          type="text"
+          value={centerQuery}
+          onChange={(e) => {
+            setCenterQuery(e.target.value);
+            setShowDropdown(true);
+            if (!e.target.value) setForm((f) => ({ ...f, centerId: "" }));
+          }}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          placeholder="Busca tu instituto..."
+          hasError={!!errs.centerId}
+        />
+        <FieldError msg={errs.centerId} />
+        {showDropdown &&
+          centerQuery.length >= 1 &&
+          filteredCenters.length > 0 && (
+            <ul
+              style={{
+                position: "absolute",
+                zIndex: 50,
+                width: "100%",
+                marginTop: 4,
+                border: "1px solid rgba(192,255,114,0.2)",
+                borderRadius: 10,
+                overflow: "hidden",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                maxHeight: 180,
+                overflowY: "auto",
+                backgroundColor: "var(--color-bg)",
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+              }}
+            >
+              {filteredCenters.map((c) => (
+                <li
+                  key={c.id}
+                  onMouseDown={() => {
+                    setForm((f) => ({ ...f, centerId: c.id }));
+                    setCenterQuery(c.nombre);
+                    setShowDropdown(false);
+                    setErrs((p) => ({ ...p, centerId: undefined }));
+                  }}
+                  style={{
+                    padding: "9px 14px",
+                    fontSize: 12,
+                    color: "var(--color-text)",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(192,255,114,0.08)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <span style={{ fontWeight: 500 }}>{c.nombre}</span>
+                  {c.ciudad && (
+                    <span
+                      style={{ fontSize: 10, color: "rgba(192,255,114,0.6)" }}
+                    >
+                      {c.ciudad}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+        {showDropdown &&
+          centerQuery.length >= 2 &&
+          filteredCenters.length === 0 && (
+            <div
+              style={{
+                position: "absolute",
+                zIndex: 50,
+                width: "100%",
+                marginTop: 4,
+                background: "var(--color-bg)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 10,
+                padding: "10px 14px",
+                fontSize: 12,
+                color: "var(--color-text-muted)",
+              }}
+            >
+              No se encontró ningún centro.
+            </div>
+          )}
+      </div>
+
+      <div style={twoCol}>
+        <div>
+          <label style={labelStyle}>Teléfono *</label>
+          <Input
+            type="tel"
+            value={form.telefono}
+            onChange={s("telefono")}
+            placeholder="+34 600 000 000"
+            hasError={!!errs.telefono}
+          />
+          <FieldError msg={errs.telefono} />
+        </div>
+        <div>
+          <label style={labelStyle}>Ciudad *</label>
+          <Input
+            value={form.ciudad}
+            onChange={s("ciudad")}
+            placeholder="Ej: Córdoba"
+            hasError={!!errs.ciudad}
+          />
+          <FieldError msg={errs.ciudad} />
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/10">
-        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
-          Información académica (opcional)
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Centro educativo
-            </label>
-            <input
-              type="text"
-              value={form.centerName}
-              onChange={s("centerName")}
-              placeholder="Ej: IES Trassierra"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Titulación / Ciclo
-            </label>
-            <input
-              type="text"
-              value={form.degree}
-              onChange={s("degree")}
-              placeholder="Ej: DAM"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Año de finalización
-            </label>
-            <input
-              type="number"
-              value={form.graduationYear}
-              onChange={s("graduationYear")}
-              placeholder="2025"
-              min="2020"
-              max="2035"
-              className="input-field"
-            />
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
+      <ErrorBox msg={error} />
       <SubmitButton loading={loading} label="Crear cuenta de estudiante" />
     </form>
   );
 }
 
-// Formulario para EMPRESA
+// ── COMPANY FORM ──────────────────────────────────────────────────────────────
 function CompanyForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
     fullName: "",
@@ -256,398 +629,403 @@ function CompanyForm({ onSubmit, loading, error }) {
     companyName: "",
     cif: "",
     sector: "",
-    size: "",
-    website: "",
-    city: "",
+    tamanio: "",
+    ciudad: "",
+    web: "",
+    telefono: "",
+    descripcion: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "empresa" });
+  const validate = () => {
+    const e = validateCommon(form);
+    if (!form.companyName.trim())
+      e.companyName = "El nombre de la empresa es obligatorio.";
+    if (!form.cif.trim()) e.cif = "El CIF es obligatorio.";
+    else if (!isValidCif(form.cif))
+      e.cif = "Formato de CIF inválido (ej: B12345678).";
+    if (form.web && !isValidUrl(form.web)) e.web = "Introduce una URL válida.";
+    if (form.telefono && !isValidPhone(form.telefono))
+      e.telefono = "Teléfono no válido.";
+    setErrs(e);
+    return Object.keys(e).length === 0;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Tu nombre completo (representante) *
-          </label>
-          <input
-            type="text"
-            required
-            value={form.fullName}
-            onChange={s("fullName")}
-            placeholder="Nombre del representante"
-            className="input-field"
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (validate()) onSubmit({ ...form, role: "empresa" });
+      }}
+      style={formGrid}
+      noValidate
+    >
+      <div>
+        <label style={labelStyle}>Tu nombre completo (representante) *</label>
+        <Input
+          value={form.fullName}
+          onChange={s("fullName")}
+          placeholder="Nombre del representante"
+          hasError={!!errs.fullName}
+        />
+        <FieldError msg={errs.fullName} />
+      </div>
+      <div>
+        <label style={labelStyle}>Correo electrónico corporativo *</label>
+        <Input
+          type="email"
+          value={form.email}
+          onChange={s("email")}
+          placeholder="contacto@empresa.com"
+          hasError={!!errs.email}
+        />
+        <FieldError msg={errs.email} />
+      </div>
+      <div style={twoCol}>
+        <div>
+          <label style={labelStyle}>Contraseña *</label>
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
           />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Correo electrónico corporativo *
-          </label>
-          <input
-            type="email"
-            required
-            value={form.email}
-            onChange={s("email")}
-            placeholder="contacto@empresa.com"
-            className="input-field"
-          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Contraseña *
-          </label>
-          <PasswordField value={form.password} onChange={s("password")} />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Confirmar contraseña *
-          </label>
-          {/* <input
-            type="password"
-            required
-            value={form.confirmPassword}
-            onChange={s("confirmPassword")}
-            placeholder="Repite la contraseña"
-            className="input-field"
-          /> */}
+          <label style={labelStyle}>Confirmar contraseña *</label>
           <PasswordField
             value={form.confirmPassword}
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
-          )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+          <FieldError msg={errs.confirmPassword} />
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/10">
-        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
-          Datos de la empresa
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Nombre de la empresa *
-            </label>
-            <input
-              type="text"
-              required
+      <div
+        style={{ paddingTop: 12, borderTop: "1px solid var(--color-border)" }}
+      >
+        <SectionLabel>Datos de la empresa</SectionLabel>
+        <div style={formGrid}>
+          <div>
+            <label style={labelStyle}>Nombre de la empresa *</label>
+            <Input
               value={form.companyName}
               onChange={s("companyName")}
               placeholder="Mi Empresa S.L."
-              className="input-field"
+              hasError={!!errs.companyName}
             />
+            <FieldError msg={errs.companyName} />
+          </div>
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>CIF *</label>
+              <Input
+                value={form.cif}
+                onChange={s("cif")}
+                placeholder="B12345678"
+                hasError={!!errs.cif}
+              />
+              <FieldError msg={errs.cif} />
+            </div>
+            <div>
+              <label style={labelStyle}>Sector</label>
+              <SelectField value={form.sector} onChange={s("sector")}>
+                <option value="">Seleccionar sector</option>
+                {[
+                  "Tecnología",
+                  "Marketing",
+                  "Diseño",
+                  "Finanzas",
+                  "Salud",
+                  "Educación",
+                  "Comercio",
+                  "Industria",
+                  "Otro",
+                ].map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          </div>
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Tamaño</label>
+              <SelectField value={form.tamanio} onChange={s("tamanio")}>
+                <option value="">Seleccionar tamaño</option>
+                {[
+                  "1–10 empleados",
+                  "11–50 empleados",
+                  "51–200 empleados",
+                  "201–500 empleados",
+                  "500+ empleados",
+                ].map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+            <div>
+              <label style={labelStyle}>Ciudad</label>
+              <Input
+                value={form.ciudad}
+                onChange={s("ciudad")}
+                placeholder="Madrid"
+              />
+            </div>
+          </div>
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Teléfono</label>
+              <Input
+                type="tel"
+                value={form.telefono}
+                onChange={s("telefono")}
+                placeholder="+34 900 000 000"
+                hasError={!!errs.telefono}
+              />
+              <FieldError msg={errs.telefono} />
+            </div>
+            <div>
+              <label style={labelStyle}>Sitio web</label>
+              <Input
+                type="url"
+                value={form.web}
+                onChange={s("web")}
+                placeholder="https://miempresa.com"
+                hasError={!!errs.web}
+              />
+              <FieldError msg={errs.web} />
+            </div>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">CIF *</label>
-            <input
-              type="text"
-              required
-              value={form.cif}
-              onChange={s("cif")}
-              placeholder="B12345678"
-              className="input-field"
+            <label style={labelStyle}>Descripción</label>
+            <Textarea
+              value={form.descripcion}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  descripcion: e.target.value.slice(0, 500),
+                }))
+              }
+              placeholder="Describe tu empresa, cultura y qué perfiles buscáis..."
             />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Sector</label>
-            <select
-              value={form.sector}
-              onChange={s("sector")}
-              className="input-field"
+            <p
+              style={{
+                fontSize: 10,
+                color: "var(--color-text-muted)",
+                marginTop: 3,
+                textAlign: "right",
+              }}
             >
-              <option value="">Seleccionar sector</option>
-              {[
-                "Tecnología",
-                "Marketing",
-                "Diseño",
-                "Finanzas",
-                "Salud",
-                "Educación",
-                "Comercio",
-                "Industria",
-                "Otro",
-              ].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              {form.descripcion.length}/500
+            </p>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Tamaño de empresa
-            </label>
-            <select
-              value={form.size}
-              onChange={s("size")}
-              className="input-field"
-            >
-              <option value="">Seleccionar tamaño</option>
-              {[
-                "1–10 empleados",
-                "11–50 empleados",
-                "51–200 empleados",
-                "201–500 empleados",
-                "500+ empleados",
-              ].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Ciudad</label>
-            <input
-              type="text"
-              value={form.city}
-              onChange={s("city")}
-              placeholder="Córdoba"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Sitio web
-            </label>
-            <input
-              type="url"
-              value={form.website}
-              onChange={s("website")}
-              placeholder="https://miempresa.com"
-              className="input-field"
-            />
-          </div>
-        </div>
-        <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
-          <p className="text-xs text-gray-500 flex items-start gap-2">
-            <svg className="w-4 h-4 text-gray-400">
-              <use href={`icons.svg#icon-info`} />
-            </svg>
+          <InfoNote>
             El CIF será verificado por el equipo de Relance en un plazo de 24–48
             h antes de activar la cuenta plenamente.
-          </p>
+          </InfoNote>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
+      <ErrorBox msg={error} />
       <SubmitButton loading={loading} label="Crear cuenta de empresa" />
     </form>
   );
 }
 
-// Formulario para CENTRO EDUCATIVO
+// ── CENTER FORM ───────────────────────────────────────────────────────────────
 function CenterForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
-    fullName: "",
+    centerName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    centerName: "",
     institutionalCode: "",
     centerType: "",
+    num_alumnos: "",
     city: "",
     province: "",
     website: "",
   });
-  const s = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errs, setErrs] = useState({});
+  const s = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrs((p) => ({ ...p, [k]: undefined }));
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    onSubmit({ ...form, role: "centro_educativo" });
+  const validate = () => {
+    const e = {};
+    if (!form.email.trim()) e.email = "El correo es obligatorio.";
+    else if (!isValidEmail(form.email)) e.email = "Introduce un correo válido.";
+    if (!form.password) e.password = "La contraseña es obligatoria.";
+    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres.";
+    else if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
+      e.password = "Debe tener al menos una mayúscula y un número.";
+    if (!form.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
+    else if (form.password !== form.confirmPassword)
+      e.confirmPassword = "Las contraseñas no coinciden.";
+    if (!form.centerName.trim())
+      e.centerName = "El nombre del centro es obligatorio.";
+    if (!form.institutionalCode.trim())
+      e.institutionalCode = "El código institucional es obligatorio.";
+    else if (form.institutionalCode.trim().length < 3)
+      e.institutionalCode = "El código debe tener al menos 3 caracteres.";
+    if (!form.city.trim()) e.city = "La ciudad es obligatoria.";
+    if (form.website && !isValidUrl(form.website))
+      e.website = "Introduce una URL válida.";
+    setErrs(e);
+    return Object.keys(e).length === 0;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Tu nombre completo (responsable) *
-          </label>
-          <input
-            type="text"
-            required
-            value={form.fullName}
-            onChange={s("fullName")}
-            placeholder="Nombre del responsable"
-            className="input-field"
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (validate()) onSubmit({ ...form, role: "centro_educativo" });
+      }}
+      style={formGrid}
+      noValidate
+    >
+      <div>
+        <label style={labelStyle}>Nombre del centro *</label>
+        <Input
+          value={form.centerName}
+          onChange={s("centerName")}
+          placeholder="IES Nombre del Centro"
+          hasError={!!errs.centerName}
+        />
+        <FieldError msg={errs.centerName} />
+      </div>
+      <div>
+        <label style={labelStyle}>Correo electrónico institucional *</label>
+        <Input
+          type="email"
+          value={form.email}
+          onChange={s("email")}
+          placeholder="responsable@centro.edu.es"
+          hasError={!!errs.email}
+        />
+        <FieldError msg={errs.email} />
+      </div>
+      <div style={twoCol}>
+        <div>
+          <label style={labelStyle}>Contraseña *</label>
+          <PasswordField
+            value={form.password}
+            onChange={s("password")}
+            hasError={!!errs.password}
           />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Correo electrónico institucional *
-          </label>
-          <input
-            type="email"
-            required
-            value={form.email}
-            onChange={s("email")}
-            placeholder="responsable@centro.edu.es"
-            className="input-field"
-          />
+          <FieldError msg={errs.password} />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Contraseña *
-          </label>
-          <PasswordField value={form.password} onChange={s("password")} />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1.5">
-            Confirmar contraseña *
-          </label>
-          {/* <input
-            type="password"
-            required
-            value={form.confirmPassword}
-            onChange={s("confirmPassword")}
-            placeholder="Repite la contraseña"
-            className="input-field"
-          /> */}
+          <label style={labelStyle}>Confirmar contraseña *</label>
           <PasswordField
             value={form.confirmPassword}
             onChange={s("confirmPassword")}
             placeholder="Repite la contraseña"
             showStrength={false}
+            hasError={!!errs.confirmPassword}
           />
-          {form.confirmPassword && form.confirmPassword !== form.password && (
-            <p className="text-xs text-red-400 mt-1">No coinciden</p>
-          )}
-          {form.confirmPassword &&
-            form.confirmPassword === form.password &&
-            form.password.length >= 8 && (
-              <p className="text-xs text-brand mt-1">✓ Coinciden</p>
-            )}
+          <FieldError msg={errs.confirmPassword} />
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/10">
-        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
-          Datos del centro
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Nombre del centro *
-            </label>
-            <input
-              type="text"
-              required
-              value={form.centerName}
-              onChange={s("centerName")}
-              placeholder="IES Nombre del Centro"
-              className="input-field"
-            />
+      <div
+        style={{ paddingTop: 12, borderTop: "1px solid var(--color-border)" }}
+      >
+        <SectionLabel>Datos del centro</SectionLabel>
+        <div style={formGrid}>
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Código institucional *</label>
+              <Input
+                value={form.institutionalCode}
+                onChange={s("institutionalCode")}
+                placeholder="Ej: IES-COR-2026"
+                hasError={!!errs.institutionalCode}
+              />
+              <FieldError msg={errs.institutionalCode} />
+            </div>
+            <div>
+              <label style={labelStyle}>Tipo de centro</label>
+              <SelectField value={form.centerType} onChange={s("centerType")}>
+                <option value="">Seleccionar tipo</option>
+                {[
+                  "IES — Instituto de Educación Secundaria",
+                  "FP — Formación Profesional",
+                  "Universidad",
+                  "Centro privado",
+                  "Academia",
+                  "Otro",
+                ].map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Código institucional *
-            </label>
-            <input
-              type="text"
-              required
-              value={form.institutionalCode}
-              onChange={s("institutionalCode")}
-              placeholder="Ej: IES-COR-2026"
-              className="input-field"
-            />
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Ciudad *</label>
+              <Input
+                value={form.city}
+                onChange={s("city")}
+                placeholder="Córdoba"
+                hasError={!!errs.city}
+              />
+              <FieldError msg={errs.city} />
+            </div>
+            <div>
+              <label style={labelStyle}>Provincia</label>
+              <Input
+                value={form.province}
+                onChange={s("province")}
+                placeholder="Córdoba"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Tipo de centro
-            </label>
-            <select
-              value={form.centerType}
-              onChange={s("centerType")}
-              className="input-field"
-            >
-              <option value="">Seleccionar tipo</option>
-              {[
-                "IES — Instituto de Educación Secundaria",
-                "FP — Formación Profesional",
-                "Universidad",
-                "Centro privado",
-                "Academia",
-                "Otro",
-              ].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Sitio web</label>
+              <Input
+                type="url"
+                value={form.website}
+                onChange={s("website")}
+                placeholder="https://iesejemplo.edu.es"
+                hasError={!!errs.website}
+              />
+              <FieldError msg={errs.website} />
+            </div>
+            <div>
+              <label style={labelStyle}>Nº de alumnos</label>
+              <Input
+                type="number"
+                value={form.num_alumnos}
+                onChange={s("num_alumnos")}
+                placeholder="Ej: 350"
+                min="1"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Ciudad *
-            </label>
-            <input
-              type="text"
-              required
-              value={form.city}
-              onChange={s("city")}
-              placeholder="Córdoba"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Provincia
-            </label>
-            <input
-              type="text"
-              value={form.province}
-              onChange={s("province")}
-              placeholder="Córdoba"
-              className="input-field"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Sitio web del centro
-            </label>
-            <input
-              type="url"
-              value={form.website}
-              onChange={s("website")}
-              placeholder="https://iesejemplo.edu.es"
-              className="input-field"
-            />
-          </div>
-        </div>
-        <div className="mt-3 bg-brand/5 border border-brand/15 rounded-xl px-4 py-3">
-          <p className="text-xs text-gray-500 flex items-start gap-2">
-            <svg className="w-4 h-4 text-gray-400">
-              <use href={`icons.svg#icon-info`} />
-            </svg>
+          <InfoNote>
             El código institucional será verificado por el equipo de Relance
             antes de activar la cuenta.
-          </p>
+          </InfoNote>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
+      <ErrorBox msg={error} />
       <SubmitButton
         loading={loading}
         label="Crear cuenta de centro educativo"
@@ -656,63 +1034,8 @@ function CenterForm({ onSubmit, loading, error }) {
   );
 }
 
-function SubmitButton({ loading, label }) {
-  return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="btn-primary w-full flex justify-center items-center gap-2 py-3.5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {loading ? (
-        <>
-          <svg className="animate-spin w-4 h-4">
-            <use href="/icons.svg#icon-spinner" />
-          </svg>
-          Creando cuenta...
-        </>
-      ) : (
-        label
-      )}
-    </button>
-  );
-}
-
-function SuccessModal({ email, role, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark/80 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-md rounded-2xl border border-brand/30 bg-dark-800 p-8 shadow-[0_0_40px_rgba(192,255,114,0.2)] animate-fade-in">
-        <div className="mb-4 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/20 border border-brand/40">
-            <svg className="h-7 w-7 text-brand">
-              <use href="/icons.svg#icon-check" />
-            </svg>
-          </div>
-        </div>
-        <h3 className="text-center font-display text-2xl font-bold text-white mb-2">
-          ¡Cambios guardados!
-        </h3>
-        <p className="text-center text-sm text-gray-400">
-          Se ha creado tu cuenta correctamente.
-        </p>
-        <p className="text-center text-brand text-sm font-semibold mt-2">
-          {email}
-        </p>
-        <p className="text-center text-xs text-gray-500 mt-4">
-          Revisa tu correo para verificar tu cuenta.
-          {(role === "empresa" || role === "centro_educativo") &&
-            " También validaremos los datos corporativos en 24–48 h."}
-        </p>
-        <button onClick={onClose} className="btn-primary w-full mt-6">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// === Página principal ================================
-export default function RegisterPage() {
-  const navigate = useNavigate();
+// ── MODAL PRINCIPAL ───────────────────────────────────────────────────────────
+export default function RegisterModal({ onClose, onSwitchToLogin }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -722,29 +1045,39 @@ export default function RegisterPage() {
   const handleSubmit = async (formData) => {
     setLoading(true);
     setError(null);
-
     const { fullName, email, password, role, ...extra } = formData;
 
-    // Paso 1 — Registro en auth.users con los metadatos completos.
-    // El trigger de base de datos (supabase_trigger.sql) lee estos metadatos
-    // y crea la fila en `usuario` automáticamente usando SECURITY DEFINER,
-    // por lo que funciona incluso antes de que el usuario confirme el email.
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
       {
         email,
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName ?? extra.centerName ?? "",
             role,
-            // Guardo los campos extra en metadatos para que el trigger
-            // pueda usarlos si necesita poblar tablas de extensión
+            ...(role === "estudiante" && {
+              ciudad: extra.ciudad ?? "",
+              telefono: extra.telefono ?? "",
+              center_id: extra.centerId ?? "",
+            }),
             ...(role === "empresa" && {
-              cif: extra.cif ?? extra.extraValue ?? "",
+              companyName: extra.companyName ?? "",
+              cif: extra.cif ?? "",
+              sector: extra.sector ?? "",
+              tamano: extra.tamanio ?? "",
+              ciudad: extra.ciudad ?? "",
+              telefono: extra.telefono ?? "",
+              web: extra.web ?? "",
+              descripcion: extra.descripcion ?? "",
             }),
             ...(role === "centro_educativo" && {
-              institutional_code:
-                extra.institutional_code ?? extra.extraValue ?? "",
+              centerName: extra.centerName ?? "",
+              institutionalCode: extra.institutionalCode ?? "",
+              centerType: extra.centerType ?? "",
+              city: extra.city ?? "",
+              province: extra.province ?? "",
+              website: extra.website ?? "",
+              num_alumnos: extra.num_alumnos ?? "",
             }),
           },
         },
@@ -764,55 +1097,78 @@ export default function RegisterPage() {
     const newUserId = signUpData?.user?.id;
     const hasSession = !!signUpData?.session;
 
-    // Paso 2 — Si Supabase devuelve sesión inmediatamente (email confirm
-    // desactivado en el proyecto), inserto directamente desde el cliente.
-    // Si hay confirmación de email, el trigger se encarga de `usuario`;
-    // las tablas de extensión se completan cuando el usuario edite su perfil.
     if (newUserId && hasSession) {
-      await supabase.from("usuario").upsert(
-        {
-          id: newUserId,
-          email,
-          nombre: fullName,
-          rol: role,
-          is_profile_completed: true,
-        },
-        { onConflict: "id" },
-      );
-
-      // Inserto en la tabla de extensión según el rol
-      if (role === "estudiante") {
-        const parts = fullName.trim().split(" ");
-        await supabase.from("estudiante").upsert(
+      await supabase
+        .from("usuario")
+        .upsert(
           {
             id: newUserId,
-            nombre: parts[0] ?? fullName,
-            apellidos: parts.slice(1).join(" ") || null,
+            email,
+            nombre: fullName ?? extra.centerName ?? "",
+            rol: role,
+            is_profile_completed: true,
           },
           { onConflict: "id" },
         );
+
+      if (role === "estudiante") {
+        const parts = (fullName ?? "").trim().split(" ");
+        await supabase
+          .from("estudiante")
+          .upsert(
+            {
+              id: newUserId,
+              nombre: parts[0] ?? fullName,
+              apellidos: parts.slice(1).join(" ") || null,
+              ciudad: extra.ciudad || null,
+              telefono: extra.telefono || null,
+            },
+            { onConflict: "id" },
+          );
+        if (extra.centerId) {
+          await supabase
+            .from("centro_estudiante")
+            .insert({ id_estudiante: newUserId, id_centro: extra.centerId });
+        }
       }
 
       if (role === "empresa") {
-        await supabase.from("empresa").upsert(
-          {
-            id_usuario: newUserId,
-            nombre: fullName,
-            cif: extra.cif ?? extra.extraValue ?? "",
-          },
-          { onConflict: "id_usuario" },
-        );
+        await supabase
+          .from("empresa")
+          .upsert(
+            {
+              id_usuario: newUserId,
+              nombre: extra.companyName,
+              cif: extra.cif ?? "",
+              sector: extra.sector || null,
+              tamano: extra.tamanio || null,
+              ciudad: extra.ciudad || null,
+              telefono: extra.telefono || null,
+              web: extra.web || null,
+              descripcion: extra.descripcion || null,
+            },
+            { onConflict: "id_usuario" },
+          );
       }
 
       if (role === "centro_educativo") {
-        await supabase.from("centro_educativo").upsert(
-          {
-            id_centro: newUserId,
-            nombre: fullName,
-            codigo_centro: extra.institutional_code ?? extra.extraValue ?? "",
-          },
-          { onConflict: "id_centro" },
-        );
+        await supabase
+          .from("centro_educativo")
+          .upsert(
+            {
+              id: newUserId,
+              nombre: extra.centerName,
+              codigo_centro: extra.institutionalCode ?? "",
+              tipo_centro: extra.centerType || null,
+              ciudad: extra.city || null,
+              provincia: extra.province || null,
+              sitio_web: extra.website || null,
+              num_alumnos: extra.num_alumnos
+                ? parseInt(extra.num_alumnos)
+                : null,
+            },
+            { onConflict: "id" },
+          );
       }
     }
 
@@ -821,195 +1177,458 @@ export default function RegisterPage() {
     setSuccess(true);
   };
 
+  // ── Éxito ──
   if (success) {
     return (
-      <MainLayout>
-        <SuccessModal
-          email={registeredEmail}
-          role={selectedRole}
-          onClose={() => navigate("/")}
-        />
-      </MainLayout>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 100,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(6px)",
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            background: "var(--color-surface-strong)",
+            border: "1px solid rgba(192,255,114,0.25)",
+            borderRadius: 18,
+            width: "100%",
+            maxWidth: 420,
+            padding: "40px 32px",
+            textAlign: "center",
+            boxShadow: "0 0 40px rgba(192,255,114,0.12)",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 18,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 14,
+                background: "rgba(192,255,114,0.08)",
+                border: "1px solid rgba(192,255,114,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--color-brand)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12l5 5l10-10" />
+              </svg>
+            </div>
+          </div>
+          <h2
+            style={{
+              fontFamily: "Syne, sans-serif",
+              fontSize: 20,
+              fontWeight: 800,
+              color: "var(--color-text)",
+              marginBottom: 8,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            ¡Cuenta creada!
+          </h2>
+          <p
+            style={{
+              color: "var(--color-text-muted)",
+              fontSize: 13,
+              marginBottom: 6,
+            }}
+          >
+            Hemos enviado un correo de verificación a:
+          </p>
+          <p
+            style={{
+              color: "var(--color-brand)",
+              fontWeight: 700,
+              fontSize: 14,
+              marginBottom: 16,
+            }}
+          >
+            {registeredEmail}
+          </p>
+          <p
+            style={{
+              color: "var(--color-text-muted)",
+              fontSize: 12,
+              marginBottom: 24,
+              lineHeight: 1.7,
+            }}
+          >
+            Revisa tu bandeja de entrada y haz clic en el enlace para activar tu
+            cuenta.
+            {(selectedRole === "empresa" ||
+              selectedRole === "centro_educativo") && (
+              <span style={{ display: "block", marginTop: 6 }}>
+                El equipo de Relance verificará tus datos en 24–48 h.
+              </span>
+            )}
+          </p>
+          <button
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: "11px 20px",
+              background: "var(--color-brand)",
+              color: "#010a00",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
     );
   }
 
+  // ── Modal principal ──
   return (
-    <MainLayout>
-      {/* <div className="min-h-screen bg-dark py-12 px-4"> */}
-      {/* // <div className="relative min-h-screen bg-dark py-12 px-4 overflow-hidden"> */}
-      {/* GRID de fondo */}
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.72)",
+        backdropFilter: "blur(6px)",
+        padding: 16,
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose?.()}
+    >
       <div
-        className="absolute inset-0 opacity-[0.03]"
         style={{
-          zIndex: -99,
-          backgroundImage: `linear-gradient(rgba(192,255,114,1) 1px, transparent 1px), linear-gradient(90deg, rgba(192,255,114,1) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
+          background: "var(--color-surface-strong)",
+          border: "1px solid var(--color-border-strong)",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 520,
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
         }}
-      />
-
-      {/* Glow central */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none"
-        style={{ background: "#c0ff72" }}
-      />
-
-      {/* Glow secundario */}
-      <div
-        className="absolute bottom-20 right-10 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none"
-        style={{ background: "#c0ff72" }}
-      />
-
-      {/* Contenido */}
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center m-10">
-          {/* <a href="/">
-            <img
-              src={logoUrl}
-              alt="Relance"
-              className="h-9 rounded-md mx-auto mb-6"
-            />
-          </a> */}
-          <h1 className="font-display text-3xl font-extrabold text-white mb-2">
+      >
+        {/* Header fijo */}
+        <div
+          style={{
+            padding: "18px 22px 14px",
+            borderBottom: "1px solid var(--color-border)",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: "Syne, sans-serif",
+              fontSize: 18,
+              fontWeight: 800,
+              color: "var(--color-text)",
+              margin: 0,
+              letterSpacing: "-0.04em",
+            }}
+          >
             Crea tu cuenta
-          </h1>
-          <p className="text-gray-500 text-base">
-            Elige tu tipo de cuenta para empezar
-          </p>
-        </div>
-
-        {/* Selector de rol */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          {ROLES.map((role) => (
-            <button
-              key={role.id}
-              onClick={() => {
-                setSelectedRole(role.id);
-                setError(null);
-              }}
-              className={`relative p-4 rounded-2xl border text-left transition-all duration-200 group overflow-hidden ${
-                selectedRole === role.id
-                  ? `border-brand bg-brand/15 shadow-[0_0_25px_rgba(192,255,114,0.15)]`
-                  : "border-brand/20 hover:border-brand/40 bg-dark-800/90"
-              }`}
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+              padding: 4,
+              display: "flex",
+              borderRadius: 6,
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
             >
-              {/* Glow de fondo si seleccionado */}
-              {selectedRole === role.id && (
-                <div className="absolute inset-0 bg-brand/5 pointer-events-none" />
-              )}
-              <span className="text-2xl block mb-2">
-                <svg className="w-5 h-5">
-                  <use href={`icons.svg#${role.icon}`} />
-                </svg>
-              </span>
-              <span
-                className={`block text-sm font-bold font-display ${selectedRole === role.id ? "text-white" : "text-gray-300"}`}
-              >
-                {role.label}
-              </span>
-              <span className="block text-xs text-gray-500 mt-0.5 leading-tight">
-                {role.desc}
-              </span>
-              {selectedRole === role.id && (
-                <div className="absolute top-2.5 right-2.5">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#c0ff72"
-                    strokeWidth="3"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Tutor: aviso */}
-        <div className="mb-6 bg-brand/5 border border-brand/20 rounded-2xl p-4 flex gap-3">
-          <span className="text-xl flex-shrink-0">
-            <svg className="text-brand w-5 h-5">
-              <use href={`icons.svg#icon-tutor`} />
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-          </span>
-          <div>
-            <p className="text-brand text-sm font-semibold">¿Eres tutor?</p>
-            <p className="text-gray-500 text-xs mt-1 leading-relaxed">
-              Los tutores (de empresa o de centro educativo) se registran
-              únicamente a través del
-              <strong className="text-gray-400">
-                {" "}
-                enlace de invitación QR
-              </strong>{" "}
-              generado por su empresa o centro. Pide a tu responsable que lo
-              genere desde su perfil de configuración.
-            </p>
-          </div>
+          </button>
         </div>
 
-        {/* Formulario por rol */}
-        {selectedRole && (
-          <div className="bg-dark-800/95 border border-brand/20 rounded-2xl p-6 sm:p-8 animate-fade-in shadow-[0_0_30px_rgba(192,255,114,0.08)]">
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/10">
-              <span className="text-xl">
-                <svg className="w-6 h-6">
+        {/* Cuerpo con scroll */}
+        <div style={{ overflowY: "auto", padding: "18px 22px", flex: 1 }}>
+          {/* Selector de rol */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            {ROLES.map((role) => {
+              const active = selectedRole === role.id;
+              return (
+                <button
+                  key={role.id}
+                  onClick={() => {
+                    setSelectedRole(role.id);
+                    setError(null);
+                  }}
+                  style={{
+                    position: "relative",
+                    padding: "12px 10px",
+                    borderRadius: 10,
+                    border: `1px solid ${active ? "rgba(192,255,114,0.35)" : "var(--color-border-strong)"}`,
+                    background: active
+                      ? "rgba(192,255,114,0.06)"
+                      : "var(--color-surface)",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    outline: "none",
+                  }}
+                >
+                  {active && (
+                    <div style={{ position: "absolute", top: 8, right: 8 }}>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#c0ff72"
+                        strokeWidth="3"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                  )}
+                  <span style={{ display: "block", marginBottom: 6 }}>
+                    <svg
+                      style={{
+                        width: 16,
+                        height: 16,
+                        color: active
+                          ? "var(--color-brand)"
+                          : "var(--color-text-muted)",
+                      }}
+                    >
+                      <use href={`/icons.svg#${role.icon}`} />
+                    </svg>
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: active
+                        ? "var(--color-text)"
+                        : "var(--color-text-secondary)",
+                      marginBottom: 2,
+                      fontFamily: "Syne, sans-serif",
+                    }}
+                  >
+                    {role.label}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 10,
+                      color: "var(--color-text-muted)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {role.desc}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Aviso tutores */}
+          <div
+            style={{
+              marginBottom: 14,
+              background: "rgba(192,255,114,0.04)",
+              border: "1px solid rgba(192,255,114,0.14)",
+              borderRadius: 10,
+              padding: "11px 14px",
+              display: "flex",
+              gap: 10,
+            }}
+          >
+            <span style={{ flexShrink: 0, color: "var(--color-brand)" }}>
+              <svg style={{ width: 15, height: 15 }}>
+                <use href="/icons.svg#icon-tutor" />
+              </svg>
+            </span>
+            <div>
+              <p
+                style={{
+                  color: "var(--color-brand)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 3,
+                }}
+              >
+                ¿Eres tutor?
+              </p>
+              <p
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontSize: 11,
+                  lineHeight: 1.6,
+                }}
+              >
+                Los tutores se registran únicamente a través del{" "}
+                <strong style={{ color: "var(--color-text-secondary)" }}>
+                  enlace de invitación QR
+                </strong>{" "}
+                generado por su empresa o centro.
+              </p>
+            </div>
+          </div>
+
+          {/* Formulario */}
+          {selectedRole && (
+            <div
+              style={{
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border-strong)",
+                borderRadius: 12,
+                padding: "16px 18px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 16,
+                  paddingBottom: 12,
+                  borderBottom: "1px solid var(--color-border)",
+                }}
+              >
+                <svg
+                  style={{
+                    width: 16,
+                    height: 16,
+                    color: "var(--color-text-muted)",
+                  }}
+                >
                   <use
-                    href={`icons.svg#${ROLES.find((r) => r.id === selectedRole)?.icon}`}
+                    href={`/icons.svg#${ROLES.find((r) => r.id === selectedRole)?.icon}`}
                   />
                 </svg>
-
-                {/* {ROLES.find((r) => r.id === selectedRole)?.icon} */}
-              </span>
-              <h2 className="font-display font-bold text-white">
-                Registro como {ROLES.find((r) => r.id === selectedRole)?.label}
-              </h2>
+                <h3
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    fontWeight: 800,
+                    color: "var(--color-text)",
+                    fontSize: 14,
+                    letterSpacing: "-0.03em",
+                    margin: 0,
+                  }}
+                >
+                  Registro como{" "}
+                  {ROLES.find((r) => r.id === selectedRole)?.label}
+                </h3>
+              </div>
+              {selectedRole === "estudiante" && (
+                <StudentForm
+                  onSubmit={handleSubmit}
+                  loading={loading}
+                  error={error}
+                />
+              )}
+              {selectedRole === "empresa" && (
+                <CompanyForm
+                  onSubmit={handleSubmit}
+                  loading={loading}
+                  error={error}
+                />
+              )}
+              {selectedRole === "centro_educativo" && (
+                <CenterForm
+                  onSubmit={handleSubmit}
+                  loading={loading}
+                  error={error}
+                />
+              )}
             </div>
+          )}
 
-            {selectedRole === "estudiante" && (
-              <StudentForm
-                onSubmit={handleSubmit}
-                loading={loading}
-                error={error}
-              />
-            )}
-            {selectedRole === "empresa" && (
-              <CompanyForm
-                onSubmit={handleSubmit}
-                loading={loading}
-                error={error}
-              />
-            )}
-            {selectedRole === "centro_educativo" && (
-              <CenterForm
-                onSubmit={handleSubmit}
-                loading={loading}
-                error={error}
-              />
-            )}
-          </div>
-        )}
+          {!selectedRole && (
+            <div
+              style={{
+                textAlign: "center",
+                color: "var(--color-text-muted)",
+                fontSize: 12,
+                padding: "20px 0",
+              }}
+            >
+              Selecciona un tipo de cuenta para continuar
+            </div>
+          )}
 
-        {!selectedRole && (
-          <div className="text-center text-gray-600 text-sm py-8">
-            Selecciona un tipo de cuenta para continuar
-          </div>
-        )}
-
-        {/* Link a login */}
-        <p className="text-center text-sm text-gray-500 mt-6">
-          ¿Ya tienes cuenta?{" "}
-          <a
-            onClick={() => navigate("/", { state: { openLogin: true } })}
-            className="text-brand hover:text-brand-dark font-medium transition-colors hover:cursor-pointer"
+          {/* Link login */}
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: 12,
+              color: "var(--color-text-muted)",
+              marginTop: 16,
+            }}
           >
-            Inicia sesión
-          </a>
-        </p>
+            ¿Ya tienes cuenta?{" "}
+            <button
+              onClick={onSwitchToLogin}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--color-brand)",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: 12,
+                padding: 0,
+              }}
+            >
+              Inicia sesión
+            </button>
+          </p>
+        </div>
       </div>
-      {/* </div> */}
-    </MainLayout>
+    </div>
   );
 }
