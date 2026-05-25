@@ -74,11 +74,10 @@ export default function UserMenu({ onClose }: { onClose: () => void }) {
   if (!user) return null;
 
   const handleSignOut = async () => {
-    const provider: string = user?.app_metadata?.provider ?? "email";
-    const providers: string[] = user?.app_metadata?.providers ?? [provider];
-    const hasGoogle: boolean = providers.includes("google");
-    const hasGitHub: boolean = providers.includes("github");
-    const hasOAuth: boolean = hasGoogle || hasGitHub;
+    const identities = user?.identities ?? [];
+    const hasGoogle = identities.some((i) => i.provider === "google");
+    const hasGitHub = identities.some((i) => i.provider === "github");
+    const hasOAuth = (hasGoogle || hasGitHub) && role !== "admin";
 
     if (hasOAuth) {
       const googleBtn = hasGoogle
