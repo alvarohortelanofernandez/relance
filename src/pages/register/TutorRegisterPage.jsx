@@ -414,19 +414,6 @@ export default function AdminRegisterPage() {
         });
       if (signUpError) throw signUpError;
 
-      // Vincular tutor con la empresa
-      if (entityType === "tutor_empresa" && signUpData?.user) {
-        const { error: linkError } = await supabase
-          .from("empresa_tutor")
-          .insert({
-            id_empresa: entityId,
-            id_tutor: signUpData.user.id,
-          });
-
-        if (linkError)
-          console.error("No se pudo vincular el tutor:", linkError.message);
-      }
-
       const { error: tokenError } = await supabase
         .from("invite_tokens")
         .update({ used: true })
