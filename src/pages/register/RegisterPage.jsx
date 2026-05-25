@@ -443,14 +443,12 @@ function StudentForm({ onSubmit, loading, error }) {
     password: "",
     confirmPassword: "",
     centerId: "",
-    degree: "",
-    graduationYear: "",
+    telefono: "",
     ciudad: "",
   });
   const [errs, setErrs] = useState({});
   const [centers, setCenters] = useState([]);
   const [centersLoading, setCentersLoading] = useState(false);
-
   const [centerQuery, setCenterQuery] = useState("");
   const [showCenterDropdown, setShowCenterDropdown] = useState(false);
 
@@ -470,6 +468,7 @@ function StudentForm({ onSubmit, loading, error }) {
     };
     fetchCenters();
   }, []);
+
   const s = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrs((p) => ({ ...p, [k]: undefined }));
@@ -477,11 +476,10 @@ function StudentForm({ onSubmit, loading, error }) {
 
   const validate = () => {
     const e = validateCommon(form);
-    if (form.graduationYear) {
-      const y = Number(form.graduationYear);
-      if (isNaN(y) || y < 2020 || y > 2035)
-        e.graduationYear = "Introduce un año entre 2020 y 2035.";
-    }
+    if (!form.centerId) e.centerId = "El instituto es obligatorio.";
+    if (!form.telefono.trim()) e.telefono = "El teléfono es obligatorio.";
+    else if (!isValidPhone(form.telefono)) e.telefono = "Teléfono no válido.";
+    if (!form.ciudad.trim()) e.ciudad = "La ciudad es obligatoria.";
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -496,6 +494,7 @@ function StudentForm({ onSubmit, loading, error }) {
       noValidate
     >
       <div style={formGrid}>
+        {/* Nombre */}
         <div>
           <label style={labelStyle}>Nombre completo *</label>
           <Input
@@ -506,6 +505,8 @@ function StudentForm({ onSubmit, loading, error }) {
           />
           <FieldError msg={errs.fullName} />
         </div>
+
+        {/* Email */}
         <div>
           <label style={labelStyle}>Correo electrónico *</label>
           <Input
@@ -517,6 +518,8 @@ function StudentForm({ onSubmit, loading, error }) {
           />
           <FieldError msg={errs.email} />
         </div>
+
+        {/* Contraseñas */}
         <div style={twoCol}>
           <div>
             <label style={labelStyle}>Contraseña *</label>
@@ -539,100 +542,127 @@ function StudentForm({ onSubmit, loading, error }) {
             <FieldError msg={errs.confirmPassword} />
           </div>
         </div>
-      </div>
 
-      <div
-        style={{ paddingTop: 14, borderTop: "1px solid var(--color-border)" }}
-      >
-        <SectionLabel>Información académica (opcional)</SectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="sm:col-span-2 relative">
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Centro educativo
-            </label>
-            <input
-              type="text"
-              value={centerQuery}
-              onChange={(e) => {
-                setCenterQuery(e.target.value);
-                setShowCenterDropdown(true);
-                if (!e.target.value) setForm((f) => ({ ...f, centerId: "" }));
-              }}
-              onFocus={() => setShowCenterDropdown(true)}
-              onBlur={() => setTimeout(() => setShowCenterDropdown(false), 150)}
-              placeholder="Busca tu centro educativo..."
-              className="input-field"
-              autoComplete="off"
+        {/* Instituto (buscador) */}
+        <div style={{ position: "relative" }}>
+          <label style={labelStyle}>Instituto *</label>
+          <Input
+            type="text"
+            value={centerQuery}
+            onChange={(e) => {
+              setCenterQuery(e.target.value);
+              setShowCenterDropdown(true);
+              if (!e.target.value) setForm((f) => ({ ...f, centerId: "" }));
+            }}
+            onFocus={() => setShowCenterDropdown(true)}
+            onBlur={() => setTimeout(() => setShowCenterDropdown(false), 150)}
+            placeholder="Busca tu instituto..."
+            hasError={!!errs.centerId}
+          />
+          <FieldError msg={errs.centerId} />
+          {showCenterDropdown &&
+            centerQuery.length >= 1 &&
+            filteredCenters.length > 0 && (
+              <ul
+                style={{
+                  position: "absolute",
+                  zIndex: 50,
+                  width: "100%",
+                  marginTop: 4,
+                  border: "1px solid rgba(192,255,114,0.2)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  maxHeight: 208,
+                  overflowY: "auto",
+                  backgroundColor: "var(--color-bg)",
+                }}
+              >
+                {filteredCenters.map((c) => (
+                  <li
+                    key={c.id}
+                    onMouseDown={() => {
+                      setForm((f) => ({ ...f, centerId: c.id }));
+                      setCenterQuery(c.nombre);
+                      setShowCenterDropdown(false);
+                      setErrs((p) => ({ ...p, centerId: undefined }));
+                    }}
+                    style={{
+                      padding: "10px 16px",
+                      fontSize: 13,
+                      color: "var(--color-text)",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1px solid rgba(255,255,255,0.05)",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        "rgba(192,255,114,0.08)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    <span style={{ fontWeight: 500 }}>{c.nombre}</span>
+                    {c.ciudad && (
+                      <span
+                        style={{ fontSize: 11, color: "rgba(192,255,114,0.6)" }}
+                      >
+                        {c.ciudad}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          {showCenterDropdown &&
+            centerQuery.length >= 2 &&
+            filteredCenters.length === 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  zIndex: 50,
+                  width: "100%",
+                  marginTop: 4,
+                  background: "var(--color-bg)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 12,
+                  padding: "12px 16px",
+                  fontSize: 13,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                No se encontró ningún centro con ese nombre.
+              </div>
+            )}
+        </div>
+
+        {/* Teléfono y Ciudad */}
+        <div style={twoCol}>
+          <div>
+            <label style={labelStyle}>Teléfono *</label>
+            <Input
+              type="tel"
+              value={form.telefono}
+              onChange={s("telefono")}
+              placeholder="+34 600 000 000"
+              hasError={!!errs.telefono}
             />
-            {showCenterDropdown &&
-              centerQuery.length >= 1 &&
-              filteredCenters.length > 0 && (
-                <ul
-                  className="absolute z-50 w-full mt-1 border border-brand/20 rounded-xl overflow-hidden shadow-xl max-h-52 overflow-y-auto"
-                  style={{ backgroundColor: "var(--color-bg)" }}
-                >
-                  {filteredCenters.map((c) => (
-                    <li
-                      key={c.id}
-                      onMouseDown={() => {
-                        setForm((f) => ({ ...f, centerId: c.id }));
-                        setCenterQuery(c.nombre);
-                        setShowCenterDropdown(false);
-                      }}
-                      className="px-4 py-2.5 text-sm text-white hover:bg-brand/10 hover:text-brand cursor-pointer flex justify-between items-center transition-colors duration-150 border-b border-white/5 last:border-0"
-                    >
-                      <span className="font-medium">{c.nombre}</span>
-                      {c.ciudad && (
-                        <span className="text-xs text-brand/60">
-                          {c.ciudad}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            {showCenterDropdown &&
-              centerQuery.length >= 2 &&
-              filteredCenters.length === 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-dark-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-500">
-                  No se encontró ningún centro con ese nombre.
-                </div>
-              )}
+            <FieldError msg={errs.telefono} />
           </div>
-          <div style={twoCol}>
-            <div>
-              <label style={labelStyle}>Titulación / Ciclo</label>
-              <Input
-                value={form.degree}
-                onChange={s("degree")}
-                placeholder="Ej: DAM"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Ciudad
-              </label>
-              <input
-                type="text"
-                value={form.ciudad}
-                onChange={s("ciudad")}
-                placeholder="Ej: Córdoba"
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Año de finalización</label>
-              <Input
-                type="number"
-                value={form.graduationYear}
-                onChange={s("graduationYear")}
-                placeholder="2025"
-                min="2020"
-                max="2035"
-                hasError={!!errs.graduationYear}
-              />
-              <FieldError msg={errs.graduationYear} />
-            </div>
+          <div>
+            <label style={labelStyle}>Ciudad *</label>
+            <Input
+              type="text"
+              value={form.ciudad}
+              onChange={s("ciudad")}
+              placeholder="Ej: Córdoba"
+              hasError={!!errs.ciudad}
+            />
+            <FieldError msg={errs.ciudad} />
           </div>
         </div>
       </div>
@@ -659,6 +689,7 @@ function CompanyForm({ onSubmit, loading, error }) {
     telefono: "",
     descripcion: "",
   });
+
   const [errs, setErrs] = useState({});
   const s = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -873,13 +904,13 @@ function CompanyForm({ onSubmit, loading, error }) {
 // ── CENTER FORM ───────────────────────────────────────────────────────────────
 function CenterForm({ onSubmit, loading, error }) {
   const [form, setForm] = useState({
-    fullName: "",
+    centerName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    centerName: "",
     institutionalCode: "",
     centerType: "",
+    num_alumnos: "",
     city: "",
     province: "",
     website: "",
@@ -891,7 +922,18 @@ function CenterForm({ onSubmit, loading, error }) {
   };
 
   const validate = () => {
-    const e = validateCommon(form);
+    const e = {};
+    // Ya no llames a validateCommon(form) porque ese valida fullName
+    // Replica solo lo que necesitas:
+    if (!form.email.trim()) e.email = "El correo es obligatorio.";
+    else if (!isValidEmail(form.email)) e.email = "Introduce un correo válido.";
+    if (!form.password) e.password = "La contraseña es obligatoria.";
+    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres.";
+    else if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
+      e.password = "Debe tener al menos una mayúscula y un número.";
+    if (!form.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
+    else if (form.password !== form.confirmPassword)
+      e.confirmPassword = "Las contraseñas no coinciden.";
     if (!form.centerName.trim())
       e.centerName = "El nombre del centro es obligatorio.";
     if (!form.institutionalCode.trim())
@@ -914,17 +956,19 @@ function CenterForm({ onSubmit, loading, error }) {
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
       noValidate
     >
+      {/* ── Campos principales ── */}
       <div style={formGrid}>
         <div>
-          <label style={labelStyle}>Tu nombre completo (responsable) *</label>
+          <label style={labelStyle}>Nombre del centro *</label>
           <Input
-            value={form.fullName}
-            onChange={s("fullName")}
-            placeholder="Nombre y apellidos"
-            hasError={!!errs.fullName}
+            value={form.centerName}
+            onChange={s("centerName")}
+            placeholder="IES Nombre del Centro"
+            hasError={!!errs.centerName}
           />
-          <FieldError msg={errs.fullName} />
+          <FieldError msg={errs.centerName} />
         </div>
+
         <div>
           <label style={labelStyle}>Correo electrónico institucional *</label>
           <Input
@@ -936,6 +980,7 @@ function CenterForm({ onSubmit, loading, error }) {
           />
           <FieldError msg={errs.email} />
         </div>
+
         <div style={twoCol}>
           <div>
             <label style={labelStyle}>Contraseña *</label>
@@ -960,21 +1005,12 @@ function CenterForm({ onSubmit, loading, error }) {
         </div>
       </div>
 
+      {/* ── Datos del centro ── */}
       <div
         style={{ paddingTop: 14, borderTop: "1px solid var(--color-border)" }}
       >
         <SectionLabel>Datos del centro</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Nombre del centro *</label>
-            <Input
-              value={form.centerName}
-              onChange={s("centerName")}
-              placeholder="IES Nombre del Centro"
-              hasError={!!errs.centerName}
-            />
-            <FieldError msg={errs.centerName} />
-          </div>
           <div style={twoCol}>
             <div>
               <label style={labelStyle}>Código institucional *</label>
@@ -1005,6 +1041,7 @@ function CenterForm({ onSubmit, loading, error }) {
               </Select>
             </div>
           </div>
+
           <div style={twoCol}>
             <div>
               <label style={labelStyle}>Ciudad *</label>
@@ -1025,17 +1062,31 @@ function CenterForm({ onSubmit, loading, error }) {
               />
             </div>
           </div>
-          <div>
-            <label style={labelStyle}>Sitio web del centro</label>
-            <Input
-              type="url"
-              value={form.website}
-              onChange={s("website")}
-              placeholder="https://iesejemplo.edu.es"
-              hasError={!!errs.website}
-            />
-            <FieldError msg={errs.website} />
+
+          <div style={twoCol}>
+            <div>
+              <label style={labelStyle}>Sitio web del centro</label>
+              <Input
+                type="url"
+                value={form.website}
+                onChange={s("website")}
+                placeholder="https://iesejemplo.edu.es"
+                hasError={!!errs.website}
+              />
+              <FieldError msg={errs.website} />
+            </div>
+            <div>
+              <label style={labelStyle}>Número de alumnos</label>
+              <Input
+                type="number"
+                value={form.num_alumnos}
+                onChange={s("num_alumnos")}
+                placeholder="Ej: 350"
+                min="1"
+              />
+            </div>
           </div>
+
           <InfoNote>
             El código institucional será verificado por el equipo de Relance
             antes de activar la cuenta.
@@ -1077,9 +1128,8 @@ export default function RegisterPage() {
             role,
             // Estudiante
             ...(role === "estudiante" && {
-              titulacion: extra.degree ?? "",
               ciudad: extra.ciudad ?? "",
-              graduation_year: extra.graduationYear ?? "",
+              telefono: extra.telefono ?? "",
               center_id: extra.centerId ?? "",
             }),
             // Empresa
@@ -1101,11 +1151,13 @@ export default function RegisterPage() {
               city: extra.city ?? "",
               province: extra.province ?? "",
               website: extra.website ?? "",
+              num_alumnos: extra.num_alumnos ?? "",
             }),
           },
         },
       },
     );
+
     if (signUpError) {
       setLoading(false);
       setError(
@@ -1114,6 +1166,13 @@ export default function RegisterPage() {
           : signUpError.message,
       );
       return;
+    }
+
+    if (role === "estudiante" && extra.centerId) {
+      await supabase.from("centro_estudiante").insert({
+        estudiante_id: signUpData.user.id,
+        centro_id: extra.centerId,
+      });
     }
 
     setLoading(false);

@@ -61,6 +61,12 @@ interface Proyecto {
   url_demo: string;
 }
 
+interface CentroOption {
+  id: string;
+  nombre: string;
+  ciudad: string;
+}
+
 interface EstudianteRow {
   nombre?: string | null;
   apellidos?: string | null;
@@ -969,22 +975,6 @@ interface ProyectoModalProps {
   onClose: () => void;
 }
 
-interface GitHubRepoData {
-  name?: string;
-  description?: string;
-  stargazers_count?: number;
-  homepage?: string;
-}
-
-interface AnthropicContentBlock {
-  type: string;
-  text?: string;
-}
-
-interface AnthropicResponse {
-  content?: AnthropicContentBlock[];
-}
-
 function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
   const [form, setForm] = useState<Proyecto>(
     proyecto ?? {
@@ -1060,7 +1050,7 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <input
               type="text"
               value={form.titulo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(e) =>
                 setForm((f) => ({ ...f, titulo: e.target.value }))
               }
               placeholder="Mi proyecto"
@@ -1073,7 +1063,7 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <textarea
               rows={3}
               value={form.descripcion}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              onChange={(e) =>
                 setForm((f) => ({
                   ...f,
                   descripcion: e.target.value.slice(0, 300),
@@ -1099,9 +1089,7 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <input
               type="text"
               value={techInput}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setTechInput(e.target.value)
-              }
+              onChange={(e) => setTechInput(e.target.value)}
               onKeyDown={handleTechKey}
               placeholder="Escribe y pulsa Enter (React, Node.js...)"
               className="input-field"
@@ -1151,7 +1139,7 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <input
               type="url"
               value={form.url_repo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(e) =>
                 setForm((f) => ({ ...f, url_repo: e.target.value }))
               }
               placeholder="https://github.com/usuario/repo"
@@ -1164,7 +1152,7 @@ function ProyectoModal({ proyecto, onSave, onClose }: ProyectoModalProps) {
             <input
               type="url"
               value={form.url_demo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(e) =>
                 setForm((f) => ({ ...f, url_demo: e.target.value }))
               }
               placeholder="https://miproyecto.vercel.app"
@@ -1219,10 +1207,10 @@ function ProyectoCard({ proyecto, onEdit, onDelete }: ProyectoCardProps) {
         padding: "12px 14px",
         transition: "border-color 0.2s",
       }}
-      onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) =>
+      onMouseEnter={(e) =>
         (e.currentTarget.style.borderColor = "var(--color-border-strong)")
       }
-      onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) =>
+      onMouseLeave={(e) =>
         (e.currentTarget.style.borderColor = "var(--color-border)")
       }
     >
@@ -1315,10 +1303,10 @@ function ProyectoCard({ proyecto, onEdit, onDelete }: ProyectoCardProps) {
                   color: "var(--color-text-muted)",
                   textDecoration: "none",
                 }}
-                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                onMouseEnter={(e) =>
                   (e.currentTarget.style.color = "var(--color-brand)")
                 }
-                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                onMouseLeave={(e) =>
                   (e.currentTarget.style.color = "var(--color-text-muted)")
                 }
               >
@@ -1338,10 +1326,10 @@ function ProyectoCard({ proyecto, onEdit, onDelete }: ProyectoCardProps) {
                   color: "var(--color-text-muted)",
                   textDecoration: "none",
                 }}
-                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                onMouseEnter={(e) =>
                   (e.currentTarget.style.color = "var(--color-brand)")
                 }
-                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                onMouseLeave={(e) =>
                   (e.currentTarget.style.color = "var(--color-text-muted)")
                 }
               >
@@ -1458,10 +1446,19 @@ export default function StudentProfile() {
   const [githubReposVinculados, setGithubReposVinculados] = useState<
     GitHubRepo[]
   >([]);
-
   const [ciudad, setCiudad] = useState<string>("");
   const [telefono, setTelefono] = useState<string>("");
 
+  // ── Centro vinculado ──
+  const [centroId, setCentroId] = useState<string | null>(null);
+  const [centroQuery, setCentroQuery] = useState<string>("");
+  const [centroSugerencias, setCentroSugerencias] = useState<CentroOption[]>(
+    [],
+  );
+  const [showCentroDropdown, setShowCentroDropdown] = useState<boolean>(false);
+  const [loadingCentro, setLoadingCentro] = useState<boolean>(false);
+
+  const email = user?.email ?? "";
   const fullName = user?.user_metadata?.full_name ?? user?.email ?? "Tu perfil";
   const displayName = nombre && apellidos ? `${nombre} ${apellidos}` : fullName;
 
@@ -1506,9 +1503,51 @@ export default function StudentProfile() {
         setCiudad(data.ciudad ?? "");
         setTelefono(data.telefono ?? "");
       }
+
+      // Cargar centro vinculado desde centro_estudiante
+      const { data: centroData } = await supabase
+        .from("centro_estudiante")
+        .select("centro_id, centro_educativo(id, nombre)")
+        .eq("estudiante_id", user.id)
+        .single<{
+          centro_id: string;
+          centro_educativo: { id: string; nombre: string };
+        }>();
+
+      if (centroData?.centro_educativo) {
+        const c = centroData.centro_educativo;
+        setCentroId(c.id);
+        setCentroQuery(c.nombre);
+      }
     };
     load();
   }, [user]);
+
+  const buscarCentros = async (q: string) => {
+    if (q.length < 2) {
+      setCentroSugerencias([]);
+      return;
+    }
+    setLoadingCentro(true);
+    const { data } = await supabase
+      .from("centro_educativo")
+      .select("id, nombre, ciudad")
+      .ilike("nombre", `%${q}%`)
+      .limit(8);
+    setCentroSugerencias(data ?? []);
+    setLoadingCentro(false);
+  };
+
+  const seleccionarCentro = async (c: CentroOption) => {
+    setCentroId(c.id);
+    setCentroQuery(c.nombre);
+    setCentroSugerencias([]);
+    setShowCentroDropdown(false);
+    if (!user) return;
+    await supabase
+      .from("centro_estudiante")
+      .upsert({ estudiante_id: user.id, centro_id: c.id });
+  };
 
   const handleAvatarUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -1573,9 +1612,7 @@ export default function StudentProfile() {
     if (!user) return;
     setSaving(true);
     setSaveError(null);
-
     try {
-      // Limpia redes_sociales: no envíes claves con string vacío
       const redesLimpias = Object.fromEntries(
         Object.entries(redesSociales).filter(([, v]) => v.trim() !== ""),
       ) as Partial<RedesSociales>;
@@ -1610,7 +1647,7 @@ export default function StudentProfile() {
         "Error al guardar: " + (e instanceof Error ? e.message : String(e)),
       );
     } finally {
-      setSaving(false); // ← siempre se ejecuta, pase lo que pase
+      setSaving(false);
     }
   };
 
@@ -1816,6 +1853,7 @@ export default function StudentProfile() {
                   )}
                 </div>
               </div>
+
               <div
                 style={{
                   display: "grid",
@@ -1823,6 +1861,7 @@ export default function StudentProfile() {
                   gap: 10,
                 }}
               >
+                {/* Nombre */}
                 <div>
                   <label style={labelStyle}>
                     Nombre{" "}
@@ -1831,14 +1870,13 @@ export default function StudentProfile() {
                   <input
                     type="text"
                     value={nombre}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setNombre(e.target.value)
-                    }
+                    onChange={(e) => setNombre(e.target.value)}
                     placeholder="Tu nombre"
                     className="input-field"
                     style={inputSmall}
                   />
                 </div>
+                {/* Apellidos */}
                 <div>
                   <label style={labelStyle}>
                     Apellidos{" "}
@@ -1847,14 +1885,13 @@ export default function StudentProfile() {
                   <input
                     type="text"
                     value={apellidos}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setApellidos(e.target.value)
-                    }
+                    onChange={(e) => setApellidos(e.target.value)}
                     placeholder="Tus apellidos"
                     className="input-field"
                     style={inputSmall}
                   />
                 </div>
+                {/* Ciudad */}
                 <div>
                   <label style={labelStyle}>
                     Ciudad{" "}
@@ -1863,26 +1900,157 @@ export default function StudentProfile() {
                   <input
                     type="text"
                     value={ciudad}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setCiudad(e.target.value)
-                    }
+                    onChange={(e) => setCiudad(e.target.value)}
                     placeholder="Ej: Córdoba"
                     className="input-field"
                     style={inputSmall}
                   />
                 </div>
+                {/* Teléfono */}
                 <div>
                   <label style={labelStyle}>Teléfono</label>
                   <input
                     type="tel"
                     value={telefono}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setTelefono(e.target.value)
-                    }
+                    onChange={(e) => setTelefono(e.target.value)}
                     placeholder="Ej: 612 345 678"
                     className="input-field"
                     style={inputSmall}
                   />
+                </div>
+
+                {/* Email readonly — ocupa 2 columnas */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>Correo electrónico</label>
+                  <input
+                    type="email"
+                    value={email}
+                    readOnly
+                    className="input-field"
+                    style={{
+                      ...inputSmall,
+                      opacity: 0.5,
+                      cursor: "not-allowed",
+                      userSelect: "none",
+                    }}
+                  />
+                  <p
+                    style={{
+                      fontSize: 10,
+                      color: "var(--color-text-subtle)",
+                      marginTop: 3,
+                      marginBottom: 0,
+                    }}
+                  >
+                    Para cambiar el correo contacta con soporte
+                  </p>
+                </div>
+
+                {/* Centro educativo — ocupa 2 columnas */}
+                <div style={{ gridColumn: "1 / -1", position: "relative" }}>
+                  <label style={labelStyle}>Centro educativo</label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="text"
+                      value={centroQuery}
+                      onChange={(e) => {
+                        setCentroQuery(e.target.value);
+                        setCentroId(null);
+                        setShowCentroDropdown(true);
+                        buscarCentros(e.target.value);
+                      }}
+                      onFocus={() =>
+                        centroQuery.length >= 2 && setShowCentroDropdown(true)
+                      }
+                      onBlur={() =>
+                        setTimeout(() => setShowCentroDropdown(false), 150)
+                      }
+                      placeholder="Busca tu centro educativo..."
+                      className="input-field"
+                      style={inputSmall}
+                      autoComplete="off"
+                    />
+                    {loadingCentro && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      >
+                        <Spinner />
+                      </div>
+                    )}
+                  </div>
+                  {showCentroDropdown && centroSugerencias.length > 0 && (
+                    <ul
+                      style={{
+                        position: "absolute",
+                        zIndex: 50,
+                        width: "100%",
+                        marginTop: 4,
+                        border: "1px solid rgba(192,255,114,0.2)",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        backgroundColor: "var(--color-bg)",
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                      }}
+                    >
+                      {centroSugerencias.map((c) => (
+                        <li
+                          key={c.id}
+                          onMouseDown={() => seleccionarCentro(c)}
+                          style={{
+                            padding: "9px 14px",
+                            fontSize: 12,
+                            color: "var(--color-text)",
+                            cursor: "pointer",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background =
+                              "rgba(192,255,114,0.08)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          <span style={{ fontWeight: 500 }}>{c.nombre}</span>
+                          {c.ciudad && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: "rgba(192,255,114,0.6)",
+                              }}
+                            >
+                              {c.ciudad}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {centroId && (
+                    <p
+                      style={{
+                        fontSize: 10,
+                        color: "var(--color-brand)",
+                        marginTop: 3,
+                        marginBottom: 0,
+                      }}
+                    >
+                      ✓ Centro vinculado correctamente
+                    </p>
+                  )}
                 </div>
               </div>
             </SectionCard>
@@ -1894,9 +2062,7 @@ export default function StudentProfile() {
             >
               <textarea
                 value={sobreMi}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setSobreMi(e.target.value.slice(0, 500))
-                }
+                onChange={(e) => setSobreMi(e.target.value.slice(0, 500))}
                 rows={3}
                 placeholder="Soy un desarrollador apasionado por... Busco prácticas en..."
                 className="input-field"
@@ -2008,11 +2174,11 @@ export default function StudentProfile() {
                   gap: 6,
                   transition: "all 0.2s",
                 }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "rgba(192,255,114,0.35)";
                   e.currentTarget.style.color = "var(--color-brand)";
                 }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor =
                     "var(--color-border-strong)";
                   e.currentTarget.style.color = "var(--color-text-muted)";
@@ -2027,9 +2193,7 @@ export default function StudentProfile() {
               <input
                 type="text"
                 value={habilidadInput}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setHabilidadInput(e.target.value)
-                }
+                onChange={(e) => setHabilidadInput(e.target.value)}
                 onKeyDown={handleHabilidadKey}
                 placeholder="Escribe una habilidad y pulsa Enter (React, Python, SQL...)"
                 className="input-field"
@@ -2326,11 +2490,11 @@ export default function StudentProfile() {
                   gap: 6,
                   transition: "all 0.2s",
                 }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "rgba(192,255,114,0.35)";
                   e.currentTarget.style.color = "var(--color-brand)";
                 }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor =
                     "var(--color-border-strong)";
                   e.currentTarget.style.color = "var(--color-text-muted)";
@@ -2394,7 +2558,7 @@ export default function StudentProfile() {
                         <input
                           type="url"
                           value={redesSociales[id] ?? ""}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          onChange={(e) =>
                             setRedesSociales((r) => ({
                               ...r,
                               [id]: e.target.value,
