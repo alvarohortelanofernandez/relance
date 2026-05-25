@@ -825,6 +825,302 @@ function CandidaturaModal({
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
+function DraggableStudent({
+  estudiante,
+  fromContainerId,
+  onDragStart,
+  isSelected,
+  isDisabled,
+  isDimmed,
+  onToggleSelect,
+}) {
+  return (
+    <div
+      draggable={!isDisabled}
+      onDragStart={(e) => {
+        if (isDisabled) {
+          e.preventDefault();
+          return;
+        }
+        e.dataTransfer.setData("text/plain", estudiante.id);
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart(estudiante.id, fromContainerId);
+      }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "7px 9px",
+        borderRadius: 8,
+        background: isSelected
+          ? "rgba(192,255,114,0.08)"
+          : "var(--color-surface-elevated)",
+        border: `1px solid ${isSelected ? "rgba(192,255,114,0.4)" : "var(--color-border-subtle)"}`,
+        cursor: isDisabled ? "not-allowed" : "grab",
+        opacity: isDisabled ? 0.28 : isDimmed ? 0.52 : 1,
+        transition: "all 0.12s",
+        userSelect: "none",
+      }}
+    >
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggleSelect(estudiante.id, fromContainerId);
+        }}
+        style={{
+          width: 15,
+          height: 15,
+          borderRadius: 4,
+          border: `1.5px solid ${isSelected ? "var(--color-brand)" : "var(--color-border-strong)"}`,
+          background: isSelected ? "var(--color-brand)" : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          cursor: "pointer",
+        }}
+      >
+        {isSelected && (
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#0d1117"
+            strokeWidth="3.5"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 11,
+            fontWeight: 600,
+            color: "var(--color-text)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {estudiante.nombre}
+        </p>
+        <p
+          style={{
+            margin: "1px 0 0",
+            fontSize: 9,
+            color: "var(--color-text-muted)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {estudiante.titulacion}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DropZone({
+  id,
+  label,
+  icon,
+  alumnos,
+  dragOverId,
+  draggingInfo,
+  selectedIds,
+  selectionSource,
+  hasSelection,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragStart,
+  onToggleSelect,
+  onSelectAll,
+}) {
+  const dragCounterRef = useRef(0);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) onDragOver(id);
+  };
+  const handleDragLeave = () => {
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) onDragLeave();
+  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    onDrop(id);
+  };
+
+  const containerSelectedCount = alumnos.filter((a) =>
+    selectedIds.has(a.id),
+  ).length;
+  const allSelectedInContainer =
+    alumnos.length > 0 && alumnos.every((a) => selectedIds.has(a.id));
+  const isDragTarget = dragOverId === id;
+  const dragCount = draggingInfo?.studentIds?.length ?? 0;
+
+  return (
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={(e) => e.preventDefault()}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        background: isDragTarget
+          ? "rgba(192,255,114,0.05)"
+          : "var(--color-surface-strong)",
+        border: `1.5px solid ${isDragTarget ? "rgba(192,255,114,0.35)" : "var(--color-border)"}`,
+        borderRadius: 12,
+        padding: "14px",
+        transition: "all 0.15s",
+        minHeight: 110,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 10,
+        }}
+      >
+        {icon}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--color-text)",
+            }}
+          >
+            {label}
+          </p>
+          <p
+            style={{
+              margin: "1px 0 0",
+              fontSize: 10,
+              color: "var(--color-text-muted)",
+            }}
+          >
+            {alumnos.length} {alumnos.length === 1 ? "alumno" : "alumnos"}
+            {containerSelectedCount > 0 && (
+              <span
+                style={{
+                  color: "var(--color-brand)",
+                  fontWeight: 700,
+                  marginLeft: 5,
+                }}
+              >
+                · {containerSelectedCount} sel.
+              </span>
+            )}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color:
+                alumnos.length > 0
+                  ? "var(--color-brand)"
+                  : "var(--color-text-subtle)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {alumnos.length}
+          </span>
+          {alumnos.length > 0 && (
+            <button
+              onClick={() => onSelectAll(id, alumnos)}
+              style={{
+                padding: "3px 8px",
+                borderRadius: 6,
+                border: `1px solid ${allSelectedInContainer ? "rgba(192,255,114,0.4)" : "var(--color-border)"}`,
+                background: allSelectedInContainer
+                  ? "rgba(192,255,114,0.1)"
+                  : "transparent",
+                color: allSelectedInContainer
+                  ? "var(--color-brand)"
+                  : "var(--color-text-muted)",
+                fontSize: 9,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {allSelectedInContainer ? "✓ Todos" : "Sel. todos"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isDragTarget && (
+        <div
+          style={{
+            border: "1.5px dashed rgba(192,255,114,0.4)",
+            borderRadius: 8,
+            padding: "8px",
+            marginBottom: 6,
+            textAlign: "center",
+            fontSize: 10,
+            color: "var(--color-brand)",
+            fontWeight: 600,
+          }}
+        >
+          Soltar aquí{dragCount > 1 ? ` (${dragCount} alumnos)` : ""}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {alumnos.map((al) => {
+          const isSelected = selectedIds.has(al.id);
+          const isDisabled =
+            hasSelection && selectionSource !== id && !isSelected;
+          const isDimmed =
+            hasSelection && selectionSource === id && !isSelected;
+          return (
+            <DraggableStudent
+              key={al.id}
+              estudiante={al}
+              fromContainerId={id}
+              onDragStart={onDragStart}
+              isSelected={isSelected}
+              isDisabled={isDisabled}
+              isDimmed={isDimmed}
+              onToggleSelect={onToggleSelect}
+            />
+          );
+        })}
+        {alumnos.length === 0 && !isDragTarget && (
+          <p
+            style={{
+              fontSize: 10,
+              color: "var(--color-text-subtle)",
+              textAlign: "center",
+              padding: "10px 0",
+              margin: 0,
+            }}
+          >
+            Sin alumnos asignados
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TutorAssignmentEmpresa({ tutores, estudiantes, onUpdate }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [selectionSource, setSelectionSource] = useState(null);
