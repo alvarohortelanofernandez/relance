@@ -1036,11 +1036,12 @@ export default function OnboardingModal({
             nombre: roleData.nombre,
             cif: roleData.cif,
             sector: roleData.sector || null,
-            tamanio: roleData.tamanio || null,
+            tamano: roleData.tamanio || null,
             ciudad: roleData.ciudad || null,
             web: roleData.web || null,
             telefono: roleData.telefono || null,
             descripcion: roleData.descripcion || null,
+            email_contacto: email,
           },
           { onConflict: "id" },
         );
@@ -1050,18 +1051,19 @@ export default function OnboardingModal({
       if (role === "centro_educativo") {
         const { error: e } = await supabase.from("centro_educativo").upsert(
           {
-            id_centro: user.id,
+            id: user.id,
             nombre: roleData.nombre,
-            codigo_centro: roleData.codigo_centro,
-            tipo: roleData.tipo || null,
+            codigo_institucional: roleData.codigo_centro,
+            tipo_centro: roleData.tipo || null,
             ciudad: roleData.ciudad || null,
             provincia: roleData.provincia || null,
-            web: roleData.web || null,
+            sitio_web: roleData.web || null,
             num_alumnos: roleData.num_alumnos
               ? parseInt(roleData.num_alumnos)
               : null,
+            email_contacto: email,
           },
-          { onConflict: "id_centro" },
+          { onConflict: "id" },
         );
         if (e) throw e;
       }
