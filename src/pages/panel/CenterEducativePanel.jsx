@@ -2551,7 +2551,8 @@ export default function CenterEducativePanel() {
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "repeat(auto-fill, minmax(160px, 1fr))",
+                        // "repeat(auto-fill, minmax(160px, 1fr))",
+                        "repeat(auto-fit, minmax(160px, 1fr))",
                       gap: 8,
                     }}
                   >
