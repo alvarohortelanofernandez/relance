@@ -1510,7 +1510,7 @@ export default function StudentProfile() {
         .select("id_centro, centro_educativo(id, nombre)")
         .eq("id_estudiante", user.id)
         .maybeSingle<{
-          centro_id: string;
+          id_centro: string;
           centro_educativo: { id: string; nombre: string } | null;
         }>();
 
