@@ -809,6 +809,7 @@ function CentroForm({
     provincia: "",
     web: "",
     num_alumnos: "",
+    telefono: "",
   });
   const [errs, setErrs] = useState<Record<string, string>>({});
 
@@ -828,6 +829,8 @@ function CentroForm({
       e.codigo_centro = "El código debe tener al menos 3 caracteres.";
     if (!form.ciudad.trim()) e.ciudad = "La ciudad es obligatoria.";
     if (form.web && !isValidUrl(form.web)) e.web = "Introduce una URL válida.";
+    if (!form.telefono.trim()) e.telefono = "El teléfono es obligatorio.";
+    else if (!isValidPhone(form.telefono)) e.telefono = "Teléfono no válido.";
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -859,17 +862,30 @@ function CentroForm({
       >
         <SectionDivider label="Datos del centro" />
         <div className="space-y-3">
-          <Field label="Nombre del centro" required>
-            <input
-              type="text"
-              value={form.nombre}
-              onChange={set("nombre")}
-              placeholder="IES Nombre del Centro"
-              className="input-field"
-              style={errStyle("nombre")}
-            />
-            <FieldError msg={errs.nombre} />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nombre del centro" required>
+              <input
+                type="text"
+                value={form.nombre}
+                onChange={set("nombre")}
+                placeholder="IES Nombre del Centro"
+                className="input-field"
+                style={errStyle("nombre")}
+              />
+              <FieldError msg={errs.nombre} />
+            </Field>
+            <Field label="Teléfono" required>
+              <input
+                type="tel"
+                value={form.telefono}
+                onChange={set("telefono")}
+                placeholder="+34 957 000 000"
+                className="input-field"
+                style={errStyle("telefono")}
+              />
+              <FieldError msg={errs.telefono} />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Código institucional" required>
@@ -1062,6 +1078,7 @@ export default function OnboardingModal({
               ? parseInt(roleData.num_alumnos)
               : null,
             email_contacto: email,
+            telefono: roleData.telefono || null,
           },
           { onConflict: "id" },
         );
@@ -1097,6 +1114,7 @@ export default function OnboardingModal({
             province: roleData.provincia ?? "",
             website: roleData.web ?? "",
             num_alumnos: roleData.num_alumnos ?? "",
+            telefono: roleData.telefono ?? "",
           }),
         },
       });

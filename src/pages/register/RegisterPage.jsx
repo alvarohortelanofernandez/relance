@@ -914,6 +914,7 @@ function CenterForm({ onSubmit, loading, error }) {
     city: "",
     province: "",
     website: "",
+    telefono: "",
   });
   const [errs, setErrs] = useState({});
   const s = (k) => (e) => {
@@ -943,6 +944,8 @@ function CenterForm({ onSubmit, loading, error }) {
     if (!form.city.trim()) e.city = "La ciudad es obligatoria.";
     if (form.website && !isValidUrl(form.website))
       e.website = "Introduce una URL válida (ej: https://iesejemplo.edu.es).";
+    if (!form.telefono.trim()) e.telefono = "El teléfono es obligatorio.";
+    else if (!isValidPhone(form.telefono)) e.telefono = "Teléfono no válido.";
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -958,15 +961,28 @@ function CenterForm({ onSubmit, loading, error }) {
     >
       {/* ── Campos principales ── */}
       <div style={formGrid}>
-        <div>
-          <label style={labelStyle}>Nombre del centro *</label>
-          <Input
-            value={form.centerName}
-            onChange={s("centerName")}
-            placeholder="IES Nombre del Centro"
-            hasError={!!errs.centerName}
-          />
-          <FieldError msg={errs.centerName} />
+        <div style={twoCol}>
+          <div>
+            <label style={labelStyle}>Nombre del centro *</label>
+            <Input
+              value={form.centerName}
+              onChange={s("centerName")}
+              placeholder="IES Nombre del Centro"
+              hasError={!!errs.centerName}
+            />
+            <FieldError msg={errs.centerName} />
+          </div>
+          <div>
+            <label style={labelStyle}>Teléfono *</label>
+            <Input
+              type="tel"
+              value={form.telefono}
+              onChange={s("telefono")}
+              placeholder="+34 957 000 000"
+              hasError={!!errs.telefono}
+            />
+            <FieldError msg={errs.telefono} />
+          </div>
         </div>
 
         <div>
@@ -1152,6 +1168,7 @@ export default function RegisterPage() {
               province: extra.province ?? "",
               website: extra.website ?? "",
               num_alumnos: extra.num_alumnos ?? "",
+              telefono: extra.telefono ?? "",
             }),
           },
         },
@@ -1170,8 +1187,9 @@ export default function RegisterPage() {
 
     if (role === "estudiante" && extra.centerId) {
       await supabase.from("centro_estudiante").insert({
-        estudiante_id: signUpData.user.id,
-        centro_id: extra.centerId,
+        id_estudiante: signUpData.user.id,
+        id_centro: extra.centerId,
+        estado: "pendiente",
       });
     }
 
