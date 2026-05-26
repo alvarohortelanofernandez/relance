@@ -57,6 +57,7 @@ export default function Header({
   // ── Ctrl+K / Cmd+K ────────────────────────────────────────────────────────
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (!user) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setSearchOpen((v) => !v);
@@ -64,7 +65,7 @@ export default function Header({
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, []);
+  }, [user]);
 
   // ── Botón de búsqueda (reutilizado en header y bajo el header) ────────────
   const SearchTrigger = ({ fullWidth = false }: { fullWidth?: boolean }) => (
