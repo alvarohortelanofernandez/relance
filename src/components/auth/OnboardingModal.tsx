@@ -1042,7 +1042,7 @@ export default function OnboardingModal({
             telefono: roleData.telefono || null,
             descripcion: roleData.descripcion || null,
           },
-          { onConflict: "id_usuario" },
+          { onConflict: "id" },
         );
         if (e) throw e;
       }
