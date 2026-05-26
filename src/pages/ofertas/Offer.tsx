@@ -1418,7 +1418,7 @@ function MisPostulaciones({
       return;
     }
 
-    const items = (data ?? [])
+    const itemsRaw = (data ?? [])
       .filter((c) => c.oferta)
       .map((c) => ({
         candidatura: {
@@ -1438,6 +1438,25 @@ function MisPostulaciones({
               .filter(Boolean) ?? [],
         },
       }));
+
+    // Deduplicar: quedarse con la candidatura más reciente por oferta
+    const seenOfertas = new Map<string, (typeof itemsRaw)[0]>();
+    for (const item of itemsRaw) {
+      const key = String(item.oferta.id_oferta);
+      if (!seenOfertas.has(key)) {
+        seenOfertas.set(key, item);
+      } else {
+        // Si hay duplicado, quedarse con el más reciente
+        const existing = seenOfertas.get(key)!;
+        if (
+          new Date(item.candidatura.fecha_envio) >
+          new Date(existing.candidatura.fecha_envio)
+        ) {
+          seenOfertas.set(key, item);
+        }
+      }
+    }
+    const items = Array.from(seenOfertas.values());
     setCandidaturas(items);
     setLoading(false);
   }, [supabase, user]);
