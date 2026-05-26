@@ -1546,7 +1546,7 @@ export default function StudentProfile() {
     if (!user) return;
     await supabase
       .from("centro_estudiante")
-      .upsert({ estudiante_id: user.id, centro_id: c.id });
+      .upsert({ id_estudiante: user.id, id_centro: c.id });
   };
 
   const handleAvatarUpload = async (
