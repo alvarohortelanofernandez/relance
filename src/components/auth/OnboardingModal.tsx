@@ -1032,7 +1032,7 @@ export default function OnboardingModal({
       if (role === "empresa") {
         const { error: e } = await supabase.from("empresa").upsert(
           {
-            id_usuario: user.id,
+            id: user.id,
             nombre: roleData.nombre,
             cif: roleData.cif,
             sector: roleData.sector || null,
