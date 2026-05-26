@@ -1018,8 +1018,8 @@ export default function OnboardingModal({
           await supabase
             .from("centro_estudiante")
             .upsert(
-              { estudiante_id: user.id, centro_id: roleData.centerId },
-              { onConflict: "estudiante_id" },
+              { id_estudiante: user.id, id_centro: roleData.centerId },
+              { onConflict: "id_estudiante" },
             );
         }
       }
