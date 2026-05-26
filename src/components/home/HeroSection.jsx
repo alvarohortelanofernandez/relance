@@ -324,23 +324,27 @@ export default function HeroSection({ onRegisterClick }) {
         >
           {[
             {
-              value: stats?.estudiantes ? stats.estudiantes + "+" : "0+",
-              label: "Estudiantes activos",
+              value: loading ? "—" : `${stats.estudiantes}+`,
+              label: "Estudiantes registrados",
             },
             {
-              value: stats?.empresas ? stats.empresas + "+" : "0+",
-              label: "Empresas verificadas",
+              value: loading ? "—" : `${stats.empresas}+`,
+              label: "Empresas colaboradoras",
             },
             {
-              value: stats?.centros ? stats.centros + "+" : "0+",
+              value: loading ? "—" : `${stats.centros}+`,
               label: "Centros educativos",
+            },
+            {
+              value: loading ? "—" : `${stats.tutores}+`,
+              label: "Tutores confían en nosotros",
             },
           ].map((stat, i, arr) => (
             <div
               key={stat.label}
               style={{
                 textAlign: "center",
-                padding: "0 2.5rem",
+                padding: "0 2rem",
                 borderRight:
                   i < arr.length - 1
                     ? "1px solid rgba(255,255,255,0.07)"

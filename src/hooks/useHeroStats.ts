@@ -5,6 +5,7 @@ type HeroStats = {
   estudiantes: number;
   empresas: number;
   centros: number;
+  tutores: number;
 };
 
 export const useHeroStats = () => {
@@ -12,6 +13,7 @@ export const useHeroStats = () => {
     estudiantes: 0,
     empresas: 0,
     centros: 0,
+    tutores: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,12 +23,18 @@ export const useHeroStats = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase.rpc("get_hero_stats");
+        const { data, error } = await supabase.from("usuario").select("rol");
+
         if (error) throw error;
+
+        const rows = data ?? [];
         setStats({
-          estudiantes: data?.estudiantes ?? 0,
-          empresas: data?.empresas ?? 0,
-          centros: data?.centros ?? 0,
+          estudiantes: rows.filter((u) => u.rol === "estudiante").length,
+          empresas: rows.filter((u) => u.rol === "empresa").length,
+          centros: rows.filter((u) => u.rol === "centro_educativo").length,
+          tutores: rows.filter(
+            (u) => u.rol === "tutor_empresa" || u.rol === "tutor_centro",
+          ).length,
         });
       } catch (err: any) {
         setError(err.message || "Error desconocido");
