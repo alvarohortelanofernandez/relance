@@ -1544,9 +1544,16 @@ export default function StudentProfile() {
     setCentroSugerencias([]);
     setShowCentroDropdown(false);
     if (!user) return;
-    await supabase
-      .from("centro_estudiante")
-      .upsert({ id_estudiante: user.id, id_centro: c.id });
+
+    const { error } = await supabase.from("centro_estudiante").upsert(
+      {
+        id_estudiante: user.id,
+        id_centro: c.id,
+        estado: "pendiente",
+      },
+      { onConflict: "id_estudiante, id_centro" },
+    );
+    if (error) console.error("Error vinculando centro:", error.message);
   };
 
   const handleAvatarUpload = async (

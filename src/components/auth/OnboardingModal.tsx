@@ -1015,12 +1015,17 @@ export default function OnboardingModal({
 
         // Relación con centro
         if (roleData.centerId) {
-          await supabase
+          const { error: centroErr } = await supabase
             .from("centro_estudiante")
             .upsert(
-              { id_estudiante: user.id, id_centro: roleData.centerId },
-              { onConflict: "id_estudiante" },
+              {
+                id_estudiante: user.id,
+                id_centro: roleData.centerId,
+                estado: "pendiente",
+              },
+              { onConflict: "id_estudiante, id_centro" },
             );
+          if (centroErr) throw centroErr;
         }
       }
 
