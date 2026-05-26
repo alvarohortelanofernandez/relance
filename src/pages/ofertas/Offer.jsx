@@ -1398,16 +1398,16 @@ function MisPostulaciones({
       .from("candidatura")
       .select(
         `
-        id_candidatura, estado, fecha_envio, comentario_estudiante, comentario_empresa,
-        oferta:oferta(
-          id_oferta, titulo, descripcion, modalidad, ubicacion,
-          duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
-          opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
-          tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
-          empresa:empresa(id, nombre, logo_url),
-          oferta_tecnologia(tecnologia(id_tecnologia, nombre))
-        )
-      `,
+    id_candidatura, estado, fecha_envio, comentario_estudiante, comentario_empresa,
+    oferta:oferta!inner(
+      id_oferta, titulo, descripcion, modalidad, ubicacion,
+      duracion_semanas, horas_semanales, num_plazas, num_plazas_restantes,
+      opcion_contrato, estado, fecha_publicacion, fecha_fin_solicitud,
+      tipo_oferta, salario_mensual, requisitos_adicionales, beneficios, id_empresa,
+      empresa:empresa(id, nombre, logo_url),
+      tecnologias:oferta_tecnologia(tecnologia:tecnologia(id_tecnologia, nombre))
+    )
+  `,
       )
       .eq("id_estudiante", user.id)
       .order("fecha_envio", { ascending: false });
@@ -1418,45 +1418,48 @@ function MisPostulaciones({
       return;
     }
 
-    const itemsRaw = (data ?? [])
-      .filter((c) => c.oferta)
-      .map((c) => ({
-        candidatura: {
-          id: c.id_candidatura,
-          estado: c.estado,
-          fecha_envio: c.fecha_envio,
-          comentario_estudiante: c.comentario_estudiante,
-          comentario_empresa: c.comentario_empresa,
-        },
-        oferta: {
-          ...c.oferta,
-          empresa_nombre: c.oferta.empresa?.nombre ?? "Empresa",
-          empresa_avatar: c.oferta.empresa?.logo_url ?? null,
-          tecnologias:
-            c.oferta.oferta_tecnologia
-              ?.map((ot) => ot.tecnologia)
-              .filter(Boolean) ?? [],
-        },
-      }));
+    const PRIORIDAD_ESTADO = { aceptado: 0, pendiente: 1, rechazado: 2 };
 
-    // Deduplicar: quedarse con la candidatura más reciente por oferta
-    const seenOfertas = new Map<string, (typeof itemsRaw)[0]>();
-    for (const item of itemsRaw) {
-      const key = String(item.oferta.id_oferta);
-      if (!seenOfertas.has(key)) {
-        seenOfertas.set(key, item);
+    const porOferta = new Map();
+    for (const c of data ?? []) {
+      if (!c.oferta) continue;
+      const id = c.oferta.id_oferta;
+      if (!porOferta.has(id)) {
+        porOferta.set(id, c);
       } else {
-        // Si hay duplicado, quedarse con el más reciente
-        const existing = seenOfertas.get(key)!;
-        if (
-          new Date(item.candidatura.fecha_envio) >
-          new Date(existing.candidatura.fecha_envio)
-        ) {
-          seenOfertas.set(key, item);
+        const actual = porOferta.get(id);
+        const prioNueva = PRIORIDAD_ESTADO[c.estado] ?? 99;
+        const prioActual = PRIORIDAD_ESTADO[actual.estado] ?? 99;
+        if (prioNueva < prioActual) {
+          porOferta.set(id, c);
         }
       }
     }
-    const items = Array.from(seenOfertas.values());
+    const items = [...porOferta.values()].map((c) => ({
+      candidatura: {
+        id: c.id_candidatura,
+        estado: c.estado,
+        fecha_envio: c.fecha_envio,
+        comentario_estudiante: c.comentario_estudiante,
+        comentario_empresa: c.comentario_empresa,
+      },
+      oferta: {
+        ...c.oferta,
+        empresa_nombre: c.oferta.empresa?.nombre ?? "Empresa",
+        empresa_avatar: c.oferta.empresa?.logo_url ?? null,
+        tecnologias:
+          c.oferta.tecnologias?.map((ot) => ot.tecnologia).filter(Boolean) ??
+          [],
+      },
+    }));
+    console.log(
+      "items deduplicados:",
+      items.map((i) => ({
+        id: i.candidatura.id,
+        oferta: i.oferta.id_oferta,
+        titulo: i.oferta.titulo,
+      })),
+    );
     setCandidaturas(items);
     setLoading(false);
   }, [supabase, user]);

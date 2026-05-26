@@ -2582,12 +2582,12 @@ export default function CenterEducativePanel() {
                       suffix="%"
                       sub="Prácticas → contrato"
                     />
-                    <StatCard
+                    {/* <StatCard
                       label="Valoración"
                       value={stats.valoracion_media}
                       suffix=" ★"
                       sub="Media empresas"
-                    />
+                    /> */}
                   </div>
 
                   <div
