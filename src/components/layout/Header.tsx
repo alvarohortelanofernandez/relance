@@ -203,8 +203,8 @@ export default function Header({
                 />
               </a>
 
-              {/* ── Búsqueda: solo visible en sm+ (≥ 640px) ── */}
-              {!isMobile && <SearchTrigger />}
+              {/* Búsqueda: solo visible en sm+ y con sesión iniciada */}
+              {!isMobile && user && <SearchTrigger />}
 
               {/* ── Usuario / acciones ── */}
               <div
@@ -299,7 +299,7 @@ export default function Header({
             </div>
 
             {/* ── Fila de búsqueda en móvil: debajo del header, centrada ── */}
-            {isMobile && (
+            {isMobile && user && (
               <div
                 style={{
                   padding: "0 4px 10px",
@@ -314,13 +314,15 @@ export default function Header({
       </div>
 
       {/* SearchModal */}
-      <SearchModal
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        role={role}
-        userId={userId}
-        triggerRef={searchTriggerRef}
-      />
+      {user && (
+        <SearchModal
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          role={role}
+          userId={userId}
+          triggerRef={searchTriggerRef}
+        />
+      )}
     </>
   );
 }
